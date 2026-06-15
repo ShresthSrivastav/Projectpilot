@@ -1,4 +1,4 @@
-# ProjectPilot v4
+# ProjectPilot 
 
 > Multi-agent AI project generator — describe your app, get a complete codebase.
 
