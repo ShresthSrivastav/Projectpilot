@@ -1,0 +1,18 @@
+{
+  "id": "e1c1593f-bb70-4292-b0d6-6567e437066e",
+  "campaign_id": "3c03a9d0-d1ad-41dc-ac6e-dd521e88dbb9",
+  "domain": "chat_app",
+  "iteration": 10,
+  "status": "completed",
+  "autonomy_score": 46.0,
+  "execution_time": 0.004064321517944336,
+  "cost": 0.0,
+  "tests_generated": 0.0,
+  "tests_passed": 1,
+  "healing_iterations": 3,
+  "deployment_success": false,
+  "benchmark_success": true,
+  "error": "",
+  "created_at": 1781170522.485041,
+  "completed_at": 1781170522.485041
+}

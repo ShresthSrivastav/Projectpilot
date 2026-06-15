@@ -1,0 +1,18 @@
+{
+  "id": "542c7559-9f8b-49ed-bbcc-b2da623d5352",
+  "campaign_id": "76218d97-2659-4205-bb02-a186e25055a3",
+  "domain": "ecommerce",
+  "iteration": 2,
+  "status": "completed",
+  "autonomy_score": 0.87,
+  "execution_time": 12.5,
+  "cost": 0.045,
+  "tests_generated": 85.0,
+  "tests_passed": 78,
+  "healing_iterations": 7,
+  "deployment_success": true,
+  "benchmark_success": true,
+  "error": "",
+  "created_at": 1781232680.9272916,
+  "completed_at": 1781232680.9272916
+}

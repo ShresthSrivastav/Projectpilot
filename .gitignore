@@ -1,0 +1,68 @@
+# Secrets
+.env
+*.key
+*.pem
+*.cert
+**/service-account*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project data
+chroma_data/
+generated_projects/
+memory_store/
+github_repos/
+browser_artifacts/
+process_logs/
+session_data/
+learning_data/
+debate_output/
+org_data/
+benchmarks/
+benchmark_history/
+healing_data/
+runtime_data/
+sdlc_data/
+monitor_data/
+deploy_data/
+graph_checkpoints/
+autonomous_data/
+validation_artifacts/
+repo_analysis/
+agents/plugins/
+
+# Logs
+*.log
+backend_err.log
+backend_out.log
+frontend_err.log
+frontend_out.log
+stderr.log
+test_output.log
+
+# Database
+*.db
+*.sqlite
+
+# Docker
+.dockerignore

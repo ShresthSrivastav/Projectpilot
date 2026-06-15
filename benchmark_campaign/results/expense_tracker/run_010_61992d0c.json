@@ -1,0 +1,18 @@
+{
+  "id": "61992d0c-dea7-4409-803d-f7d3ac983b58",
+  "campaign_id": "8f590386-cb2c-46b5-832a-6e9fc19291fb",
+  "domain": "expense_tracker",
+  "iteration": 10,
+  "status": "completed",
+  "autonomy_score": 46.0,
+  "execution_time": 0.036074161529541016,
+  "cost": 0.0,
+  "tests_generated": 0.0,
+  "tests_passed": 1,
+  "healing_iterations": 3,
+  "deployment_success": false,
+  "benchmark_success": true,
+  "error": "",
+  "created_at": 1781170481.1997418,
+  "completed_at": 1781170481.1997418
+}

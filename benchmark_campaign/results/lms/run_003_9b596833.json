@@ -1,0 +1,18 @@
+{
+  "id": "9b596833-9574-4a1a-9101-bf283c598257",
+  "campaign_id": "3c03a9d0-d1ad-41dc-ac6e-dd521e88dbb9",
+  "domain": "lms",
+  "iteration": 3,
+  "status": "completed",
+  "autonomy_score": 46.0,
+  "execution_time": 0.004999399185180664,
+  "cost": 0.0,
+  "tests_generated": 0.0,
+  "tests_passed": 1,
+  "healing_iterations": 3,
+  "deployment_success": false,
+  "benchmark_success": true,
+  "error": "",
+  "created_at": 1781170524.0796065,
+  "completed_at": 1781170524.0796065
+}

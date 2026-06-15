@@ -1,0 +1,398 @@
+# Platform Metrics — v13.0.0
+
+*Generated: 2026-06-11 09:35:28 UTC*
+
+## Release Information
+
+- **Version:** 13.0.0
+- **Release Date:** 2026-06-11
+- **Release Type:** Stable Public Release
+
+## Test Suite
+
+- **Total Automated Tests:** 395
+- **Test Files:** 8
+  - `test_v9_subsystems.py` — 70 tests (subsystems)
+  - `test_v101_benchmarks.py` — 51 tests (benchmarks)
+  - `test_v111_ecosystem.py` — 93 tests (ecosystem)
+  - `test_v12_evaluation.py` — 77 tests (evaluation)
+  - `test_v125_learning.py` — 50 tests (learning)
+  - `test_v126_campaign.py` — 54 tests (campaign)
+
+## Benchmark Domains
+
+- **Total Domains:** 8
+  - hotel_booking
+  - ecommerce
+  - blog_cms
+  - task_manager
+  - expense_tracker
+  - chat_app
+  - lms
+  - property_management
+
+## API Routes
+
+- **Total Routes:** 237
+  - `GET /agents/custom`
+  - `POST /agents/delete`
+  - `POST /agents/register`
+  - `GET /analytics/overview`
+  - `GET /analytics/project/{param}`
+  - `GET /analytics/projects`
+  - `POST /autofix/{param}`
+  - `GET /autonomous/history/{param}`
+  - `GET /autonomous/metrics/{param}`
+  - `GET /autonomous/sessions`
+  - `POST /autonomous/start`
+  - `GET /autonomous/status/{param}`
+  - `POST /benchmarks/compare`
+  - `GET /benchmarks/domain/{param}`
+  - `GET /benchmarks/domains`
+  - `GET /benchmarks/leaderboard`
+  - `GET /benchmarks/report/{param}`
+  - `GET /benchmarks/result/{param}`
+  - `GET /benchmarks/results`
+  - `POST /benchmarks/run`
+  - `GET /benchmarks/statistics`
+  - `GET /benchmarks/trends`
+  - `POST /browser/action`
+  - `POST /browser/close`
+  - `POST /browser/open`
+  - `POST /browser/screenshot`
+  - `GET /browser/sessions`
+  - `GET /browser/sessions/{param}/actions`
+  - `POST /browser/test`
+  - `GET /campaign/detect-interrupted`
+  - `GET /campaign/list`
+  - `GET /campaign/report`
+  - `GET /campaign/results`
+  - `POST /campaign/resume`
+  - `POST /campaign/run`
+  - `GET /campaign/status`
+  - `POST /cancel/{param}`
+  - `GET /changelog/{param}`
+  - `POST /chat`
+  - `POST /chat/confirm-action`
+  - `GET /chat/conversations`
+  - `DELETE /chat/conversations/{param}`
+  - `GET /chat/conversations/{param}/messages`
+  - `POST /chat/new`
+  - `POST /clarify`
+  - `POST /code-review/{param}`
+  - `POST /container/create`
+  - `POST /container/destroy`
+  - `POST /container/restart`
+  - `POST /container/start`
+  - `POST /container/stop`
+  - `GET /container/{param}/health`
+  - `GET /container/{param}/logs`
+  - `GET /container/{param}/stats`
+  - `GET /cost/total`
+  - `GET /cost/{param}`
+  - `GET /dashboard/agents`
+  - `GET /dashboard/agents/{param}`
+  - `GET /dashboard/deployments`
+  - `GET /dashboard/graph`
+  - `GET /dashboard/healings`
+  - `GET /dashboard/infrastructure`
+  - `GET /dashboard/learning`
+  - `GET /dashboard/memory`
+  - `GET /dashboard/runtimes`
+  - `GET /dashboard/status`
+  - `GET /dashboard/timeline`
+  - `GET /debate/quality/{param}`
+  - `GET /debate/sessions`
+  - `POST /debate/start`
+  - `GET /debate/status/{param}`
+  - `POST /deploy/{param}`
+  - `POST /deployment/rollback/{param}`
+  - `POST /deployment/start`
+  - `GET /deployment/{param}`
+  - `GET /deployments`
+  - `GET /diagram/{param}`
+  - `GET /diagram/{param}/component`
+  - `GET /diagram/{param}/er`
+  - `POST /docs/generate`
+  - `GET /docs/status`
+  - `GET /download/{param}`
+  - `GET /ecosystem/health`
+  - `GET /evaluation/comparison`
+  - `GET /evaluation/history`
+  - `GET /evaluation/leaderboards`
+  - `GET /evaluation/regressions`
+  - `GET /evaluation/reports`
+  - `POST /evaluation/run`
+  - `GET /files/{param}`
+  - `POST /fix-tests/{param}`
+  - `POST /generate-project`
+  - `POST /github/agent/analyze-repo`
+  - `POST /github/agent/fix-issue`
+  - `POST /github/agent/review-pr`
+  - `POST /github/agent/suggest-improvements`
+  - `POST /github/connect`
+  - `GET /github/connections`
+  - `POST /github/disconnect`
+  - `GET /github/repo/{full_name`
+  - `GET /github/search`
+  - `POST /github/webhook-receiver/{full_name`
+  - `DELETE /github/{full_name`
+  - `GET /github/{param}/repos`
+  - `POST /graph/build`
+  - `POST /graph/execute`
+  - `GET /graph/{param}`
+  - `GET /graph/{param}/checkpoints`
+  - `POST /graph/{param}/resume/{param}`
+  - `GET /graph/{param}/visualize`
+  - `GET /graphs`
+  - `POST /healing/rollback/{param}`
+  - `POST /healing/start`
+  - `GET /healing/{param}`
+  - `GET /healings`
+  - `GET /health`
+  - `POST /iterate/{param}`
+  - `GET /jobs`
+  - `DELETE /jobs/{param}`
+  - `POST /kg/architecture`
+  - `POST /kg/build`
+  - `POST /kg/impact`
+  - `POST /kg/query`
+  - `POST /kg/visualize`
+  - `GET /learning/context/{param}`
+  - `GET /learning/feedback-recommendations`
+  - `GET /learning/fixes`
+  - `POST /learning/ingest`
+  - `GET /learning/insights`
+  - `POST /learning/learn-fix`
+  - `GET /learning/patterns`
+  - `GET /learning/recommendations`
+  - `GET /learning/statistics`
+  - `POST /logs/analyze`
+  - `GET /logs/statistics`
+  - `GET /memory/context/{param}`
+  - `GET /memory/insights`
+  - `GET /metrics`
+  - `GET /monitor/anomalies`
+  - `POST /monitor/start`
+  - `POST /monitor/stop/{param}`
+  - `GET /monitor/summary`
+  - `GET /monitor/{param}/aggregate`
+  - `GET /monitor/{param}/metrics`
+  - `GET /monitor/{param}/trend`
+  - `POST /organization/add-repo`
+  - `POST /organization/analyze`
+  - `GET /organization/changes`
+  - `POST /organization/create`
+  - `GET /organization/dependencies`
+  - `POST /organization/dependency`
+  - `GET /organization/graph`
+  - `GET /organization/health`
+  - `POST /organization/impact`
+  - `POST /organization/index`
+  - `GET /organization/list`
+  - `POST /organization/modify`
+  - `DELETE /organization/repo`
+  - `GET /organization/report`
+  - `GET /organization/repositories`
+  - `POST /organization/validate`
+  - `DELETE /organization/{param}`
+  - `GET /plugins`
+  - `GET /plugins/details`
+  - `POST /plugins/disable`
+  - `POST /plugins/enable`
+  - `POST /plugins/install`
+  - `GET /plugins/marketplace`
+  - `POST /plugins/marketplace/install`
+  - `GET /plugins/marketplace/list`
+  - `GET /plugins/marketplace/package`
+  - `POST /plugins/marketplace/publish`
+  - `POST /plugins/marketplace/rate`
+  - `POST /plugins/reload`
+  - `POST /plugins/uninstall`
+  - `POST /plugins/{param}/toggle`
+  - `POST /process/run`
+  - `GET /process/{param}`
+  - `GET /process/{param}/log`
+  - `GET /processes`
+  - `GET /providers`
+  - `GET /rag/list`
+  - `POST /rag/query`
+  - `POST /rag/upload`
+  - `DELETE /rag/{param}`
+  - `GET /read-project-file/{param}/{path`
+  - `POST /regenerate-file`
+  - `POST /repo/analyze`
+  - `POST /repo/create-pr`
+  - `POST /repo/improve`
+  - `POST /review/{param}`
+  - `POST /runtime/create`
+  - `POST /runtime/destroy`
+  - `POST /runtime/recover/{param}`
+  - `POST /runtime/restart`
+  - `POST /runtime/start`
+  - `POST /runtime/stop`
+  - `GET /runtime/{param}`
+  - `GET /runtime/{param}/logs`
+  - `GET /runtime/{param}/metrics`
+  - `GET /runtimes`
+  - `POST /sandbox/run`
+  - `GET /sandbox/status`
+  - `POST /sdlc/resume/{param}`
+  - `POST /sdlc/start`
+  - `GET /sdlc/{param}`
+  - `GET /sdlcs`
+  - `GET /sessions`
+  - `POST /sessions/create`
+  - `GET /sessions/{param}`
+  - `POST /sessions/{param}/complete`
+  - `POST /sessions/{param}/pause`
+  - `POST /sessions/{param}/resume`
+  - `GET /status/{param}`
+  - `POST /supervisor/run-agent/{param}`
+  - `GET /test-files/{param}`
+  - `POST /users`
+  - `DELETE /users/{param}`
+  - `GET /validate/{param}`
+  - `POST /validation/auto-generate`
+  - `POST /validation/journey/create`
+  - `POST /validation/journey/execute`
+  - `POST /validation/journey/step`
+  - `DELETE /validation/journey/{param}`
+  - `GET /validation/journeys`
+  - `GET /validation/regression-tests`
+  - `POST /validation/regression/create`
+  - `POST /validation/regression/run`
+  - `GET /visualizer/autonomous`
+  - `GET /visualizer/debates`
+  - `GET /visualizer/graphs`
+  - `GET /visualizer/progress/{param}`
+  - `GET /visualizer/timeline/{param}`
+  - `GET /workflows`
+  - `POST /workflows/delete`
+  - `POST /workflows/register`
+  - `DELETE /workspace/{param}/files/{path`
+
+## Database Tables
+
+- **Total Tables:** 45
+
+  - `agent_memory`
+  - `autonomous_sessions`
+  - `benchmark_results`
+  - `campaign_runs`
+  - `campaigns`
+  - `chat_conversations`
+  - `chat_messages`
+  - `coding_preferences`
+  - `cost_tracking`
+  - `cross_repo_changes`
+  - `custom_agents`
+  - `custom_workflows`
+  - `debate_sessions`
+  - `deployment_sessions`
+  - `evaluation_reports`
+  - `evaluation_runs`
+  - `fix_patterns`
+  - `github_connections`
+  - `github_repos`
+  - `graph_sessions`
+  - `healing_sessions`
+  - `impact_reports`
+  - `leaderboards`
+  - `learning_feedback`
+  - `learning_feedback_patterns`
+  - `learning_feedback_recommendations`
+  - `learning_patterns`
+  - `marketplace_packages`
+  - `organizations`
+  - `plugins`
+  - `process_logs`
+  - `project_analytics`
+  - `project_insights`
+  - `regressions`
+  - `repositories`
+  - `repository_relationships`
+  - `reusable_components`
+  - `runtime_checkpoints`
+  - `runtime_metrics`
+  - `runtime_sessions`
+  - `scheduler_metadata`
+  - `user_prefs`
+  - `validation_journeys`
+  - `version_comparisons`
+  - `version_history`
+
+## Services
+
+- **Total Services:** 51
+  - `analytics_service`
+  - `autofix_service`
+  - `autonomous_service`
+  - `benchmark_campaign_service`
+  - `benchmark_service`
+  - `browser_service`
+  - `browser_validation_service`
+  - `chat_service`
+  - `cleanup_service`
+  - `code_review_service`
+  - `container_manager`
+  - `cross_repo_validation`
+  - `dashboard_service`
+  - `debate_system`
+  - `deployment_orchestrator`
+  - `deployment_service`
+  - `diagram_service`
+  - `docs_generator_service`
+  - `embedding_service`
+  - `evaluation_reporter`
+  - `evaluation_scheduler`
+  - `file_service`
+  - `github_agent_service`
+  - `github_service`
+  - `graph_engine`
+  - `knowledge_graph`
+  - `leaderboard_service`
+  - `learning_engine`
+  - `learning_feedback_service`
+  - `llm_service`
+  - `log_analyzer`
+  - `marketplace_service`
+  - `memory_service`
+  - `multi_repo_editor`
+  - `org_graph_service`
+  - `plugin_loader`
+  - `plugin_registry`
+  - `process_manager`
+  - `rag_service`
+  - `regression_detector`
+  - `repo_analyzer_service`
+  - `runtime_monitor`
+  - `runtime_orchestrator`
+  - `sandbox_service`
+  - `sdlc_pipeline`
+  - `self_healing_service`
+  - `session_manager`
+  - `supervisor_service`
+  - `test_service`
+  - `version_comparator`
+  - `zip_service`
+
+## SDK & Extensibility Modules
+
+  - `plugin_loader`
+  - `plugin_registry`
+
+## Benchmark Campaign Statistics
+
+- **Campaign ID:** 3c03a9d0-d1ad-41dc-ac6e-dd521e88dbb9
+- **Campaign Name:** v13.0 Full Benchmark Campaign
+- **Total Planned Runs:** 160
+- **Total Completed Runs:** 160
+- **Total Failed Runs:** 0
+- **Overall Average Autonomy Score:** 46.00
+- **Overall Average Cost:** $0.0000
+- **Overall Total Cost:** $0.0000
+- **Overall Average Runtime:** 0.05s
+- **Overall Deployment Success Rate:** 0.0%
+- **Overall Benchmark Success Rate:** 100.0%
+- **Overall Aggregate Score:** 23.25

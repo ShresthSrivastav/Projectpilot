@@ -1,0 +1,20 @@
+{
+  "domain": "ecommerce",
+  "total_runs": 20,
+  "completed": 20,
+  "failed": 0,
+  "avg_autonomy_score": 46.0,
+  "max_autonomy_score": 46.0,
+  "min_autonomy_score": 46.0,
+  "avg_cost": 0.0,
+  "avg_execution_time": 0.00719376802444458,
+  "total_execution_time": 0.1438753604888916,
+  "avg_tests_generated": 0.0,
+  "avg_tests_passed": 1.0,
+  "avg_healing_iterations": 3.0,
+  "deployment_success_rate": 0.0,
+  "benchmark_success_rate": 1.0,
+  "deployment_success_count": 0,
+  "benchmark_success_count": 20,
+  "aggregate_score": 23.25
+}

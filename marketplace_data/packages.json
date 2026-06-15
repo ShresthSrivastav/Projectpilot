@@ -1,0 +1,32 @@
+[
+  {
+    "id": "ddb1d0a1-4b11-4da3-9394-7526f0cede2c",
+    "name": "v1",
+    "version": "1.0",
+    "author": "a",
+    "description": "d",
+    "package_type": "plugin",
+    "downloads": 0,
+    "rating": 0.0,
+    "rating_count": 0,
+    "tags": [],
+    "published_at": "2026-06-14T08:19:48.463247+00:00",
+    "updated_at": "2026-06-14T08:19:48.463247+00:00",
+    "source_url": "marketplace_data\\local\\v1",
+    "readme": "",
+    "compatibility": ">=11.0.0",
+    "verified": true,
+    "manifest": {
+      "name": "v1",
+      "version": "1.0",
+      "author": "a",
+      "description": "d",
+      "plugin_type": "tool",
+      "dependencies": [],
+      "permissions": [],
+      "compatibility": ">=11.0.0",
+      "entry_point": "",
+      "tags": []
+    }
+  }
+]

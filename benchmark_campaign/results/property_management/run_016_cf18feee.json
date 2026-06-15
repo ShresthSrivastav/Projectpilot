@@ -1,0 +1,18 @@
+{
+  "id": "cf18feee-58fe-4a9d-a8a1-60c9eae65b5d",
+  "campaign_id": "3c03a9d0-d1ad-41dc-ac6e-dd521e88dbb9",
+  "domain": "property_management",
+  "iteration": 16,
+  "status": "completed",
+  "autonomy_score": 46.0,
+  "execution_time": 0.005005598068237305,
+  "cost": 0.0,
+  "tests_generated": 0.0,
+  "tests_passed": 1,
+  "healing_iterations": 3,
+  "deployment_success": false,
+  "benchmark_success": true,
+  "error": "",
+  "created_at": 1781170528.2016597,
+  "completed_at": 1781170528.2016597
+}

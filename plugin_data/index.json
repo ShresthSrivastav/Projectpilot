@@ -1,0 +1,31 @@
+[
+  {
+    "id": "343c1258-871e-4203-9511-f87cae265a1d",
+    "manifest": {
+      "name": "secure-plugin",
+      "version": "1.0.0",
+      "author": "",
+      "description": "",
+      "plugin_type": "tool",
+      "dependencies": [],
+      "permissions": [
+        "read:files"
+      ],
+      "compatibility": ">=11.0.0",
+      "entry_point": "C:\\Users\\shres\\AppData\\Local\\Temp\\tmpycit6jlo.py",
+      "tags": []
+    },
+    "source": "plugin_data\\installed\\tmpycit6jlo\\tmpycit6jlo.py",
+    "enabled": true,
+    "installed_at": "2026-06-14T08:19:48.779806+00:00",
+    "updated_at": "2026-06-14T08:19:48.779806+00:00",
+    "resource_limits": {
+      "cpu": 1,
+      "memory_mb": 256
+    },
+    "permissions_granted": [
+      "read:files"
+    ],
+    "checksum": "d11ec2f4390f3a1b2f17c15e544f89d8ffcb2089eb41c6e50105f7296c9faf07"
+  }
+]

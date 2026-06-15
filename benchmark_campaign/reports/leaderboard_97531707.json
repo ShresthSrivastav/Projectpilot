@@ -1,0 +1,132 @@
+{
+  "campaign_id": "97531707-52ac-4988-bf12-fd4b8cd057d1",
+  "generated_at": "2026-06-11T09:45:06.170078",
+  "overall_leader": {
+    "rank": 1,
+    "domain": "hotel_booking",
+    "iteration": 1,
+    "autonomy_score": 0.87,
+    "execution_time": 12.5,
+    "cost": 0.045,
+    "tests_passed": 78,
+    "benchmark_success": true,
+    "deployment_success": true
+  },
+  "best_autonomy_score": 0.87,
+  "domain_leaders": {
+    "hotel_booking": {
+      "rank": 1,
+      "domain": "hotel_booking",
+      "iteration": 1,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    },
+    "ecommerce": {
+      "rank": 3,
+      "domain": "ecommerce",
+      "iteration": 1,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    }
+  },
+  "top_10": [
+    {
+      "rank": 1,
+      "domain": "hotel_booking",
+      "iteration": 1,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    },
+    {
+      "rank": 2,
+      "domain": "hotel_booking",
+      "iteration": 2,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    },
+    {
+      "rank": 3,
+      "domain": "ecommerce",
+      "iteration": 1,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    },
+    {
+      "rank": 4,
+      "domain": "ecommerce",
+      "iteration": 2,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    }
+  ],
+  "all_entries_sorted": [
+    {
+      "rank": 1,
+      "domain": "hotel_booking",
+      "iteration": 1,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    },
+    {
+      "rank": 2,
+      "domain": "hotel_booking",
+      "iteration": 2,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    },
+    {
+      "rank": 3,
+      "domain": "ecommerce",
+      "iteration": 1,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    },
+    {
+      "rank": 4,
+      "domain": "ecommerce",
+      "iteration": 2,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    }
+  ]
+}

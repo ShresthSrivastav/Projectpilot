@@ -1,0 +1,18 @@
+{
+  "id": "7c1ed42d-ab50-4d4a-ae7f-583aefbada63",
+  "campaign_id": "8f590386-cb2c-46b5-832a-6e9fc19291fb",
+  "domain": "task_manager",
+  "iteration": 10,
+  "status": "completed",
+  "autonomy_score": 46.0,
+  "execution_time": 0.026000022888183594,
+  "cost": 0.0,
+  "tests_generated": 0.0,
+  "tests_passed": 1,
+  "healing_iterations": 3,
+  "deployment_success": false,
+  "benchmark_success": true,
+  "error": "",
+  "created_at": 1781170478.6455219,
+  "completed_at": 1781170478.6455219
+}
