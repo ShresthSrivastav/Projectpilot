@@ -334,8 +334,6 @@ class EvaluationScheduler:
                 continue
             last_run = meta.get("last_run_at")
             expected_interval = meta.get("interval_hours", 24.0 if sched_type == "nightly" else 168.0)
-            recovery_window = meta.get("recovery_window_hours", 6.0)
-
             is_due = False
             if last_run is None:
                 is_due = True

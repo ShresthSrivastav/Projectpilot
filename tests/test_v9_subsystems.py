@@ -3,7 +3,6 @@ import json
 import os
 import sys
 import tempfile
-import time
 from pathlib import Path
 
 import pytest
@@ -15,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 class TestTaskGraphEngine:
     def test_create_graph(self):
-        from services.graph_engine import TaskGraph, Task, TaskStatus
+        from services.graph_engine import TaskGraph, Task
         g = TaskGraph()
         t1 = Task(name="Task 1")
         t2 = Task(name="Task 2", deps=[t1.id])
@@ -53,7 +52,7 @@ class TestTaskGraphEngine:
         assert order.index(t2.id) < order.index(t3.id)
 
     def test_ready_tasks(self):
-        from services.graph_engine import TaskGraph, Task, TaskStatus
+        from services.graph_engine import TaskGraph, Task
         g = TaskGraph()
         t1 = Task(name="A")
         t2 = Task(name="B", deps=[t1.id])
@@ -80,7 +79,6 @@ class TestTaskGraphEngine:
 
     def test_checkpoint_save_load(self):
         from services.graph_engine import TaskGraph, Task
-        import tempfile, os
         g = TaskGraph()
         t1 = Task(name="Checkpoint A")
         t2 = Task(name="Checkpoint B", deps=[t1.id])
@@ -350,7 +348,7 @@ class TestAutonomousEngine:
         assert session.config.max_iterations == 3
 
     def test_get_session(self):
-        from services.autonomous_service import AutonomousEngine, AutonomousConfig
+        from services.autonomous_service import AutonomousEngine
         engine = AutonomousEngine()
         session = engine.start_session("job-456")
         found = engine.get_session(session.id)
@@ -369,7 +367,6 @@ class TestAutonomousEngine:
         from services.autonomous_service import AutonomousEngine, AutonomousConfig, IterationMetrics
         engine = AutonomousEngine()
         session = engine.start_session("job-history", AutonomousConfig(max_iterations=2))
-        from services.autonomous_service import IterationStage
         m1 = IterationMetrics(iteration=1, score=0.5, tokens_used=100, test_passed=5, test_total=10)
         m2 = IterationMetrics(iteration=2, score=0.8, tokens_used=200, test_passed=9, test_total=10)
         session.iterations = [m1, m2]

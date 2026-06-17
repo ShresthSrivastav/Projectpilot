@@ -1,6 +1,6 @@
 """Benchmark Dashboard — run, compare, and track autonomy scores."""
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import requests
 import streamlit as st

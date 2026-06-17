@@ -1,13 +1,10 @@
 """Log Analysis Engine — parse logs, classify errors, detect root causes, suggest fixes."""
 import json
 import logging
-import os
 import re
-from dataclasses import dataclass, field, asdict
-from datetime import datetime
+from dataclasses import dataclass, asdict
 from enum import Enum
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from services.llm_service import call_model
 
@@ -167,10 +164,7 @@ class LogAnalyzer:
         )
 
     def _generate_root_cause(self, category: ErrorCategory, match: re.Match, log_text: str) -> str:
-        context_lines = log_text.splitlines()
         line_idx = self._find_line_number(log_text, match.start())
-        context = "\n".join(context_lines[max(0, line_idx - 3):line_idx + 3]) if line_idx else match.group(0)
-
         causes = {
             ErrorCategory.SYNTAX_ERROR: f"Syntax error in source code at line ~{line_idx}: {match.group(0)}",
             ErrorCategory.DEPENDENCY_FAILURE: f"Missing or incompatible dependency: {match.group(0)}",

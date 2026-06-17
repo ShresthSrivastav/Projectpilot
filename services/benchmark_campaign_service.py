@@ -2,7 +2,6 @@
 
 import json
 import logging
-import os
 import threading
 import time
 import uuid
@@ -10,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -122,8 +121,7 @@ class BenchmarkCampaignService:
     def run_campaign(self, campaign_id: str) -> Dict[str, Any]:
         from database.memory_store import (
             mem_get_campaign, mem_update_campaign,
-            mem_save_campaign_run, mem_update_campaign_run,
-            mem_list_campaign_runs,
+            mem_save_campaign_run, mem_list_campaign_runs,
         )
         from services.benchmark_service import get_benchmark_service
 

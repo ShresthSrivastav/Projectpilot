@@ -7,10 +7,9 @@ import time
 import uuid
 from collections import defaultdict, deque
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -434,17 +433,17 @@ class PlanBuilder:
         test_id = self.add_stage("Test Generation", "TestGenAgent", deps=[code_id],
                                  description="Generate tests",
                                  job_id=job_id, model=model)
-        security_id = self.add_stage("Security Scan", "SecurityAgent", deps=[code_id],
-                                     priority=TaskPriority.NORMAL,
-                                     description="Scan for security issues",
-                                     job_id=job_id, model=model)
+        self.add_stage("Security Scan", "SecurityAgent", deps=[code_id],
+                       priority=TaskPriority.NORMAL,
+                       description="Scan for security issues",
+                       job_id=job_id, model=model)
         review_id = self.add_stage("Code Review", "ValidationAgent", deps=[code_id, test_id],
                                    description="Review code and tests",
                                    job_id=job_id)
-        debug_id = self.add_stage("Debug & Fix", "DebugAgent", deps=[test_id, review_id],
-                                  description="Fix test failures",
-                                  job_id=job_id, model=model)
-        docs_id = self.add_stage("Documentation", "DocsAgent", deps=[code_id, review_id],
+        self.add_stage("Debug & Fix", "DebugAgent", deps=[test_id, review_id],
+                       description="Fix test failures",
+                       job_id=job_id, model=model)
+        self.add_stage("Documentation", "DocsAgent", deps=[code_id, review_id],
                                  priority=TaskPriority.LOW,
                                  description="Generate docs",
                                  job_id=job_id, model=model)

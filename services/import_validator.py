@@ -1,8 +1,6 @@
 """Import Validator — verify every import resolves in generated projects."""
 
 import ast
-import importlib
-import importlib.util
 import logging
 import subprocess
 import sys
@@ -48,7 +46,6 @@ def validate(job_dir: Path) -> Dict:
             )
             if result.returncode != 0:
                 stderr = result.stderr.strip()
-                error_type = _classify_error(stderr)
                 errors.append(f"[{rel}] Import `{mod_name}`: {stderr[:300]}")
 
     return {

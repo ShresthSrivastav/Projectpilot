@@ -1,20 +1,16 @@
 """GitHub Service — OAuth, repo management, branches, commits, PRs, issues, sync."""
-import json
 import logging
 import os
-import re
-import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from github import Github, GithubIntegration
+from github import Github
 from github.Auth import Token as GhToken
 from git import Repo, GitCommandError
 
 from database.memory_store import (
     get_github_connection, save_github_connection, delete_github_connection,
-    get_github_repos, save_github_repo, delete_github_repo,
 )
 from services.token_crypto import encrypt_token, decrypt_token, mask_token
 

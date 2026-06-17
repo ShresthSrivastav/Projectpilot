@@ -6,22 +6,15 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from services.llm_service import call_model
-from services.graph_engine import TaskGraph, PlanBuilder, GraphExecutor
-from services.runtime_orchestrator import get_orchestrator, ExecutionEnvironment
-from services.container_manager import ContainerManager
-from services.process_manager import ProcessManager
-from services.log_analyzer import get_log_analyzer
+from services.graph_engine import PlanBuilder, GraphExecutor
+from services.runtime_orchestrator import get_orchestrator
 from services.self_healing_service import get_healing_engine
 from services.deployment_orchestrator import get_deployment_orchestrator
 from services.runtime_monitor import get_monitor
-from services.session_manager import get_session_manager
-from services.learning_engine import get_learning_engine
 
 logger = logging.getLogger(__name__)
 
@@ -110,11 +103,11 @@ class SDLCEngine:
 
             pipeline.stage = SDLCStage.TESTING
             self._save_checkpoint(pipeline)
-            tests_ok = self._run_stage_testing(pipeline)
+            self._run_stage_testing(pipeline)
 
             pipeline.stage = SDLCStage.BROWSER_VALIDATION
             self._save_checkpoint(pipeline)
-            bv_ok = self._run_stage_browser_validation(pipeline)
+            self._run_stage_browser_validation(pipeline)
 
             pipeline.stage = SDLCStage.DEPLOYMENT
             self._save_checkpoint(pipeline)

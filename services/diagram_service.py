@@ -14,7 +14,6 @@ def generate_component_diagram(blueprint: Dict[str, Any]) -> str:
 
     lines = ["graph TD", f'    A["User"] -->|"HTTP"| B["{tech_stack.get("backend","API")}"]']
 
-    backend_files = [f for f in files if "backend" in f.get("path", "")]
     frontend_files = [f for f in files if "frontend" in f.get("path", "")]
     database_files = [f for f in files if "database" in f.get("path", "")]
 

@@ -1,7 +1,6 @@
 """RAG Service — document upload, chunking, embedding, and retrieval."""
 import json
 import logging
-import os
 import re
 import uuid
 from pathlib import Path
@@ -166,7 +165,6 @@ def list_documents() -> List[Dict[str, Any]]:
 
 def query(query_text: str, top_k: int = 5, tags: Optional[List[str]] = None) -> List[Dict[str, Any]]:
     try:
-        where = {}
         if tags:
             tag_set = set(tags)
             r_chunks = _col("rag_chunks").get(include=["documents", "metadatas"])

@@ -8,8 +8,7 @@ Shows how any developer can create a plugin without modifying platform source co
 # type: validator
 
 import ast
-import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from sdk.plugin_sdk.base_plugin import BasePlugin, PluginManifest, PluginType
 

@@ -6,7 +6,6 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -228,7 +227,6 @@ class DebateSystem:
             return self._weighted_consensus(valid)
 
     def _majority_consensus(self, results: List[SolverResult]) -> Tuple[str, float]:
-        common_patterns = self._find_common_patterns(results)
         best = max(results, key=lambda r: r.confidence)
         return best.solution, best.confidence
 

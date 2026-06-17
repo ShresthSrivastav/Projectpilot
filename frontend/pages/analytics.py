@@ -1,7 +1,6 @@
 """Analytics Dashboard — charts, metrics, and project history."""
-import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import altair as alt
 import pandas as pd

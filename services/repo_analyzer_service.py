@@ -11,18 +11,15 @@ Workflow:
   8. Commit changes to a new branch
   9. Create pull request via GitHub API
 """
-import json
 import logging
 import os
 import re
 import subprocess
-import tempfile
-import time
 import uuid
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional
 
 from services.llm_service import call_model
 
@@ -138,7 +135,7 @@ def create_pr(
     body: str = "AI-driven improvements including fixes, tests, and documentation.",
     model: str = "local",
 ) -> Dict[str, Any]:
-    from services.github_service import create_branch, create_pull_request, get_file_content
+    from services.github_service import create_branch, create_pull_request
 
     path = Path(repo_path)
     if not path.exists():
@@ -148,10 +145,10 @@ def create_pr(
     changes = improve_repository(path, model=model)
 
     try:
-        branch_result = create_branch(github_token, repo_full_name, branch_name, base_branch)
+        create_branch(github_token, repo_full_name, branch_name, base_branch)
     except Exception as exc:
         logger.warning("Branch may already exist: %s", exc)
-        branch_result = {"ref": f"refs/heads/{branch_name}"}
+        pass
 
     _git_commit_and_push(path, branch_name, title)
 

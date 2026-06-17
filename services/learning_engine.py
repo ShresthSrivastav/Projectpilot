@@ -7,13 +7,11 @@ import time
 import uuid
 from collections import defaultdict
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from database.memory_store import (
     record_fix_pattern, get_fix_patterns,
-    save_reusable_component, get_reusable_components,
     save_project_insight, get_project_insights,
 )
 

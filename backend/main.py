@@ -16,8 +16,6 @@ import json
 import logging
 import os
 import re
-import subprocess
-import sys
 import threading
 import time
 import uuid
@@ -41,27 +39,19 @@ from database.memory_store import (
     init_db as init_memory_db,
     get_project_analytics, get_analytics_summary,
     save_github_repo,
-    create_chat_conversation, add_chat_message, get_chat_messages,
+    create_chat_conversation, get_chat_messages,
     list_chat_conversations, delete_chat_conversation,
-    update_chat_conversation_title,
     save_organization as mem_save_organization,
-    get_organization as mem_get_organization,
-    list_organizations_db,
     delete_organization as mem_del_organization,
     save_repository as mem_save_repository,
-    get_repositories as mem_get_repositories,
     delete_repository as mem_del_repository,
     save_repository_relationship,
     get_repository_relationships,
     save_cross_repo_change as mem_save_cross_repo_change,
     get_cross_repo_changes as mem_get_cross_repo_changes,
-    get_cross_repo_change as mem_get_cross_repo_change,
     save_impact_report as mem_save_impact_report,
     get_impact_reports as mem_get_impact_reports,
     get_impact_report_by_id as mem_get_impact_report,
-    delete_cross_repo_change as mem_del_cross_repo_change,
-    delete_impact_report as mem_del_impact_report,
-    delete_repository_relationship as mem_del_repo_rel,
     delete_repository_relationships_by_org,
     delete_impact_reports_by_org,
     delete_cross_repo_changes_by_org,
@@ -70,10 +60,8 @@ from database.memory_store import (
 from services.plugin_registry import get_plugin_registry
 from services.marketplace_service import get_marketplace_service
 from database.memory_store import (
-    mem_save_plugin, mem_get_plugin, mem_list_plugins, mem_delete_plugin,
-    mem_save_marketplace_package, mem_get_marketplace_package,
-    mem_search_marketplace_packages, mem_delete_marketplace_package,
-    mem_save_custom_agent, mem_list_custom_agents, mem_delete_custom_agent,
+    mem_save_plugin, mem_delete_plugin,
+    mem_save_marketplace_package, mem_save_custom_agent, mem_list_custom_agents, mem_delete_custom_agent,
     mem_save_custom_workflow, mem_list_custom_workflows, mem_delete_custom_workflow,
 )
 from database.memory_store import (
@@ -81,16 +69,15 @@ from database.memory_store import (
     mem_get_leaderboard, mem_get_leaderboard_categories,
     mem_get_version_comparisons, mem_list_regressions,
     mem_save_evaluation_run, mem_save_evaluation_report,
-    mem_list_learning_feedback, mem_list_learning_patterns,
+    mem_list_learning_patterns,
     mem_list_learning_recommendations, mem_get_learning_insights,
 )
 from services.chat_service import process_message as chat_process_message
 from services.chat_service import execute_confirmed_action as chat_execute_action
 from services.cleanup_service import start_cleanup_daemon
-from services.auth_service import get_api_key_role, lookup_role, require_admin, require_user, Role, ADMIN_KEY, USER_KEY
+from services.auth_service import lookup_role, Role
 from services.file_service import BASE_DIR, list_files
 from services.rate_limiter import RateLimitMiddleware
-from services.token_crypto import encrypt_token, decrypt_token, mask_token
 from services.llm_service import (
     get_available_models, get_available_providers, get_pull_status,
     is_available, ensure_models, call_model, is_cloud_available, CLOUD_MODEL,
@@ -2341,7 +2328,6 @@ async def browser_action(req: BrowserActionRequest):
     from services.browser_service import (
         navigate, click, fill, select_option, upload_file,
         screenshot, get_content, evaluate, wait_for_selector,
-        get_session,
     )
     try:
         if req.action == "navigate":
@@ -2542,11 +2528,7 @@ async def dashboard_memory():
 async def dashboard_websocket(websocket: WebSocket):
     from services.dashboard_service import subscribe, unsubscribe, get_dashboard_status
     await websocket.accept()
-    queue: List = []
-    import threading as _th
-
     def _on_event(event):
-        import json as _j
         try:
             import anyio
             anyio.from_thread.run(websocket.send_json, {
@@ -2621,7 +2603,7 @@ class GraphExecuteRequest(BaseModel):
 
 @app.post("/graph/build")
 async def graph_build(req: GraphBuildRequest):
-    from services.graph_engine import create_pipeline_graph, PlanBuilder
+    from services.graph_engine import PlanBuilder
     builder = PlanBuilder()
     graph = builder.build_standard_plan(req.prompt, req.job_id, req.model, req.stack)
     from database.memory_store import save_graph_session
@@ -2644,7 +2626,7 @@ async def graph_execute(req: GraphExecuteRequest):
     data = json.loads(saved["graph_data"])
     graph = TaskGraph(graph_id=req.graph_id)
     for tid, tdata in data.get("tasks", {}).items():
-        from services.graph_engine import Task, TaskStatus, TaskPriority
+        from services.graph_engine import Task, TaskPriority
         t = Task(
             id=tid, name=tdata.get("name", ""),
             deps=tdata.get("deps", []), dependents=tdata.get("dependents", []),
@@ -3923,7 +3905,7 @@ async def organization_create(req: OrgCreateRequest):
 
 @app.post("/organization/add-repo")
 async def organization_add_repo(req: OrgAddRepoRequest):
-    from services.org_graph_service import get_organization, OrganizationGraph
+    from services.org_graph_service import get_organization
     graph = get_organization(req.org_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -4641,7 +4623,6 @@ def _init_evaluation():
     """Register evaluation completion handler, recover state, check missed runs."""
     from services.evaluation_scheduler import get_evaluation_scheduler
     from services.evaluation_reporter import get_evaluation_reporter
-    from services.learning_feedback_service import get_learning_feedback_service
     scheduler = get_evaluation_scheduler()
 
     # Phase 4 — recover unfinished runs and check for missed scheduled runs

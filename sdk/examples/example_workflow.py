@@ -1,7 +1,7 @@
 """Example Custom Workflow — CI/CD Pipeline Workflow.
 Shows how any developer can create a custom DAG workflow without modifying platform source code.
 """
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from sdk.workflow_sdk.base_workflow import BaseWorkflow, WorkflowStep, WorkflowStatus
 

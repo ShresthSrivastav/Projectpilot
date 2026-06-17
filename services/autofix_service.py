@@ -11,15 +11,13 @@ On each iteration:
 
 Records fix patterns for future learning.
 """
-import json
 import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from database.chroma_db import update_job_status
-from database.memory_store import record_fix_pattern
 from services.file_service import BASE_DIR
 from services.llm_service import call_model
 from services.memory_service import record_successful_fix

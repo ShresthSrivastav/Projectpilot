@@ -4,7 +4,6 @@ from typing import Any, Dict, Optional
 
 import requests
 import streamlit as st
-from streamlit.components.v1 import html as _html
 
 BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 
@@ -357,8 +356,6 @@ def _show_github_section():
         return
 
     username = current_username
-    token_placeholder = "TODO"  # not stored in session for security; fetched from backend
-
     #  Tabs within GitHub 
     gh_tab1, gh_tab2, gh_tab3, gh_tab4, gh_tab5 = st.tabs([
         "Repositories", "Branches && Files", "Commits", "Pull Requests", "Issues",

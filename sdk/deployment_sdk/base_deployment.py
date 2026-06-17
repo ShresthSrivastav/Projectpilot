@@ -1,6 +1,5 @@
 """Base Deployment SDK — interface for creating custom deployment targets."""
 import logging
-import time
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, asdict

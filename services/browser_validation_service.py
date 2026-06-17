@@ -1,15 +1,12 @@
 """Advanced Browser Validation — Playwright workflows, journey simulation, screenshot validation, regression testing."""
-import json
 import logging
 import os
-import re
 import threading
 import time
 import uuid
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +119,7 @@ class BrowserValidationService:
                 try:
                     if step.action == "navigate":
                         url = step.url or effective_base
-                        nav_result = navigate(session.session_id, url, timeout=step.timeout)
+                        navigate(session.session_id, url, timeout=step.timeout)
                         step_result.success = True
                         step_result.page_url = url
 
@@ -148,7 +145,6 @@ class BrowserValidationService:
                             raise ValueError("selector and value required for select")
 
                     elif step.action == "screenshot":
-                        name = step.screenshot_name or f"step_{i:03d}"
                         screenshot_result = screenshot(session.session_id, full_page=True)
                         ss_path = screenshot_result.get("screenshot_path", "")
                         step_result.screenshot_path = ss_path
@@ -201,7 +197,7 @@ class BrowserValidationService:
             if session:
                 close_session(session.session_id)
 
-        except Exception as exc:
+        except Exception:
             overall_success = False
             if session:
                 try:

@@ -6,7 +6,6 @@ Supports:
 - Capturing stdout/stderr
 - Cleanup after execution
 """
-import json
 import logging
 import os
 import subprocess
@@ -53,7 +52,6 @@ def run_python(
     memory: str = SANDBOX_MEMORY,
     cpus: str = SANDBOX_CPU,
 ) -> Dict[str, Any]:
-    t0 = time.monotonic()
     if _check_docker():
         return _run_docker(code, requirements, timeout, memory, cpus)
     return _run_subprocess(code, requirements, timeout)

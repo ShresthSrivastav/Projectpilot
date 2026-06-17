@@ -7,13 +7,10 @@ Supports:
 """
 import json
 import logging
-import os
-import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from services.file_service import BASE_DIR
-from services.llm_service import call_model
 
 logger = logging.getLogger(__name__)
 

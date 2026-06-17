@@ -1,7 +1,6 @@
 """Example Deployment Target — Kubernetes Deployment.
 Shows how any developer can create a custom deployment target without modifying platform source code.
 """
-from typing import List
 
 from sdk.deployment_sdk.base_deployment import BaseDeploymentTarget, DeploymentConfig, DeploymentResult
 

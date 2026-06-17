@@ -2,18 +2,15 @@
 import json
 import logging
 import os
-import shutil
 import subprocess
 import threading
 import time
 import uuid
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from services.llm_service import call_model
 
 logger = logging.getLogger(__name__)
 

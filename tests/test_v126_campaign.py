@@ -3,7 +3,6 @@
 Covers campaign creation, execution, persistence, reports,
 API routes, resume, and integration with Benchmark Suite.
 """
-import json
 import os
 import sys
 import time

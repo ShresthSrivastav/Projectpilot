@@ -211,8 +211,6 @@ def _request_fixes(model: str, failure_context: List[Dict], project_files: Dict[
     context_json = json.dumps(failure_context, indent=2)
     # Build file listing (truncated if too large)
     file_list = "\n".join(f"  {k}  ({len(v)} chars)" for k, v in sorted(project_files.items()))
-    total_chars = sum(len(v) for v in project_files.values())
-
     # Send truncated files (first 80k chars)
     files_section = ""
     accumulated = 0
@@ -411,7 +409,6 @@ def _build_report_md(job_id: str, data: Dict) -> str:
             if changes:
                 lines += ["", "**Changes applied:**", ""]
                 for c in changes:
-                    status_icon = {True: " [" + "](" + ")", False: " [ ]"}.get(True, "")
                     status = c.get("status", "?")
                     if status == "modified":
                         icon = ""

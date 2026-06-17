@@ -8,12 +8,11 @@ Provides high-level API for storing and retrieving:
 """
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from database.memory_store import (
     get_coding_preferences, set_coding_preference,
-    get_reusable_components, save_reusable_component,
-    get_fix_patterns, record_fix_pattern,
+    get_reusable_components, get_fix_patterns, record_fix_pattern,
     get_project_insights, save_project_insight,
 )
 

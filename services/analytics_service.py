@@ -3,9 +3,9 @@ import json
 import logging
 import time
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-from database.memory_store import get_project_analytics, get_analytics_summary, record_project_analytics
+from database.memory_store import get_project_analytics, get_analytics_summary
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class AgentTimer:
         self.start_time = time.monotonic()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, _exc_type, _exc_val, _exc_tb):
         self.elapsed_ms = int((time.monotonic() - self.start_time) * 1000)
         duration = self.elapsed_ms
         record = {

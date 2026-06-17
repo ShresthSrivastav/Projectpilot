@@ -1,13 +1,9 @@
 """v11.1 Plugin & Agent SDK Ecosystem — 85 tests covering SDK, registry, marketplace, APIs, DB, security."""
-import json
 import os
 import sys
 import tempfile
-import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -21,16 +17,15 @@ from database.memory_store import (
     mem_search_marketplace_packages, mem_delete_marketplace_package,
     mem_save_custom_agent, mem_list_custom_agents, mem_delete_custom_agent,
     mem_save_custom_workflow, mem_list_custom_workflows, mem_delete_custom_workflow,
-    MEMORY_DIR, MEMORY_DB,
 )
 from services.plugin_registry import PluginRegistry, PluginEntry
-from services.marketplace_service import MarketplaceService, MarketplacePackage
+from services.marketplace_service import MarketplaceService
 from sdk.plugin_sdk.base_plugin import BasePlugin, PluginManifest, PluginType
 from sdk.agent_sdk.base_agent import BaseAgent, AgentCapability
-from sdk.workflow_sdk.base_workflow import BaseWorkflow, WorkflowStep, WorkflowStatus
-from sdk.benchmark_sdk.base_benchmark import BaseBenchmarkPack, BenchmarkCriteria, BenchmarkTest
-from sdk.deployment_sdk.base_deployment import BaseDeploymentTarget, DeploymentConfig, DeploymentResult
-from sdk.validation_sdk.base_validator import BaseValidator, ValidationRule, ValidationReport
+from sdk.workflow_sdk.base_workflow import WorkflowStep, WorkflowStatus
+from sdk.benchmark_sdk.base_benchmark import BenchmarkCriteria, BenchmarkTest
+from sdk.deployment_sdk.base_deployment import DeploymentConfig, DeploymentResult
+from sdk.validation_sdk.base_validator import ValidationRule, ValidationReport
 from sdk.examples.example_plugin import CodeQualityValidator
 from sdk.examples.example_agent import DocGenAgent
 from sdk.examples.example_workflow import CICDPipelineWorkflow
@@ -629,7 +624,7 @@ class TestDatabaseCRUD:
             "id": vid, "name": "v1", "version": "1.0",
             "plugin_type": "validator", "source": "/tmp/v.py",
         })
-        tools = mem_list_plugins(plugin_type="tool")
+        mem_list_plugins(plugin_type="tool")
         validators = mem_list_plugins(plugin_type="validator")
         assert any(p["name"] == "v1" for p in validators)
 
@@ -803,7 +798,6 @@ class TestMarketplaceAPI:
             "source_path": path, "package_type": "plugin",
         })
         assert r.status_code == 200
-        pkg_id = r.json()["id"]
         r2 = client.get("/plugins/marketplace", params={"query": "api-test-pkg"})
         assert r2.status_code == 200
         assert len(r2.json()["packages"]) >= 1

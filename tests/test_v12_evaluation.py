@@ -1,9 +1,7 @@
 """v12.0 Continuous Autonomous Evaluation — tests for Phase 1: API fixes, scheduler wiring, report persistence."""
-import json
 import os
 import sys
-from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,8 +9,7 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from database.memory_store import (
-    init_db, mem_save_evaluation_run, mem_list_evaluation_runs,
-    mem_save_evaluation_report, mem_list_evaluation_reports,
+    init_db,
 )
 
 
@@ -283,7 +280,7 @@ class TestSchedulerUnit:
         assert s1 is s2
 
     def test_trigger_run_defaults(self):
-        from services.evaluation_scheduler import EvaluationScheduler, get_evaluation_scheduler
+        from services.evaluation_scheduler import get_evaluation_scheduler
         scheduler = get_evaluation_scheduler()
         with patch("services.benchmark_service.BenchmarkService") as mock_bsvc:
             mock_bsvc.return_value = MockBenchmarkService()
@@ -696,7 +693,7 @@ class TestSQLitePersistence:
 
     @patch("services.benchmark_service.BenchmarkService")
     def test_run_persisted_to_db(self, mock_bsvc, client):
-        from database.memory_store import mem_list_evaluation_runs, mem_count_evaluation_runs
+        from database.memory_store import mem_count_evaluation_runs
         mock_bsvc.return_value = MockBenchmarkService()
         before = mem_count_evaluation_runs()
         client.post("/evaluation/run", json={"trigger_type": "nightly"})
@@ -907,12 +904,11 @@ class TestMissedRunRecovery:
         scheduler = get_evaluation_scheduler()
         result = scheduler.check_missed_runs()
         # Should not trigger recovery since last_run is recent
-        nightly_results = [r for r in result if r["schedule"] == "nightly"]
         # It may trigger if the count check passes, but let's just verify it doesn't error
         assert isinstance(result, list)
 
     def test_disabled_schedule_not_checked(self):
-        from database.memory_store import mem_save_scheduler_metadata, mem_get_scheduler_metadata
+        from database.memory_store import mem_save_scheduler_metadata
         from services.evaluation_scheduler import get_evaluation_scheduler
         import time
         old_ts = time.time() - 48 * 3600
@@ -1036,7 +1032,7 @@ class TestParallelExecution:
 
     @patch("services.benchmark_service.BenchmarkService")
     def test_sequential_vs_parallel_same_result(self, mock_bsvc):
-        from services.evaluation_scheduler import get_evaluation_scheduler, EvaluationRun
+        from services.evaluation_scheduler import get_evaluation_scheduler
         mock_bsvc.return_value = MockBenchmarkService()
         scheduler = get_evaluation_scheduler()
 
@@ -1086,7 +1082,6 @@ class TestPersistenceIntegrity:
     def test_evaluation_run_crud_roundtrip(self):
         from database.memory_store import (
             mem_save_evaluation_run, mem_get_evaluation_run,
-            mem_list_evaluation_runs,
         )
         run_data = {
             "id": "integrity-test-1",

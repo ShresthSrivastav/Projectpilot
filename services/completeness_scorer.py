@@ -8,13 +8,12 @@ Each dimension scores 0-100.  Overall score is weighted average:
   Docs          (10%)
   Deployment    (10%)
 """
-import json
 import logging
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from services.file_service import BASE_DIR, write_file
 from services.import_validator import validate as validate_imports

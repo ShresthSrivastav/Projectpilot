@@ -14,7 +14,6 @@ Returns a summary dict that gets logged to ChromaDB and stored in the job.
 """
 
 import logging
-import os
 import py_compile
 import subprocess
 import time

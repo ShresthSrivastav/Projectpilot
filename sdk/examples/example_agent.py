@@ -1,7 +1,7 @@
 """Example Custom Agent — Documentation Generator Agent.
 Shows how any developer can create a custom agent without modifying platform source code.
 """
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from sdk.agent_sdk.base_agent import BaseAgent, AgentCapability, AgentLifecycleHook
 

@@ -13,7 +13,7 @@ import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from database.chroma_db import log_to_db
 from services.file_service import create_job_directory, write_file

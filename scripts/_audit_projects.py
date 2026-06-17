@@ -1,4 +1,4 @@
-import ast, pathlib, sys
+import ast, pathlib
 
 base = pathlib.Path("generated_projects")
 errors = []

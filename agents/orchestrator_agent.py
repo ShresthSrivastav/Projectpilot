@@ -7,13 +7,10 @@ and test-result collection so backend/main.py stays thin.
 import json
 import logging
 import threading
-import time
 from typing import Any, Dict, List, Optional
 
 from database.chroma_db import log_to_db, save_generated_project, update_job_status
 from services.file_service import BASE_DIR
-from services.llm_service import call_model
-from services.test_service import run_pytest, run_syntax_check
 from services.zip_service import create_zip
 from services.healing_acceptance_gates import heal_gates
 
@@ -289,8 +286,6 @@ def test_health(client):
                 if not (job_dir / critical_file).resolve().exists():
                     missing_critical.append(critical_file)
             # Check that at least one test file exists
-            test_dir = job_dir / "tests"
-            has_tests = test_dir.exists() and any(test_dir.rglob("test_*.py"))
             if missing_critical:
                 error_msg = f"Critical files missing after code generation: {missing_critical}"
                 self._log("CodeAgent", error_msg, level="CRITICAL")
@@ -311,7 +306,7 @@ def test_health(client):
             # ── 5. Debug + Test ──────────────────────────────────────────────
             self._check_cancel()
             self._step("DebugAgent", 70)
-            debug_result = debug_agent.run(
+            debug_agent.run(
                 self.generated_files, self.job_id,
                 model=self.model, blueprint=blueprint,
             )

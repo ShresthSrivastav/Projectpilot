@@ -132,7 +132,6 @@ def _parent_env() -> dict:
 
 
 def _kill(proc):
-    import signal
     try:
         proc.terminate()
         proc.wait(timeout=5)

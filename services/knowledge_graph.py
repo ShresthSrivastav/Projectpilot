@@ -1,15 +1,12 @@
 """Repository Knowledge Graph — file/API/dependency relationships, impact analysis, graph queries."""
 import ast
-import json
 import logging
-import os
 import re
 import threading
-import time
 from collections import defaultdict
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
@@ -151,28 +148,6 @@ class KnowledgeGraph:
                             node.exports.append(f"route:{a.s}")
                         elif isinstance(a, ast.Constant) and isinstance(a.value, str):
                             node.exports.append(f"route:{a.value}")
-
-    def _extract_api_route(self, func: ast.FunctionDef, decorators: List[str], node: FileNode) -> None:
-        for dec in func.decorator_list:
-            method = ""
-            path = ""
-            if isinstance(dec, ast.Call):
-                if isinstance(dec.func, ast.Attribute):
-                    method = dec.func.attr
-                elif isinstance(dec.func, ast.Name):
-                    method = dec.func.id
-                for a in dec.args:
-                    if isinstance(a, ast.Str):
-                        path = a.s
-                    elif isinstance(a, ast.Constant) and isinstance(a.value, str):
-                        path = a.value
-                if method in ("get", "post", "put", "delete", "patch", "route"):
-                    node.apis.append({
-                        "method": method.upper(),
-                        "path": path,
-                        "handler": func.name,
-                        "line": func.lineno,
-                    })
 
     def _parse_js_ts_file(self, content: str, node: FileNode) -> None:
         node.tech_stack.append("javascript")

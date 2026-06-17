@@ -4,7 +4,6 @@ Ingests evaluation results, benchmark scores, regression reports, deployment
 outcomes, and healing statistics. Extracts patterns, generates insights, and
 produces recommendations to improve future autonomous behavior.
 """
-import json
 import logging
 import uuid
 from dataclasses import dataclass, field, asdict
@@ -222,7 +221,6 @@ class LearningFeedbackService:
     def _extract_patterns_from_run(self, run: Dict) -> List[Dict]:
         """Extract learning patterns from an evaluation run."""
         patterns = []
-        now = datetime.now(timezone.utc).timestamp()
         run_id = run.get("id", "")
         run_dict = run if isinstance(run, dict) else run.to_dict() if hasattr(run, "to_dict") else {}
 
@@ -399,9 +397,7 @@ class LearningFeedbackService:
         """Generate recommendations from stored patterns and feedback."""
         from database.memory_store import (
             mem_list_learning_patterns, mem_save_learning_recommendation,
-            mem_list_learning_recommendations,
         )
-        now = datetime.now(timezone.utc).timestamp()
         generated = []
 
         patterns = mem_list_learning_patterns(min_confidence=0.3, limit=200)

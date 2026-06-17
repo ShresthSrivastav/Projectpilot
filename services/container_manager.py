@@ -1,14 +1,10 @@
 """Container Manager — Docker container lifecycle, resource limits, monitoring."""
-import json
 import logging
-import os
 import subprocess
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
-from datetime import datetime
-from pathlib import Path
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)

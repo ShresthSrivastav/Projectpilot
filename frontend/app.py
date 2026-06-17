@@ -13,7 +13,6 @@ from typing import Dict, List, Optional
 
 import requests
 import streamlit as st
-from streamlit.components.v1 import html as _html
 
 BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 POLL_SEC = 2

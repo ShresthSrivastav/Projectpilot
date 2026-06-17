@@ -1,7 +1,6 @@
 """Regression Detector — detect regressions in autonomy scores, success rate, costs, runtime, deployment, and benchmarks."""
 import json
 import logging
-import time
 import uuid
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone

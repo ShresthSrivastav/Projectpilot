@@ -11,7 +11,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
@@ -290,8 +290,6 @@ class OrganizationGraph:
 
     def _parse_entities(self, content: str, repo_name: str, rel_path: str, suffix: str) -> List[OrgEntity]:
         entities = []
-        lines = content.split("\n")
-
         # Parse imports
         imports = []
         if suffix == ".py":

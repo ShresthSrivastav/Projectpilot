@@ -1,17 +1,15 @@
 """GitHub Agent Service — AI-powered repo analysis, PR review, bug fixing, improvements."""
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from services.github_service import (
     list_files as gh_list_files,
     get_file_content, list_issues, list_pull_requests,
     get_pr_files, create_issue, add_issue_comment,
     get_repo_info, list_branches, list_commits,
-    local_read_file, local_write_file, local_commit_and_push,
-    clone_repo, get_local_repo_status,
 )
-from services.llm_service import call_model, clean_code_response
+from services.llm_service import call_model
 
 logger = logging.getLogger(__name__)
 

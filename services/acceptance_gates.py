@@ -26,7 +26,6 @@ only if ALL 20 gates pass.  Otherwise status is FAILED with a detailed report.
   20. Test Validation
 """
 
-import json
 import logging
 import os
 import re
@@ -36,9 +35,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-import py_compile
 
-from database.chroma_db import update_job_status, log_to_db
+from database.chroma_db import log_to_db
 from services.file_service import BASE_DIR, write_file
 from services.import_validator import validate as validate_imports
 from services.packaging_validator import validate as validate_packaging
@@ -333,7 +331,7 @@ def _run_static_analysis_gate(job_dir: Path) -> Dict:
     for py_file in sorted(job_dir.rglob("*.py")):
         files_checked += 1
         try:
-            tree = compile(py_file.read_text(encoding="utf-8", errors="replace"), str(py_file), "exec")
+            compile(py_file.read_text(encoding="utf-8", errors="replace"), str(py_file), "exec")
         except SyntaxError as exc:
             errors.append(f"{py_file.relative_to(job_dir)}: syntax error in static analysis: {exc}")
             continue
@@ -399,7 +397,6 @@ def _run_frontend_gate(job_dir: Path) -> Dict:
 
 def _run_api_gate(job_dir: Path) -> Dict:
     endpoints = []
-    issues = []
     for py_file in sorted(job_dir.rglob("*.py")):
         text = py_file.read_text(encoding="utf-8", errors="replace")
         rel = str(py_file.relative_to(job_dir))
@@ -415,7 +412,6 @@ def _run_auth_gate(job_dir: Path) -> Dict:
     protected_routes = 0
     for py_file in sorted(job_dir.rglob("*.py")):
         text = py_file.read_text(encoding="utf-8", errors="replace")
-        rel = str(py_file.relative_to(job_dir))
         for m in re.finditer(r'@(?:app|router)\.(?:get|post|put|delete|patch)\s*\(', text):
             start = max(0, m.start() - 200)
             prefix = text[start:m.start()]
@@ -432,7 +428,6 @@ def _run_authorization_gate(job_dir: Path) -> Dict:
     issues = []
     for py_file in sorted(job_dir.rglob("*.py")):
         text = py_file.read_text(encoding="utf-8", errors="replace")
-        rel = str(py_file.relative_to(job_dir))
         if "role" in text.lower() or "permission" in text.lower() or "admin" in text.lower():
             if "Depends" not in text:
                 pass
@@ -444,7 +439,6 @@ def _run_crud_gate(job_dir: Path) -> Dict:
     operations = {"create": 0, "read": 0, "update": 0, "delete": 0}
     for py_file in sorted(job_dir.rglob("*.py")):
         text = py_file.read_text(encoding="utf-8", errors="replace")
-        rel = str(py_file.relative_to(job_dir))
         for model_name in re.findall(r"class (\w+)\(.*Base\)", text):
             models.add(model_name)
         for op in operations:
@@ -480,7 +474,6 @@ def _run_performance_gate(job_dir: Path) -> Dict:
 def _run_documentation_gate(job_dir: Path) -> Dict:
     issues = []
     docs_found = list(job_dir.rglob("*.md")) + list(job_dir.rglob("docs/*"))
-    py_files = list(job_dir.rglob("*.py"))
     if not docs_found:
         return {"passed": True, "details": {"note": "No documentation found — skipping", "skipped": True}}
     endpoint_docs = set()

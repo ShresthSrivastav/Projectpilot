@@ -3,11 +3,9 @@
 Covers feedback ingestion, pattern extraction, recommendation generation,
 insight aggregation, API routes, and integration with evaluation completion.
 """
-import json
 import os
 import sys
-from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -726,9 +724,7 @@ class TestIntegration:
         """Verify database CRUD operations work for all 3 learning tables."""
         from database.memory_store import (
             mem_save_learning_feedback, mem_list_learning_feedback,
-            mem_save_learning_pattern, mem_list_learning_patterns,
-            mem_save_learning_recommendation, mem_list_learning_recommendations,
-            mem_get_learning_pattern, mem_get_learning_recommendation,
+            mem_save_learning_pattern, mem_save_learning_recommendation, mem_get_learning_pattern, mem_get_learning_recommendation,
         )
         import time
         now = time.time()

@@ -3,7 +3,7 @@
 import json
 import logging
 import re
-from typing import Any, Dict, List
+from typing import Dict, List
 
 from database import chroma_db
 from database import memory_store
@@ -76,7 +76,7 @@ def _get_project_context(job) -> str:
     if td:
         lines.append(f"Test details: {td[:500]}")
     try:
-        changelog = memory_store.read_file if hasattr(memory_store, 'read_file') else None
+        memory_store.read_file if hasattr(memory_store, 'read_file') else None
     except Exception:
         pass
     try:
@@ -88,7 +88,7 @@ def _get_project_context(job) -> str:
         except Exception:
             pass
         try:
-            fls = rf(jid, "")
+            rf(jid, "")
         except Exception:
             pass
     except Exception:

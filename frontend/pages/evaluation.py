@@ -1,7 +1,7 @@
 """Evaluation Center — history, trends, regressions, leaderboards, and version comparisons."""
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import requests
 import streamlit as st

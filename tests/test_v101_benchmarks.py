@@ -1,8 +1,6 @@
 """Tests for v10.1 Benchmark Suite — autonomy score computation, leaderboard, trends, comparisons."""
 import json
-import os
 import sys
-import tempfile
 import time
 from pathlib import Path
 
@@ -168,7 +166,7 @@ class TestBenchmarkService:
         assert isinstance(lb, list)
 
     def test_leaderboard_sorted(self):
-        from services.benchmark_service import get_benchmark_service, BenchmarkResult, BenchmarkMetrics, BenchmarkStatus
+        from services.benchmark_service import get_benchmark_service, BenchmarkResult, BenchmarkStatus
         svc = get_benchmark_service()
         r1 = BenchmarkResult(domain="hotel_booking", run_id="aaaa0001")
         r1.autonomy_score = 50.0
@@ -183,7 +181,7 @@ class TestBenchmarkService:
         assert lb[0]["autonomy_score"] >= lb[1]["autonomy_score"]
 
     def test_compare_runs(self):
-        from services.benchmark_service import get_benchmark_service, BenchmarkResult, BenchmarkMetrics, BenchmarkStatus
+        from services.benchmark_service import get_benchmark_service, BenchmarkResult, BenchmarkStatus
         svc = get_benchmark_service()
         r1 = BenchmarkResult(domain="hotel_booking", run_id="cmp00001")
         r1.metrics.completion_rate = 50.0
