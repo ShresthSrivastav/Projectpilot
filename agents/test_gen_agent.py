@@ -8,7 +8,7 @@ agent feeds it the test files it needs.
 """
 import logging
 import time
-from typing import Any, Dict, List
+from typing import Any
 
 from database.chroma_db import log_to_db
 from services.file_service import write_file
@@ -30,12 +30,12 @@ _SYS = (
 
 
 def run(
-    requirements: Dict[str, Any],
-    blueprint: Dict[str, Any],
-    generated_files: List[str],
+    requirements: dict[str, Any],
+    blueprint: dict[str, Any],
+    generated_files: list[str],
     job_id: str,
     model: str = None,
-) -> List[str]:
+) -> list[str]:
     log_to_db(job_id, "TestGenAgent", "Generating validation test suite…")
 
     routes = blueprint.get("routes", [])
@@ -59,7 +59,7 @@ CRITICAL REQUIREMENT:
 - Mock database calls with pytest fixtures using unittest.mock
 - Every test function must start with test_"""
 
-    new_files: List[str] = []
+    new_files: list[str] = []
 
     t0 = time.monotonic()
     try:
@@ -84,5 +84,5 @@ CRITICAL REQUIREMENT:
     return new_files
 
 
-def _minimal_smoke_test(routes: List[Dict]) -> str:
+def _minimal_smoke_test(routes: list[dict]) -> str:
     return ""

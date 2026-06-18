@@ -1,6 +1,5 @@
 """Analytics Dashboard — charts, metrics, and project history."""
 import os
-from typing import Dict, List, Optional
 
 import altair as alt
 import pandas as pd
@@ -10,7 +9,7 @@ import streamlit as st
 BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 
 
-def _get(path: str, timeout: int = 10) -> Optional[Dict]:
+def _get(path: str, timeout: int = 10) -> dict | None:
     try:
         r = requests.get(f"{BACKEND}{path}", timeout=timeout)
         r.raise_for_status()
@@ -24,7 +23,7 @@ def show_analytics_tab():
 
     overview = _get("/analytics/overview") or {}
     projects_data = _get("/analytics/projects")
-    projects: List[Dict] = (projects_data or {}).get("projects", [])
+    projects: list[dict] = (projects_data or {}).get("projects", [])
 
     if not projects:
         st.info("No analytics data yet. Generate a project to see stats here.")

@@ -2,7 +2,6 @@
 
 import logging
 from pathlib import Path
-from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +14,7 @@ EXPECTED_DIRS = [
 ]
 
 
-def validate(job_dir: Path) -> Dict:
+def validate(job_dir: Path) -> dict:
     """Check that all expected files and directories exist.
 
     Also verifies that any file referenced in Dockerfile, start.sh,
@@ -24,7 +23,7 @@ def validate(job_dir: Path) -> Dict:
     Returns:
         {"passed": bool, "missing": [...], "files_checked": int}
     """
-    missing: List[str] = []
+    missing: list[str] = []
 
     for f in EXPECTED_FILES:
         if not (job_dir / f).exists():
@@ -62,7 +61,7 @@ def validate(job_dir: Path) -> Dict:
     }
 
 
-def _extract_file_refs(line: str) -> List[str]:
+def _extract_file_refs(line: str) -> list[str]:
     import re
     refs = []
     for m in re.finditer(r'(?:COPY|ADD)\s+(\S+)', line, re.IGNORECASE):

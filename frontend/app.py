@@ -9,7 +9,6 @@ New in v4:
 """
 import os
 import time
-from typing import Dict, List, Optional
 
 import requests
 import streamlit as st
@@ -127,7 +126,7 @@ PROJECT_TYPE_DEFAULTS = {
 }
 
 
-def _sync_project_defaults(project_type: str) -> Dict[str, str]:
+def _sync_project_defaults(project_type: str) -> dict[str, str]:
     current = dict(st.session_state.wizard_data)
     defaults = PROJECT_TYPE_DEFAULTS.get(project_type, PROJECT_TYPE_DEFAULTS["Web API (backend only)"])
     current["project_type"] = project_type
@@ -144,7 +143,7 @@ def _sync_project_defaults(project_type: str) -> Dict[str, str]:
 
 
 #  API helpers 
-def _get(path: str, timeout: int = 8) -> Optional[Dict]:
+def _get(path: str, timeout: int = 8) -> dict | None:
     try:
         r = requests.get(f"{BACKEND}{path}", timeout=timeout)
         r.raise_for_status()
@@ -153,7 +152,7 @@ def _get(path: str, timeout: int = 8) -> Optional[Dict]:
         return None
 
 
-def _post(path: str, payload: Dict, timeout: int = 60) -> Optional[Dict]:
+def _post(path: str, payload: dict, timeout: int = 60) -> dict | None:
     try:
         r = requests.post(f"{BACKEND}{path}", json=payload, timeout=timeout)
         r.raise_for_status()
@@ -171,7 +170,7 @@ def _post(path: str, payload: Dict, timeout: int = 60) -> Optional[Dict]:
         return None
 
 
-def _download(job_id: str) -> Optional[bytes]:
+def _download(job_id: str) -> bytes | None:
     try:
         r = requests.get(f"{BACKEND}/download/{job_id}", timeout=30)
         r.raise_for_status()
@@ -681,7 +680,7 @@ with tab_gen:
             pct     = int(data.get("progress_pct", 0))
             agent   = data.get("current_agent", "")
             err     = data.get("error_message", "")
-            logs: List[Dict] = data.get("logs", [])
+            logs: list[dict] = data.get("logs", [])
 
             badge_html = f"<span class='status-badge-{status}'>{status.upper()}</span>"
             st.markdown(
@@ -1028,7 +1027,7 @@ with tab_hist:
         st.rerun()
 
     hist = _get("/jobs")
-    jobs: List[Dict] = (hist or {}).get("jobs", [])
+    jobs: list[dict] = (hist or {}).get("jobs", [])
 
     if not jobs:
         st.info("No jobs found yet. Generate your first project!")

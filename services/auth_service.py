@@ -3,7 +3,6 @@ import logging
 import os
 import secrets
 from enum import Enum
-from typing import Optional
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -45,7 +44,7 @@ _init_keys()
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
-def get_api_key_role(credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme)) -> Role:
+def get_api_key_role(credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme)) -> Role:
     if credentials is None:
         return Role.NONE
     return _API_KEYS.get(credentials.credentials, Role.NONE)

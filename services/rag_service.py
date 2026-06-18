@@ -4,7 +4,7 @@ import logging
 import re
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import chromadb
 from chromadb.config import Settings
@@ -15,7 +15,7 @@ CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 MAX_CHUNKS_PER_DOC = 200
 
-_rag_client: Optional[chromadb.EphemeralClient] = None
+_rag_client: chromadb.EphemeralClient | None = None
 
 
 def _get_client() -> chromadb.EphemeralClient:
@@ -35,11 +35,11 @@ def _col(name: str):
     )
 
 
-def _embed(n: int = 1) -> List[List[float]]:
+def _embed(n: int = 1) -> list[list[float]]:
     return [[0.0]] * n
 
 
-def _chunk_text(text: str, source: str) -> List[Dict[str, Any]]:
+def _chunk_text(text: str, source: str) -> list[dict[str, Any]]:
     paragraphs = re.split(r"\n\s*\n", text)
     chunks = []
     buffer = ""
@@ -100,9 +100,9 @@ def _extract_text_from_file(file_path: Path) -> str:
 
 def upload_document(
     file_path: Path,
-    tags: Optional[List[str]] = None,
-    doc_id: Optional[str] = None,
-) -> Dict[str, Any]:
+    tags: list[str] | None = None,
+    doc_id: str | None = None,
+) -> dict[str, Any]:
     doc_id = doc_id or str(uuid.uuid4())
     text = _extract_text_from_file(file_path)
     chunks = _chunk_text(text, file_path.name)
@@ -144,7 +144,7 @@ def upload_document(
     return {"doc_id": doc_id, "status": "ok", "chunks": len(chunks), "source": file_path.name}
 
 
-def list_documents() -> List[Dict[str, Any]]:
+def list_documents() -> list[dict[str, Any]]:
     try:
         r = _col("rag_docs").get(include=["documents", "metadatas"])
         docs = []
@@ -163,7 +163,7 @@ def list_documents() -> List[Dict[str, Any]]:
         return []
 
 
-def query(query_text: str, top_k: int = 5, tags: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+def query(query_text: str, top_k: int = 5, tags: list[str] | None = None) -> list[dict[str, Any]]:
     try:
         if tags:
             tag_set = set(tags)

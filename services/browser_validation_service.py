@@ -4,9 +4,9 @@ import os
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -16,13 +16,13 @@ VALIDATION_DIR = Path(os.getenv("VALIDATION_OUTPUT_DIR", "./validation_artifacts
 @dataclass
 class ValidationStep:
     action: str
-    selector: Optional[str] = None
-    value: Optional[str] = None
-    url: Optional[str] = None
-    script: Optional[str] = None
-    screenshot_name: Optional[str] = None
-    expected_text: Optional[str] = None
-    expected_url: Optional[str] = None
+    selector: str | None = None
+    value: str | None = None
+    url: str | None = None
+    script: str | None = None
+    screenshot_name: str | None = None
+    expected_text: str | None = None
+    expected_url: str | None = None
     wait_time: float = 0.0
     timeout: int = 10000
     description: str = ""
@@ -33,8 +33,8 @@ class UserJourney:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
     base_url: str = ""
-    steps: List[ValidationStep] = field(default_factory=list)
-    tags: List[str] = field(default_factory=list)
+    steps: list[ValidationStep] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
     created_at: float = field(default_factory=time.time)
 
 
@@ -43,36 +43,36 @@ class ValidationResult:
     step_index: int
     success: bool
     action: str
-    selector: Optional[str] = None
-    error: Optional[str] = None
-    screenshot_path: Optional[str] = None
-    page_url: Optional[str] = None
+    selector: str | None = None
+    error: str | None = None
+    screenshot_path: str | None = None
+    page_url: str | None = None
     duration_ms: float = 0.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class RegressionTest:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
-    journeys: List[str] = field(default_factory=list)
-    screenshot_comparisons: List[Dict] = field(default_factory=list)
+    journeys: list[str] = field(default_factory=list)
+    screenshot_comparisons: list[dict] = field(default_factory=list)
     created_at: float = field(default_factory=time.time)
-    last_run: Optional[float] = None
+    last_run: float | None = None
     last_status: str = "never_run"
-    baseline_dir: Optional[str] = None
+    baseline_dir: str | None = None
     threshold: float = 0.95
 
 
 class BrowserValidationService:
     def __init__(self):
-        self.journeys: Dict[str, UserJourney] = {}
-        self.regression_tests: Dict[str, RegressionTest] = {}
-        self.baselines: Dict[str, str] = {}
+        self.journeys: dict[str, UserJourney] = {}
+        self.regression_tests: dict[str, RegressionTest] = {}
+        self.baselines: dict[str, str] = {}
         self._lock = threading.Lock()
         VALIDATION_DIR.mkdir(parents=True, exist_ok=True)
 
-    def create_journey(self, name: str, base_url: str, tags: Optional[List[str]] = None) -> UserJourney:
+    def create_journey(self, name: str, base_url: str, tags: list[str] | None = None) -> UserJourney:
         journey = UserJourney(name=name, base_url=base_url, tags=tags or [])
         with self._lock:
             self.journeys[journey.id] = journey
@@ -85,24 +85,31 @@ class BrowserValidationService:
             self.journeys[journey_id].steps.append(step)
         return True
 
-    def get_journey(self, journey_id: str) -> Optional[UserJourney]:
+    def get_journey(self, journey_id: str) -> UserJourney | None:
         return self.journeys.get(journey_id)
 
-    def list_journeys(self) -> List[Dict]:
+    def list_journeys(self) -> list[dict]:
         return [asdict(j) for j in self.journeys.values()]
 
     def delete_journey(self, journey_id: str) -> bool:
         with self._lock:
             return self.journeys.pop(journey_id, None) is not None
 
-    def execute_journey(self, journey_id: str, headless: bool = True, base_url: Optional[str] = None) -> Dict[str, Any]:
+    def execute_journey(self, journey_id: str, headless: bool = True, base_url: str | None = None) -> dict[str, Any]:
         journey = self.journeys.get(journey_id)
         if not journey:
             return {"error": f"Journey {journey_id} not found", "success": False}
 
         from services.browser_service import (
-            create_session, navigate, click, fill, select_option,
-            screenshot, get_content, evaluate, close_session,
+            click,
+            close_session,
+            create_session,
+            evaluate,
+            fill,
+            get_content,
+            navigate,
+            screenshot,
+            select_option,
         )
 
         session = None
@@ -263,13 +270,13 @@ class BrowserValidationService:
             logger.info("Auto-generated %d steps for journey %s", len(steps), journey.id[:8])
         return journey
 
-    def create_regression_test(self, name: str, journey_ids: Optional[List[str]] = None) -> RegressionTest:
+    def create_regression_test(self, name: str, journey_ids: list[str] | None = None) -> RegressionTest:
         rt = RegressionTest(name=name, journeys=journey_ids or [])
         with self._lock:
             self.regression_tests[rt.id] = rt
         return rt
 
-    def run_regression(self, regression_id: str, headless: bool = True) -> Dict[str, Any]:
+    def run_regression(self, regression_id: str, headless: bool = True) -> dict[str, Any]:
         rt = self.regression_tests.get(regression_id)
         if not rt:
             return {"error": "Regression test not found", "success": False}
@@ -297,10 +304,10 @@ class BrowserValidationService:
             "failed_journeys": sum(1 for jr in journey_results.values() if not jr.get("success")),
         }
 
-    def list_regression_tests(self) -> List[Dict]:
+    def list_regression_tests(self) -> list[dict]:
         return [asdict(rt) for rt in self.regression_tests.values()]
 
-    def get_regression_test(self, regression_id: str) -> Optional[RegressionTest]:
+    def get_regression_test(self, regression_id: str) -> RegressionTest | None:
         return self.regression_tests.get(regression_id)
 
     def delete_regression_test(self, regression_id: str) -> bool:

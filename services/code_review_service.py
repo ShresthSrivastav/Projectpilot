@@ -2,7 +2,7 @@
 import logging
 import threading
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from database.chroma_db import log_to_db
 from services.file_service import BASE_DIR, list_files
@@ -10,7 +10,7 @@ from services.file_service import BASE_DIR, list_files
 logger = logging.getLogger(__name__)
 
 
-def _quality_review(file_path: Path, content: str) -> List[Dict[str, Any]]:
+def _quality_review(file_path: Path, content: str) -> list[dict[str, Any]]:
     findings = []
     lines = content.splitlines()
 
@@ -74,7 +74,7 @@ def _quality_review(file_path: Path, content: str) -> List[Dict[str, Any]]:
     return findings
 
 
-def _security_review(file_path: Path, content: str) -> List[Dict[str, Any]]:
+def _security_review(file_path: Path, content: str) -> list[dict[str, Any]]:
     findings = []
     patterns = {
         "SQL injection risk": ["execute(", "cursor.", "raw_sql"],
@@ -103,14 +103,14 @@ def _security_review(file_path: Path, content: str) -> List[Dict[str, Any]]:
 
 def run(
     job_id: str,
-    generated_files: Optional[List[str]] = None,
+    generated_files: list[str] | None = None,
     model: str = "local",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     log_to_db(job_id, "CodeReviewService", "Starting multi-agent code review.")
     all_files = list_files(job_id)
     py_files = [f for f in all_files if str(f).endswith(".py")]
 
-    all_findings: List[Dict[str, Any]] = []
+    all_findings: list[dict[str, Any]] = []
     lock = threading.Lock()
 
     def _run_reviewer(reviewer_func):

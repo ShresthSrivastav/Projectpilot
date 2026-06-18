@@ -5,9 +5,9 @@ import re
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 from services.org_graph_service import OrganizationGraph
 
@@ -20,12 +20,12 @@ class ValidationResult:
     org_id: str = ""
     validation_type: str = ""
     passed: bool = True
-    issues: List[Dict] = field(default_factory=list)
+    issues: list[dict] = field(default_factory=list)
     summary: str = ""
     details: str = ""
     created_at: float = field(default_factory=time.time)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -33,7 +33,7 @@ class CrossRepoValidator:
     def __init__(self, graph: OrganizationGraph):
         self.graph = graph
         self._lock = threading.Lock()
-        self._results: Dict[str, ValidationResult] = {}
+        self._results: dict[str, ValidationResult] = {}
 
     def validate_api_compatibility(self, org_id: str) -> ValidationResult:
         result = ValidationResult(
@@ -43,7 +43,7 @@ class CrossRepoValidator:
         issues = []
         repos = self.graph.list_repositories()
 
-        api_endpoints: Dict[str, List[Dict]] = {}
+        api_endpoints: dict[str, list[dict]] = {}
         for repo in repos:
             repo_path = Path(repo.path)
             if not repo_path.exists():
@@ -51,7 +51,7 @@ class CrossRepoValidator:
             endpoints = self._extract_api_endpoints(repo_path)
             api_endpoints[repo.name] = endpoints
 
-        route_map: Dict[str, List[str]] = {}
+        route_map: dict[str, list[str]] = {}
         for repo_name, endpoints in api_endpoints.items():
             for ep in endpoints:
                 key = f"{ep['method']} {ep['path']}"
@@ -104,7 +104,7 @@ class CrossRepoValidator:
         shared_libs = [r for r in repos if r.category == "shared-libraries"]
         consumers = [r for r in repos if r.category != "shared-libraries"]
 
-        lib_interfaces: Dict[str, Set[str]] = {}
+        lib_interfaces: dict[str, set[str]] = {}
         for lib in shared_libs:
             lib_path = Path(lib.path)
             if not lib_path.exists():
@@ -257,7 +257,7 @@ class CrossRepoValidator:
         self._save_result(result)
         return result
 
-    def run_all_validations(self, org_id: str) -> Dict[str, ValidationResult]:
+    def run_all_validations(self, org_id: str) -> dict[str, ValidationResult]:
         return {
             "api_compatibility": self.validate_api_compatibility(org_id),
             "shared_libraries": self.validate_shared_libraries(org_id),
@@ -266,11 +266,11 @@ class CrossRepoValidator:
             "documentation_coverage": self.validate_documentation_coverage(org_id),
         }
 
-    def get_result(self, result_id: str) -> Optional[ValidationResult]:
+    def get_result(self, result_id: str) -> ValidationResult | None:
         with self._lock:
             return self._results.get(result_id)
 
-    def list_results(self, org_id: str) -> List[Dict]:
+    def list_results(self, org_id: str) -> list[dict]:
         return [
             r.to_dict() for r in self._results.values()
             if r.org_id == org_id
@@ -280,7 +280,7 @@ class CrossRepoValidator:
         with self._lock:
             self._results[result.id] = result
 
-    def _extract_api_endpoints(self, repo_path: Path) -> List[Dict]:
+    def _extract_api_endpoints(self, repo_path: Path) -> list[dict]:
         endpoints = []
         patterns = [
             r'@(?:app|router)\.(get|post|put|patch|delete|options)\s*\(\s*[\'"]([^\'"]+)[\'"]',
@@ -304,7 +304,7 @@ class CrossRepoValidator:
                 continue
         return endpoints
 
-    def _extract_public_api(self, repo_path: Path) -> Set[str]:
+    def _extract_public_api(self, repo_path: Path) -> set[str]:
         exports = set()
         for py_file in repo_path.rglob("*.py"):
             if "__pycache__" in str(py_file) or py_file.name.startswith("_"):
@@ -319,7 +319,7 @@ class CrossRepoValidator:
                 continue
         return exports
 
-    def _extract_imports(self, repo_path: Path) -> Set[str]:
+    def _extract_imports(self, repo_path: Path) -> set[str]:
         imports = set()
         for py_file in repo_path.rglob("*.py"):
             if "__pycache__" in str(py_file):
@@ -334,7 +334,7 @@ class CrossRepoValidator:
                 continue
         return imports
 
-    def _extract_schemas(self, repo_path: Path) -> Dict[str, List[str]]:
+    def _extract_schemas(self, repo_path: Path) -> dict[str, list[str]]:
         schemas = {}
         for py_file in repo_path.rglob("*.py"):
             if "__pycache__" in str(py_file):
@@ -355,11 +355,11 @@ class CrossRepoValidator:
         return schemas
 
 
-_validators: Dict[str, CrossRepoValidator] = {}
+_validators: dict[str, CrossRepoValidator] = {}
 _validator_lock = threading.Lock()
 
 
-def get_cross_repo_validator(graph: Optional[OrganizationGraph] = None) -> CrossRepoValidator:
+def get_cross_repo_validator(graph: OrganizationGraph | None = None) -> CrossRepoValidator:
     key = id(graph) if graph else "default"
     with _validator_lock:
         if key not in _validators:

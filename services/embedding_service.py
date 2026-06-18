@@ -1,6 +1,5 @@
 import logging
 import os
-from typing import List
 
 import httpx
 
@@ -10,7 +9,7 @@ OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "all-minilm:l6-v2")
 
 
-def ollama_embedding_function(texts: List[str]) -> List[List[float]]:
+def ollama_embedding_function(texts: list[str]) -> list[list[float]]:
     try:
         resp = httpx.post(
             f"{OLLAMA_BASE_URL}/api/embed",
@@ -27,7 +26,7 @@ def ollama_embedding_function(texts: List[str]) -> List[List[float]]:
     return _fallback_embed(texts)
 
 
-def _fallback_embed(texts: List[str]) -> List[List[float]]:
+def _fallback_embed(texts: list[str]) -> list[list[float]]:
     dim = 384
     return [[0.0] * dim for _ in texts]
 

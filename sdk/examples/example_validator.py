@@ -3,7 +3,7 @@ Shows how any developer can create a custom validator without modifying platform
 """
 from typing import Any
 
-from sdk.validation_sdk.base_validator import BaseValidator, ValidationRule, ValidationReport
+from sdk.validation_sdk.base_validator import BaseValidator, ValidationReport, ValidationRule
 
 
 class APISchemaValidator(BaseValidator):

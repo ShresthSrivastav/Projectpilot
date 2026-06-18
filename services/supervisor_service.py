@@ -7,9 +7,10 @@ messaging, parallel team execution, and routing. Fully backward-compatible.
 import logging
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class AgentRecord:
     priority: AgentPriority = AgentPriority.NORMAL
     team: str = "default"
     enabled: bool = True
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -36,7 +37,7 @@ class AgentMessage:
     sender: str
     recipient: str
     topic: str
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     timestamp: float = field(default_factory=time.time)
 
 
@@ -56,9 +57,9 @@ class Supervisor:
         if getattr(self, "_initialized", False):
             return
         self._initialized = True
-        self._agents: Dict[str, AgentRecord] = {}
-        self._teams: Dict[str, List[str]] = {}
-        self._messages: List[AgentMessage] = []
+        self._agents: dict[str, AgentRecord] = {}
+        self._teams: dict[str, list[str]] = {}
+        self._messages: list[AgentMessage] = []
         self._registrations_lock = threading.Lock()
         self._message_lock = threading.Lock()
 
@@ -68,7 +69,7 @@ class Supervisor:
         entry_point: Callable,
         priority: AgentPriority = AgentPriority.NORMAL,
         team: str = "default",
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         with self._registrations_lock:
             self._agents[name] = AgentRecord(
@@ -95,10 +96,10 @@ class Supervisor:
                     pass
             return rec is not None
 
-    def get_agent(self, name: str) -> Optional[AgentRecord]:
+    def get_agent(self, name: str) -> AgentRecord | None:
         return self._agents.get(name)
 
-    def list_agents(self, team: Optional[str] = None) -> List[AgentRecord]:
+    def list_agents(self, team: str | None = None) -> list[AgentRecord]:
         with self._registrations_lock:
             if team:
                 return [self._agents[n] for n in self._teams.get(team, []) if n in self._agents]
@@ -118,25 +119,25 @@ class Supervisor:
             return True
         return False
 
-    def send_message(self, sender: str, recipient: str, topic: str, payload: Dict[str, Any]) -> None:
+    def send_message(self, sender: str, recipient: str, topic: str, payload: dict[str, Any]) -> None:
         with self._message_lock:
             self._messages.append(AgentMessage(sender=sender, recipient=recipient, topic=topic, payload=payload))
 
-    def get_messages(self, for_agent: str, topic: Optional[str] = None) -> List[AgentMessage]:
+    def get_messages(self, for_agent: str, topic: str | None = None) -> list[AgentMessage]:
         with self._message_lock:
             results = [m for m in self._messages if m.recipient == for_agent]
             if topic:
                 results = [m for m in results if m.topic == topic]
             return results
 
-    def clear_messages(self, for_agent: Optional[str] = None) -> None:
+    def clear_messages(self, for_agent: str | None = None) -> None:
         with self._message_lock:
             if for_agent:
                 self._messages = [m for m in self._messages if m.recipient != for_agent]
             else:
                 self._messages.clear()
 
-    def broadcast(self, sender: str, topic: str, payload: Dict[str, Any]) -> None:
+    def broadcast(self, sender: str, topic: str, payload: dict[str, Any]) -> None:
         for name in self._agents:
             if name != sender and self._agents[name].enabled:
                 self.send_message(sender, name, topic, payload)
@@ -144,10 +145,10 @@ class Supervisor:
     def run_team(
         self,
         team: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         timeout_per_agent: int = 300,
-    ) -> Dict[str, Any]:
-        results: Dict[str, Any] = {}
+    ) -> dict[str, Any]:
+        results: dict[str, Any] = {}
         agents = sorted(
             [a for a in self._teams.get(team, []) if a in self._agents and self._agents[a].enabled],
             key=lambda n: self._agents[n].priority.value,
@@ -173,11 +174,11 @@ class Supervisor:
 
     def run_teams_parallel(
         self,
-        teams: List[str],
-        context: Dict[str, Any],
+        teams: list[str],
+        context: dict[str, Any],
         timeout_per_agent: int = 300,
-    ) -> Dict[str, Any]:
-        all_results: Dict[str, Any] = {}
+    ) -> dict[str, Any]:
+        all_results: dict[str, Any] = {}
         threads = []
         results_lock = threading.Lock()
 
@@ -196,7 +197,7 @@ class Supervisor:
 
         return all_results
 
-    def delegate(self, agent_name: str, task: Dict[str, Any]) -> Any:
+    def delegate(self, agent_name: str, task: dict[str, Any]) -> Any:
         rec = self._agents.get(agent_name)
         if not rec:
             raise ValueError(f"Agent '{agent_name}' not registered")

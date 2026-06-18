@@ -6,17 +6,17 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 PLUGIN_DIR = Path(os.getenv("PLUGIN_DIR", "./agents/plugins"))
 
-_registry: Dict[str, Dict[str, Any]] = {}
-_hooks: Dict[str, List[str]] = {}
+_registry: dict[str, dict[str, Any]] = {}
+_hooks: dict[str, list[str]] = {}
 
 
-def _discover_plugins() -> List[Path]:
+def _discover_plugins() -> list[Path]:
     PLUGIN_DIR.mkdir(parents=True, exist_ok=True)
     py_files = sorted(PLUGIN_DIR.glob("*.py"))
     json_files = sorted(PLUGIN_DIR.glob("*.json"))
@@ -58,7 +58,7 @@ def _discover_plugins() -> List[Path]:
     return list(plugin_paths | manifest_plugins)
 
 
-def _load_plugin_module(py_path: Path) -> Optional[Any]:
+def _load_plugin_module(py_path: Path) -> Any | None:
     try:
         module_name = f"agents_plugin_{py_path.stem}"
         spec = importlib.util.spec_from_file_location(module_name, str(py_path))
@@ -73,7 +73,7 @@ def _load_plugin_module(py_path: Path) -> Optional[Any]:
         return None
 
 
-def load_plugins() -> Dict[str, Dict[str, Any]]:
+def load_plugins() -> dict[str, dict[str, Any]]:
     _discover_plugins()
     loaded = {}
     for name, info in _registry.items():
@@ -101,7 +101,7 @@ def load_plugins() -> Dict[str, Dict[str, Any]]:
     return loaded
 
 
-def get_plugin(name: str) -> Optional[Dict[str, Any]]:
+def get_plugin(name: str) -> dict[str, Any] | None:
     if name not in _registry:
         _discover_plugins()
     info = _registry.get(name)
@@ -111,7 +111,7 @@ def get_plugin(name: str) -> Optional[Dict[str, Any]]:
     return info
 
 
-def list_plugins() -> List[Dict[str, Any]]:
+def list_plugins() -> list[dict[str, Any]]:
     _discover_plugins()
     return [{
         "name": info["name"],
@@ -139,7 +139,7 @@ def disable_plugin(name: str) -> bool:
     return False
 
 
-def run_hook(hook: str, context: Dict[str, Any]) -> Dict[str, Any]:
+def run_hook(hook: str, context: dict[str, Any]) -> dict[str, Any]:
     results = {}
     for plugin_name in _hooks.get(hook, []):
         info = _registry.get(plugin_name)
@@ -157,7 +157,7 @@ def run_hook(hook: str, context: Dict[str, Any]) -> Dict[str, Any]:
     return results
 
 
-def reload_plugins() -> Dict[str, Dict[str, Any]]:
+def reload_plugins() -> dict[str, dict[str, Any]]:
     _registry.clear()
     _hooks.clear()
     return load_plugins()

@@ -33,8 +33,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
-
+from typing import Any
 
 from database.chroma_db import log_to_db
 from services.file_service import BASE_DIR, write_file
@@ -52,8 +51,8 @@ SKIP_IMPORT  = os.getenv("SKIP_IMPORT_VALIDATION", "").lower() in ("true", "1", 
 def run_gates(
     job_id: str,
     model: str = "local",
-    review_fn: Optional[callable] = None,
-) -> Dict[str, Any]:
+    review_fn: callable | None = None,
+) -> dict[str, Any]:
     """Execute all 20 acceptance gates.  Returns gate results dict.
 
     Args:
@@ -87,7 +86,7 @@ def run_gates(
             "report_path": None,
         }
 
-    gate_results: Dict[str, Dict] = {}
+    gate_results: dict[str, dict] = {}
 
     # Gate 1: Dependency Validation
     gate_results["dependency_validation"] = _run_dependency_gate(job_dir)
@@ -184,7 +183,7 @@ def run_gates(
     return result
 
 
-def _run_import_gate(job_dir: Path) -> Dict:
+def _run_import_gate(job_dir: Path) -> dict:
     result = validate_imports(job_dir)
     return {
         "passed": result["passed"],
@@ -195,7 +194,7 @@ def _run_import_gate(job_dir: Path) -> Dict:
     }
 
 
-def _run_syntax_gate(job_dir: Path) -> Dict:
+def _run_syntax_gate(job_dir: Path) -> dict:
     import py_compile
     errors = []
     files_checked = 0
@@ -218,8 +217,9 @@ def _run_syntax_gate(job_dir: Path) -> Dict:
     }
 
 
-def _run_test_gate(job_dir: Path) -> Dict:
-    import subprocess, sys
+def _run_test_gate(job_dir: Path) -> dict:
+    import subprocess
+    import sys
     test_dirs = [job_dir / "tests", job_dir / "test"]
     test_dir = None
     for td in test_dirs:
@@ -252,7 +252,7 @@ def _run_test_gate(job_dir: Path) -> Dict:
         return {"passed": False, "details": {"error": str(exc)}}
 
 
-def _run_runtime_gate(job_dir: Path) -> Dict:
+def _run_runtime_gate(job_dir: Path) -> dict:
     result = validate_runtime(job_dir, timeout=30)
     return {
         "passed": result["passed"],
@@ -265,7 +265,7 @@ def _run_runtime_gate(job_dir: Path) -> Dict:
     }
 
 
-def _run_review_gate(job_id: str, model: str, review_fn: callable) -> Dict:
+def _run_review_gate(job_id: str, model: str, review_fn: callable) -> dict:
     try:
         review = review_fn(job_id, model=model)
         verdict = review.get("verdict", "FAIL")
@@ -283,7 +283,7 @@ def _run_review_gate(job_id: str, model: str, review_fn: callable) -> Dict:
         return {"passed": False, "details": {"error": str(exc)}}
 
 
-def _run_security_gate(job_dir: Path) -> Dict:
+def _run_security_gate(job_dir: Path) -> dict:
     result = validate_security(job_dir)
     return {
         "passed": result["passed"],
@@ -294,7 +294,7 @@ def _run_security_gate(job_dir: Path) -> Dict:
     }
 
 
-def _run_packaging_gate(job_dir: Path) -> Dict:
+def _run_packaging_gate(job_dir: Path) -> dict:
     result = validate_packaging(job_dir)
     return {
         "passed": result["passed"],
@@ -305,7 +305,7 @@ def _run_packaging_gate(job_dir: Path) -> Dict:
     }
 
 
-def _run_dependency_gate(job_dir: Path) -> Dict:
+def _run_dependency_gate(job_dir: Path) -> dict:
     req_files = list(job_dir.rglob("requirements.txt"))
     if not req_files:
         return {"passed": True, "details": {"note": "No requirements.txt found", "skipped": True}}
@@ -325,7 +325,7 @@ def _run_dependency_gate(job_dir: Path) -> Dict:
     return {"passed": len(errors) == 0, "details": {"files_checked": len(req_files), "errors": errors}}
 
 
-def _run_static_analysis_gate(job_dir: Path) -> Dict:
+def _run_static_analysis_gate(job_dir: Path) -> dict:
     errors = []
     files_checked = 0
     for py_file in sorted(job_dir.rglob("*.py")):
@@ -338,7 +338,7 @@ def _run_static_analysis_gate(job_dir: Path) -> Dict:
     return {"passed": len(errors) == 0, "details": {"files_checked": files_checked, "errors": errors}}
 
 
-def _run_type_checking_gate(job_dir: Path) -> Dict:
+def _run_type_checking_gate(job_dir: Path) -> dict:
     issues = []
     files_checked = 0
     for py_file in sorted(job_dir.rglob("*.py")):
@@ -359,7 +359,7 @@ def _run_type_checking_gate(job_dir: Path) -> Dict:
     return {"passed": len(issues) <= max(1, files_checked // 4), "details": {"files_checked": files_checked, "issues": issues[:20]}}
 
 
-def _run_db_migration_gate(job_dir: Path) -> Dict:
+def _run_db_migration_gate(job_dir: Path) -> dict:
     issues = []
     models_found = 0
     has_sqlalchemy = False
@@ -377,7 +377,7 @@ def _run_db_migration_gate(job_dir: Path) -> Dict:
     return {"passed": models_found > 0 or not has_sqlalchemy, "details": {"models_found": models_found, "issues": issues}}
 
 
-def _run_frontend_gate(job_dir: Path) -> Dict:
+def _run_frontend_gate(job_dir: Path) -> dict:
     html_templates = list(job_dir.rglob("templates/*.html")) + list(job_dir.rglob("*.html"))
     streamlit_files = list(job_dir.rglob("*app*.py")) + list(job_dir.rglob("*streamlit*.py"))
     if not html_templates and not streamlit_files:
@@ -395,7 +395,7 @@ def _run_frontend_gate(job_dir: Path) -> Dict:
     return {"passed": len(issues) == 0, "details": {"templates": len(html_templates), "streamlit_files": len(streamlit_files), "issues": issues}}
 
 
-def _run_api_gate(job_dir: Path) -> Dict:
+def _run_api_gate(job_dir: Path) -> dict:
     endpoints = []
     for py_file in sorted(job_dir.rglob("*.py")):
         text = py_file.read_text(encoding="utf-8", errors="replace")
@@ -407,7 +407,7 @@ def _run_api_gate(job_dir: Path) -> Dict:
     return {"passed": True, "details": {"endpoints_found": endpoints}}
 
 
-def _run_auth_gate(job_dir: Path) -> Dict:
+def _run_auth_gate(job_dir: Path) -> dict:
     issues = []
     protected_routes = 0
     for py_file in sorted(job_dir.rglob("*.py")):
@@ -424,7 +424,7 @@ def _run_auth_gate(job_dir: Path) -> Dict:
     return {"passed": True, "details": {"protected_routes": protected_routes, "issues": issues}}
 
 
-def _run_authorization_gate(job_dir: Path) -> Dict:
+def _run_authorization_gate(job_dir: Path) -> dict:
     issues = []
     for py_file in sorted(job_dir.rglob("*.py")):
         text = py_file.read_text(encoding="utf-8", errors="replace")
@@ -434,7 +434,7 @@ def _run_authorization_gate(job_dir: Path) -> Dict:
     return {"passed": True, "details": {"issues": issues}}
 
 
-def _run_crud_gate(job_dir: Path) -> Dict:
+def _run_crud_gate(job_dir: Path) -> dict:
     models = set()
     operations = {"create": 0, "read": 0, "update": 0, "delete": 0}
     for py_file in sorted(job_dir.rglob("*.py")):
@@ -445,20 +445,20 @@ def _run_crud_gate(job_dir: Path) -> Dict:
             for http_method in ["get", "post", "put", "delete", "patch"]:
                 if op in ["create", "read", "update", "delete"]:
                     if http_method == "post" and op == "create":
-                        operations[op] += len(re.findall(rf"@(?:app|router)\.post\(", text))
+                        operations[op] += len(re.findall(r"@(?:app|router)\.post\(", text))
                     elif http_method == "get" and op == "read":
-                        operations[op] += len(re.findall(rf"@(?:app|router)\.get\(", text))
+                        operations[op] += len(re.findall(r"@(?:app|router)\.get\(", text))
                     elif http_method in ("put", "patch") and op == "update":
                         operations[op] += len(re.findall(rf"@(?:app|router)\.{http_method}\(", text))
                     elif http_method == "delete" and op == "delete":
-                        operations[op] += len(re.findall(rf"@(?:app|router)\.delete\(", text))
+                        operations[op] += len(re.findall(r"@(?:app|router)\.delete\(", text))
     if not models:
         return {"passed": True, "details": {"note": "No SQLAlchemy models found — skipping", "skipped": True}}
     all_crud = all(v > 0 for v in operations.values())
     return {"passed": all_crud, "details": {"models": list(models), "operations": operations, "note": "All CRUD present" if all_crud else "Missing some CRUD operations"}}
 
 
-def _run_performance_gate(job_dir: Path) -> Dict:
+def _run_performance_gate(job_dir: Path) -> dict:
     large_files = []
     for py_file in job_dir.rglob("*.py"):
         size = py_file.stat().st_size
@@ -471,7 +471,7 @@ def _run_performance_gate(job_dir: Path) -> Dict:
     return {"passed": len(large_files) == 0, "details": {"large_files": large_files, "note": "Passes performance check" if not large_files else f"{len(large_files)} large file(s)"}}
 
 
-def _run_documentation_gate(job_dir: Path) -> Dict:
+def _run_documentation_gate(job_dir: Path) -> dict:
     issues = []
     docs_found = list(job_dir.rglob("*.md")) + list(job_dir.rglob("docs/*"))
     if not docs_found:
@@ -486,7 +486,7 @@ def _run_documentation_gate(job_dir: Path) -> Dict:
     return {"passed": True, "details": {"docs_count": len(docs_found), "endpoint_docs_referenced": len(endpoint_docs), "issues": issues}}
 
 
-def _run_docker_gate(job_dir: Path) -> Dict:
+def _run_docker_gate(job_dir: Path) -> dict:
     missing = []
     dockerfile = job_dir / "Dockerfile"
     compose = job_dir / "docker-compose.yml"
@@ -505,7 +505,7 @@ def _run_docker_gate(job_dir: Path) -> Dict:
     return {"passed": len(missing) == 0, "details": {"missing": missing, "has_dockerfile": dockerfile.exists(), "has_compose": compose.exists(), "has_start_sh": start_sh.exists()}}
 
 
-def _run_deployment_gate(job_dir: Path) -> Dict:
+def _run_deployment_gate(job_dir: Path) -> dict:
     issues = []
     compose_file = job_dir / "docker-compose.yml"
     nginx_conf = job_dir / "nginx.conf"
@@ -520,7 +520,7 @@ def _run_deployment_gate(job_dir: Path) -> Dict:
     return {"passed": len(issues) == 0, "details": {"has_compose": compose_file.exists(), "has_nginx": nginx_conf.exists(), "has_dockerfile": dockerfile.exists(), "issues": issues}}
 
 
-def _run_e2e_gate(job_dir: Path, model: str, review_fn: Optional[callable]) -> Dict:
+def _run_e2e_gate(job_dir: Path, model: str, review_fn: callable | None) -> dict:
     test_dir = job_dir / "tests"
     if not test_dir.exists():
         test_dir = job_dir / "test"
@@ -545,13 +545,13 @@ def _parse_failures(output: str):
     return failures
 
 
-def _write_report(job_id: str, result: Dict) -> str:
+def _write_report(job_id: str, result: dict) -> str:
     report = _build_report_md(job_id, result)
     path = write_file(job_id, "GENERATION_ACCEPTANCE_REPORT.md", report)
     return str(path) if path else None
 
 
-def _build_report_md(job_id: str, result: Dict) -> str:
+def _build_report_md(job_id: str, result: dict) -> str:
     now = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
     passed = result["passed"]
     gates = result.get("gates", {})
@@ -565,8 +565,8 @@ def _build_report_md(job_id: str, result: Dict) -> str:
         "",
         f"## Overall: {overall_icon}",
         "",
-        f"| Gate | Status | Details |",
-        f"|------|--------|---------|",
+        "| Gate | Status | Details |",
+        "|------|--------|---------|",
     ]
 
     for gate_name, gate in gates.items():
@@ -586,7 +586,7 @@ def _build_report_md(job_id: str, result: Dict) -> str:
         if gate["passed"]:
             continue
         label = gate_name.replace("_", " ").title()
-        lines += [f"---", "", f"## {label} — FAILED", ""]
+        lines += ["---", "", f"## {label} — FAILED", ""]
         details = gate.get("details", {})
         for key, value in details.items():
             if isinstance(value, list) and value:
@@ -608,7 +608,7 @@ def _build_report_md(job_id: str, result: Dict) -> str:
     return "\n".join(lines)
 
 
-def _gate_summary(gate: Dict) -> str:
+def _gate_summary(gate: dict) -> str:
     details = gate.get("details", {})
     parts = []
     if "errors" in details and details["errors"]:

@@ -1,7 +1,7 @@
 """File service — manages generated_projects directory."""
-import logging, os
+import logging
+import os
 from pathlib import Path
-from typing import List
 
 logger = logging.getLogger(__name__)
 BASE_DIR = Path(os.getenv("GENERATED_PROJECTS_DIR", "./generated_projects"))
@@ -37,7 +37,7 @@ def read_file(job_id: str, relative_path: str) -> str:
     if not t.exists(): raise FileNotFoundError(f"File not found: {t}")
     return t.read_text(encoding="utf-8")
 
-def list_files(job_id: str) -> List[Path]:
+def list_files(job_id: str) -> list[Path]:
     d = _resolve_path(job_id)
     if not d.exists():
         return []

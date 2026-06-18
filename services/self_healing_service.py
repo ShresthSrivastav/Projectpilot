@@ -5,10 +5,10 @@ import os
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from services.llm_service import call_model
 from services.log_analyzer import get_log_analyzer
@@ -39,17 +39,17 @@ class HealingSession:
     root_cause: str = ""
     fix_description: str = ""
     fix_applied: bool = False
-    tests_passed: Optional[bool] = None
-    browser_validated: Optional[bool] = None
+    tests_passed: bool | None = None
+    browser_validated: bool | None = None
     max_retries: int = 3
     attempt: int = 0
     created_at: float = field(default_factory=time.time)
-    completed_at: Optional[float] = None
-    error: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    patches: List[Dict] = field(default_factory=list)
+    completed_at: float | None = None
+    error: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    patches: list[dict] = field(default_factory=list)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         d = asdict(self)
         d["status"] = self.status.value
         return d
@@ -57,7 +57,7 @@ class HealingSession:
 
 class SelfHealingEngine:
     def __init__(self):
-        self.sessions: Dict[str, HealingSession] = {}
+        self.sessions: dict[str, HealingSession] = {}
         self._lock = threading.Lock()
         HEALING_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -66,7 +66,7 @@ class SelfHealingEngine:
         job_id: str,
         runtime_id: str,
         log_text: str,
-        project_dir: Optional[str] = None,
+        project_dir: str | None = None,
         max_retries: int = 3,
         confidence_threshold: float = 0.6,
         run_browser_validation: bool = False,
@@ -88,7 +88,7 @@ class SelfHealingEngine:
         self,
         session: HealingSession,
         log_text: str,
-        project_dir: Optional[str],
+        project_dir: str | None,
         confidence_threshold: float,
         run_browser_validation: bool,
     ) -> None:
@@ -140,7 +140,7 @@ class SelfHealingEngine:
             logger.error("Healing %s failed: %s", session.id[:8], exc)
 
     def _generate_and_apply_fix(
-        self, session: HealingSession, analysis: Any, project_dir: Optional[str]
+        self, session: HealingSession, analysis: Any, project_dir: str | None
     ) -> bool:
         try:
             prompt = (
@@ -175,7 +175,7 @@ class SelfHealingEngine:
             logger.warning("Fix generation failed: %s", exc)
             return False
 
-    def _parse_patches(self, text: str, project_dir: Optional[str] = None) -> List[Dict]:
+    def _parse_patches(self, text: str, project_dir: str | None = None) -> list[dict]:
         import re
         patches = []
         blocks = re.split(r"---\s*FILE\s*:\s*", text)
@@ -195,7 +195,7 @@ class SelfHealingEngine:
             patches.append({"file": fpath, "action": action, "content": content})
         return patches
 
-    def _run_tests(self, session: HealingSession, project_dir: Optional[str]) -> bool:
+    def _run_tests(self, session: HealingSession, project_dir: str | None) -> bool:
         if not project_dir:
             return True
         from services.test_service import run_pytest
@@ -205,7 +205,7 @@ class SelfHealingEngine:
         except Exception:
             return False
 
-    def _run_browser_validation(self, session: HealingSession, project_dir: Optional[str]) -> bool:
+    def _run_browser_validation(self, session: HealingSession, project_dir: str | None) -> bool:
         return True
 
     def rollback(self, session_id: str) -> bool:
@@ -221,10 +221,10 @@ class SelfHealingEngine:
         self._save_session(session)
         return True
 
-    def get_session(self, session_id: str) -> Optional[HealingSession]:
+    def get_session(self, session_id: str) -> HealingSession | None:
         return self.sessions.get(session_id)
 
-    def list_sessions(self, job_id: Optional[str] = None, limit: int = 20) -> List[Dict]:
+    def list_sessions(self, job_id: str | None = None, limit: int = 20) -> list[dict]:
         with self._lock:
             sessions = list(self.sessions.values())
         if job_id:

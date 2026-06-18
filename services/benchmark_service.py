@@ -5,11 +5,11 @@ import os
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class BenchmarkMetrics:
     cost: float = 0.0
     feature_completeness: float = 0.0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -62,17 +62,17 @@ class BenchmarkResult:
     status: BenchmarkStatus = BenchmarkStatus.PENDING
     metrics: BenchmarkMetrics = field(default_factory=BenchmarkMetrics)
     autonomy_score: float = 0.0
-    features_passed: List[str] = field(default_factory=list)
-    features_failed: List[str] = field(default_factory=list)
+    features_passed: list[str] = field(default_factory=list)
+    features_failed: list[str] = field(default_factory=list)
     feature_total: int = 0
-    logs: List[str] = field(default_factory=list)
-    error: Optional[str] = None
+    logs: list[str] = field(default_factory=list)
+    error: str | None = None
     created_at: float = field(default_factory=time.time)
-    completed_at: Optional[float] = None
+    completed_at: float | None = None
     model: str = "local"
     iteration: int = 1
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d["status"] = self.status.value
         d["metrics"] = self.metrics.to_dict()
@@ -117,10 +117,10 @@ def compute_autonomy_score(metrics: BenchmarkMetrics) -> float:
 
 class BenchmarkService:
     def __init__(self):
-        self.results: Dict[str, BenchmarkResult] = {}
+        self.results: dict[str, BenchmarkResult] = {}
         self._lock = threading.Lock()
         BENCHMARK_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
-        self._domains: Dict[str, Dict] = {}
+        self._domains: dict[str, dict] = {}
         self._load_benchmarks()
         self._restore_history()
 
@@ -175,7 +175,7 @@ class BenchmarkService:
         except Exception as exc:
             logger.warning("Failed to save benchmark history: %s", exc)
 
-    def _dict_to_result(self, d: Dict) -> BenchmarkResult:
+    def _dict_to_result(self, d: dict) -> BenchmarkResult:
         metrics_dict = d.get("metrics", {})
         metrics = BenchmarkMetrics(**metrics_dict)
         d.pop("metrics", None)
@@ -187,7 +187,7 @@ class BenchmarkService:
                 break
         return result
 
-    def list_domains(self) -> List[Dict[str, Any]]:
+    def list_domains(self) -> list[dict[str, Any]]:
         domains = []
         for domain_name, info in self._domains.items():
             domains.append({
@@ -199,7 +199,7 @@ class BenchmarkService:
             })
         return domains
 
-    def get_domain_info(self, domain: str) -> Optional[Dict[str, Any]]:
+    def get_domain_info(self, domain: str) -> dict[str, Any] | None:
         return self._domains.get(domain)
 
     def run_benchmark(
@@ -230,7 +230,7 @@ class BenchmarkService:
             start_time = time.time()
             domain_info = self._domains[result.domain]
 
-            result.logs.append(f"[{datetime.now(timezone.utc).isoformat()}] Starting benchmark: {result.domain}")
+            result.logs.append(f"[{datetime.now(UTC).isoformat()}] Starting benchmark: {result.domain}")
 
             completion_rate, architecture_quality, code_quality = self._evaluate_code_quality(result, domain_info)
             result.metrics.completion_rate = completion_rate
@@ -261,7 +261,7 @@ class BenchmarkService:
             result.status = BenchmarkStatus.COMPLETED
             result.completed_at = time.time()
 
-            result.logs.append(f"[{datetime.now(timezone.utc).isoformat()}] Completed. Autonomy Score: {result.autonomy_score}")
+            result.logs.append(f"[{datetime.now(UTC).isoformat()}] Completed. Autonomy Score: {result.autonomy_score}")
 
             self._save_history()
             logger.info("Benchmark %s/%s completed: autonomy_score=%.1f", result.domain, result.run_id, result.autonomy_score)
@@ -270,11 +270,11 @@ class BenchmarkService:
             result.status = BenchmarkStatus.FAILED
             result.error = str(exc)
             result.completed_at = time.time()
-            result.logs.append(f"[{datetime.now(timezone.utc).isoformat()}] FAILED: {exc}")
+            result.logs.append(f"[{datetime.now(UTC).isoformat()}] FAILED: {exc}")
             logger.warning("Benchmark %s/%s failed: %s", result.domain, result.run_id, exc)
             self._save_history()
 
-    def _evaluate_code_quality(self, result: BenchmarkResult, domain_info: Dict) -> Tuple[float, float, float]:
+    def _evaluate_code_quality(self, result: BenchmarkResult, domain_info: dict) -> tuple[float, float, float]:
         project_dir = Path(os.getenv("GENERATED_PROJECTS_DIR", "./generated_projects"))
         job_projects = list(project_dir.iterdir()) if project_dir.exists() else []
 
@@ -318,10 +318,10 @@ class BenchmarkService:
         result.logs.append(f"Code quality: {total_files} files, completion={completion_rate:.0f}%, arch={architecture_quality:.0f}%, code={code_score:.0f}%")
         return completion_rate, architecture_quality, code_score
 
-    def _run_validation_tests(self, result: BenchmarkResult, domain_info: Dict) -> Tuple[float, List[Tuple[str, bool]]]:
+    def _run_validation_tests(self, result: BenchmarkResult, domain_info: dict) -> tuple[float, list[tuple[str, bool]]]:
         expected_features = domain_info.get("expected_features", {})
         features_data = expected_features.get("features", {})
-        feature_results: List[Tuple[str, bool]] = []
+        feature_results: list[tuple[str, bool]] = []
 
         all_features = []
         for category, flist in features_data.items():
@@ -358,7 +358,7 @@ class BenchmarkService:
                 continue
         return False
 
-    def _run_browser_tests(self, result: BenchmarkResult, domain_info: Dict) -> float:
+    def _run_browser_tests(self, result: BenchmarkResult, domain_info: dict) -> float:
         browser_file = BENCHMARKS_DIR / result.domain / "browser_tests.py"
         if not browser_file.exists():
             return 50.0
@@ -372,7 +372,7 @@ class BenchmarkService:
         except Exception:
             return 50.0
 
-    def _run_deployment_tests(self, result: BenchmarkResult, domain_info: Dict) -> float:
+    def _run_deployment_tests(self, result: BenchmarkResult, domain_info: dict) -> float:
         deploy_file = BENCHMARKS_DIR / result.domain / "deployment_tests.py"
         if not deploy_file.exists():
             return 50.0
@@ -387,7 +387,7 @@ class BenchmarkService:
                 if (latest / ".env.example").exists(): score += 15.0
         return min(100.0, score)
 
-    def _evaluate_self_healing(self, result: BenchmarkResult, domain_info: Dict) -> float:
+    def _evaluate_self_healing(self, result: BenchmarkResult, domain_info: dict) -> float:
         from services.self_healing_service import get_healing_engine
         engine = get_healing_engine()
         sessions = engine.list_sessions() if hasattr(engine, "list_sessions") else []
@@ -406,14 +406,14 @@ class BenchmarkService:
         cost_per_token = 0.000002 if result.model == "local" else 0.00001
         return round(tokens * cost_per_token, 6)
 
-    def get_result(self, run_id_or_result_id: str) -> Optional[BenchmarkResult]:
+    def get_result(self, run_id_or_result_id: str) -> BenchmarkResult | None:
         with self._lock:
             for r in self.results.values():
                 if r.id == run_id_or_result_id or r.run_id == run_id_or_result_id:
                     return r
         return None
 
-    def list_results(self, domain: Optional[str] = None, limit: int = 50) -> List[Dict]:
+    def list_results(self, domain: str | None = None, limit: int = 50) -> list[dict]:
         with self._lock:
             results = list(self.results.values())
         if domain:
@@ -421,7 +421,7 @@ class BenchmarkService:
         results.sort(key=lambda r: r.created_at, reverse=True)
         return [r.to_dict() for r in results[:limit]]
 
-    def get_leaderboard(self, domain: Optional[str] = None, limit: int = 20) -> List[Dict]:
+    def get_leaderboard(self, domain: str | None = None, limit: int = 20) -> list[dict]:
         with self._lock:
             results = list(self.results.values())
         if domain:
@@ -435,7 +435,7 @@ class BenchmarkService:
             leaderboard.append(d)
         return leaderboard
 
-    def compare_runs(self, run_id_1: str, run_id_2: str) -> Dict[str, Any]:
+    def compare_runs(self, run_id_1: str, run_id_2: str) -> dict[str, Any]:
         r1 = self.get_result(run_id_1)
         r2 = self.get_result(run_id_2)
         if not r1 or not r2:
@@ -466,7 +466,7 @@ class BenchmarkService:
         if format == "markdown":
             lines = [
                 f"# Benchmark Report: {result.domain}",
-                f"",
+                "",
                 f"- **Run ID:** {result.run_id}",
                 f"- **Domain:** {result.domain}",
                 f"- **Status:** {result.status.value}",
@@ -475,35 +475,35 @@ class BenchmarkService:
                 f"- **Iteration:** {result.iteration}",
                 f"- **Created:** {datetime.fromtimestamp(result.created_at).isoformat()}",
                 f"- **Completed:** {datetime.fromtimestamp(result.completed_at).isoformat() if result.completed_at else 'N/A'}",
-                f"",
-                f"## Metrics",
-                f"",
-                f"| Metric | Value |",
-                f"|--------|-------|",
+                "",
+                "## Metrics",
+                "",
+                "| Metric | Value |",
+                "|--------|-------|",
             ]
             for key, val in result.metrics.to_dict().items():
                 lines.append(f"| {key.replace('_', ' ').title()} | {val} |")
 
             lines.extend([
-                f"",
-                f"## Features",
-                f"",
+                "",
+                "## Features",
+                "",
                 f"- **Passed:** {len(result.features_passed)}/{result.feature_total}",
                 f"- **Failed:** {len(result.features_failed)}/{result.feature_total}",
-                f"",
-                f"## Logs",
+                "",
+                "## Logs",
             ])
             for log in result.logs[-20:]:
                 lines.append(f"- {log}")
 
             if result.error:
-                lines.extend([f"", f"## Error", f"", f"```", result.error, f"```"])
+                lines.extend(["", "## Error", "", "```", result.error, "```"])
 
             return "\n".join(lines)
 
         return json.dumps(data, indent=2, default=str)
 
-    def get_trend_data(self, domain: Optional[str] = None, limit: int = 50) -> Dict[str, Any]:
+    def get_trend_data(self, domain: str | None = None, limit: int = 50) -> dict[str, Any]:
         with self._lock:
             results = list(self.results.values())
         if domain:
@@ -531,7 +531,7 @@ class BenchmarkService:
         trend["improvement_rate"] = self._calculate_improvement_rate(completed)
         return trend
 
-    def _calculate_improvement_rate(self, results: List[BenchmarkResult]) -> float:
+    def _calculate_improvement_rate(self, results: list[BenchmarkResult]) -> float:
         if len(results) < 2:
             return 0.0
         first = results[0].autonomy_score
@@ -540,7 +540,7 @@ class BenchmarkService:
             return 0.0
         return round(((last - first) / first) * 100.0, 1)
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         with self._lock:
             results = list(self.results.values())
         completed = [r for r in results if r.status == BenchmarkStatus.COMPLETED]

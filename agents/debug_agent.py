@@ -11,12 +11,12 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from database.chroma_db import log_to_db
 from services.file_service import BASE_DIR
 from services.llm_service import call_model, clean_code_response
-from services.test_service import run_syntax_check, run_pytest
+from services.test_service import run_pytest, run_syntax_check
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ def _attempt_fix(file_path: Path, error: str, job_id: str, model: str) -> bool:
     return False
 
 
-def _check_and_fix_file(rel: str, job_dir: Path, job_id: str, fix_model: str) -> Dict[str, Any]:
+def _check_and_fix_file(rel: str, job_dir: Path, job_id: str, fix_model: str) -> dict[str, Any]:
     """Check one file and attempt fixes. Returns error dict or None."""
     abs_path = job_dir / rel
     if not abs_path.exists():
@@ -101,7 +101,7 @@ def _check_and_fix_file(rel: str, job_dir: Path, job_id: str, fix_model: str) ->
     return error_entry
 
 
-def _reflect_blueprint(blueprint: Dict, job_dir: Path, job_id: str) -> List[Dict]:
+def _reflect_blueprint(blueprint: dict, job_dir: Path, job_id: str) -> list[dict]:
     """
     Blueprint reflection: read backend/main.py and check that routes defined
     in the blueprint actually appear in the generated code.
@@ -135,18 +135,18 @@ def _reflect_blueprint(blueprint: Dict, job_dir: Path, job_id: str) -> List[Dict
             })
 
     if not issues:
-        log_to_db(job_id, "DebugAgent", f"Blueprint reflection passed — all routes present.")
+        log_to_db(job_id, "DebugAgent", "Blueprint reflection passed — all routes present.")
     return issues
 
 
 def run(
-    generated_files: List[str],
+    generated_files: list[str],
     job_id: str,
     model: str = None,
-    blueprint: Dict = None,
-) -> Dict[str, Any]:
+    blueprint: dict = None,
+) -> dict[str, Any]:
     log_to_db(job_id, "DebugAgent", f"Checking {len(generated_files)} files (parallel).")
-    errors: List[Dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
     fixes = 0
     job_dir = BASE_DIR / job_id
     fix_model = model or "local"

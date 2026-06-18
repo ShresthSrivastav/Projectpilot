@@ -8,7 +8,7 @@ Supports:
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from services.file_service import BASE_DIR
 
@@ -21,7 +21,7 @@ def deploy_project(
     job_id: str,
     target: str = "docker",
     model: str = "local",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     job_dir = BASE_DIR / job_id
     if not job_dir.exists():
         return {"job_id": job_id, "status": "error", "error": "Project files not found."}
@@ -44,7 +44,7 @@ def deploy_project(
         return {"job_id": job_id, "status": "error", "error": str(exc)[:500]}
 
 
-def _read_project_files(job_dir: Path) -> Dict[str, str]:
+def _read_project_files(job_dir: Path) -> dict[str, str]:
     files = {}
     for fp in sorted(job_dir.rglob("*")):
         if fp.is_file() and "__pycache__" not in str(fp):
@@ -55,7 +55,7 @@ def _read_project_files(job_dir: Path) -> Dict[str, str]:
     return files
 
 
-def _detect_stack(files: Dict[str, str]) -> Dict[str, str]:
+def _detect_stack(files: dict[str, str]) -> dict[str, str]:
     stack = {"backend": "python", "port": "8000", "build": "", "start": ""}
     for name in files:
         if "requirements.txt" in name:
@@ -72,20 +72,24 @@ def _detect_stack(files: Dict[str, str]) -> Dict[str, str]:
     return stack
 
 
-def _generate_docker(job_id: str, job_dir: Path, deploy_path: Path, model: str) -> Dict[str, Any]:
+def _generate_docker(job_id: str, job_dir: Path, deploy_path: Path, model: str) -> dict[str, Any]:
     files = _read_project_files(job_dir)
     stack = _detect_stack(files)
     has_requirements = any("requirements.txt" in f for f in files)
 
-    dockerfile_parts = [f"FROM python:3.11-slim"]
+    dockerfile_parts = ["FROM python:3.11-slim"]
     dockerfile_parts.append("WORKDIR /app")
     dockerfile_parts.append("COPY . .")
     if has_requirements:
-        dockerfile_parts.append(f"RUN pip install --no-cache-dir -r requirements.txt")
+        dockerfile_parts.append("RUN pip install --no-cache-dir -r requirements.txt")
     else:
         dockerfile_parts.append("RUN pip install --no-cache-dir fastapi uvicorn")
-    dockerfile_parts.append(f"EXPOSE {stack['port']}")
-    dockerfile_parts.append(f'CMD ["{stack['start'].split()[0]}", "{stack['start'].split()[1]}", "--host", "0.0.0.0", "--port", "{stack['port']}"]')
+    start_cmd = stack['start'].split()
+    start_0 = start_cmd[0] if len(start_cmd) > 0 else "python"
+    start_1 = start_cmd[1] if len(start_cmd) > 1 else "main.py"
+    port_val = stack['port']
+    dockerfile_parts.append(f"EXPOSE {port_val}")
+    dockerfile_parts.append(f'CMD ["{start_0}", "{start_1}", "--host", "0.0.0.0", "--port", "{port_val}"]')
 
     dockerfile_path = deploy_path / "Dockerfile"
     dockerfile_path.write_text("\n".join(dockerfile_parts), encoding="utf-8")
@@ -113,7 +117,7 @@ def _generate_docker(job_id: str, job_dir: Path, deploy_path: Path, model: str) 
     }
 
 
-def _generate_render(job_id: str, job_dir: Path, deploy_path: Path, model: str) -> Dict[str, Any]:
+def _generate_render(job_id: str, job_dir: Path, deploy_path: Path, model: str) -> dict[str, Any]:
     files = _read_project_files(job_dir)
     stack = _detect_stack(files)
     render = {
@@ -138,7 +142,7 @@ def _generate_render(job_id: str, job_dir: Path, deploy_path: Path, model: str) 
     }
 
 
-def _generate_railway(job_id: str, job_dir: Path, deploy_path: Path, model: str) -> Dict[str, Any]:
+def _generate_railway(job_id: str, job_dir: Path, deploy_path: Path, model: str) -> dict[str, Any]:
     railway = {
         "build": {
             "builder": "NIXPACKS",

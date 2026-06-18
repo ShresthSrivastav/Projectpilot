@@ -3,11 +3,10 @@ import json
 import logging
 import shutil
 import uuid
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 from sdk.plugin_sdk.base_plugin import PluginManifest
 
@@ -20,11 +19,11 @@ class MarketplacePackage:
     author: str = ""
     description: str = ""
     package_type: str = "plugin"
-    manifest: Optional[PluginManifest] = None
+    manifest: PluginManifest | None = None
     downloads: int = 0
     rating: float = 0.0
     rating_count: int = 0
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
     published_at: str = ""
     updated_at: str = ""
     source_url: str = ""
@@ -32,7 +31,7 @@ class MarketplacePackage:
     compatibility: str = ">=11.0.0"
     verified: bool = False
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d.pop("manifest", None)
         if self.manifest:
@@ -54,7 +53,7 @@ class MarketplaceService:
         self._initialized = True
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(parents=True, exist_ok=True)
-        self._packages: Dict[str, MarketplacePackage] = {}
+        self._packages: dict[str, MarketplacePackage] = {}
         self._local_dir = self.storage_dir / "local"
         self._local_dir.mkdir(parents=True, exist_ok=True)
         self._logger = logging.getLogger("MarketplaceService")
@@ -94,9 +93,9 @@ class MarketplaceService:
         description: str,
         source_path: str,
         package_type: str = "plugin",
-        tags: Optional[List[str]] = None,
+        tags: list[str] | None = None,
         readme: str = "",
-        manifest: Optional[PluginManifest] = None,
+        manifest: PluginManifest | None = None,
     ) -> MarketplacePackage:
         pkg_id = str(uuid.uuid4())
         pkg_dir = self._local_dir / name.replace(" ", "_").lower()
@@ -125,8 +124,8 @@ class MarketplaceService:
             package_type=package_type,
             manifest=manifest,
             tags=tags or [],
-            published_at=datetime.now(timezone.utc).isoformat(),
-            updated_at=datetime.now(timezone.utc).isoformat(),
+            published_at=datetime.now(UTC).isoformat(),
+            updated_at=datetime.now(UTC).isoformat(),
             source_url=str(pkg_dir),
             readme=readme,
             compatibility=manifest.compatibility,
@@ -140,13 +139,13 @@ class MarketplaceService:
     def search_packages(
         self,
         query: str = "",
-        package_type: Optional[str] = None,
-        tag: Optional[str] = None,
-        author: Optional[str] = None,
+        package_type: str | None = None,
+        tag: str | None = None,
+        author: str | None = None,
         min_rating: float = 0.0,
         sort_by: str = "downloads",
         limit: int = 50,
-    ) -> List[MarketplacePackage]:
+    ) -> list[MarketplacePackage]:
         results = list(self._packages.values())
 
         if query:
@@ -182,23 +181,23 @@ class MarketplaceService:
 
         return results[:limit]
 
-    def get_package(self, package_id: str) -> Optional[MarketplacePackage]:
+    def get_package(self, package_id: str) -> MarketplacePackage | None:
         return self._packages.get(package_id)
 
-    def get_package_by_name(self, name: str) -> Optional[MarketplacePackage]:
+    def get_package_by_name(self, name: str) -> MarketplacePackage | None:
         for pkg in self._packages.values():
             if pkg.name.lower() == name.lower():
                 return pkg
         return None
 
-    def update_package(self, package_id: str, **kwargs) -> Optional[MarketplacePackage]:
+    def update_package(self, package_id: str, **kwargs) -> MarketplacePackage | None:
         pkg = self._packages.get(package_id)
         if pkg is None:
             return None
         for key, value in kwargs.items():
             if hasattr(pkg, key) and value is not None:
                 setattr(pkg, key, value)
-        pkg.updated_at = datetime.now(timezone.utc).isoformat()
+        pkg.updated_at = datetime.now(UTC).isoformat()
         self._save_index()
         return pkg
 
@@ -212,7 +211,7 @@ class MarketplaceService:
         self._save_index()
         return True
 
-    def rate_package(self, package_id: str, rating: float) -> Optional[MarketplacePackage]:
+    def rate_package(self, package_id: str, rating: float) -> MarketplacePackage | None:
         pkg = self._packages.get(package_id)
         if pkg is None:
             return None
@@ -220,7 +219,7 @@ class MarketplaceService:
         total = pkg.rating * pkg.rating_count + rating
         pkg.rating_count += 1
         pkg.rating = round(total / pkg.rating_count, 2)
-        pkg.updated_at = datetime.now(timezone.utc).isoformat()
+        pkg.updated_at = datetime.now(UTC).isoformat()
         self._save_index()
         return pkg
 
@@ -232,7 +231,7 @@ class MarketplaceService:
 
     def install_package(
         self, package_id: str, target_dir: str = "plugins"
-    ) -> Optional[str]:
+    ) -> str | None:
         pkg = self._packages.get(package_id)
         if pkg is None:
             return None
@@ -259,8 +258,8 @@ class MarketplaceService:
         return str(install_path)
 
     def list_packages(
-        self, package_type: Optional[str] = None, verified_only: bool = False
-    ) -> List[MarketplacePackage]:
+        self, package_type: str | None = None, verified_only: bool = False
+    ) -> list[MarketplacePackage]:
         results = list(self._packages.values())
         if package_type:
             results = [p for p in results if p.package_type == package_type]

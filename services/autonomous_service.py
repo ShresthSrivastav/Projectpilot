@@ -4,10 +4,11 @@ import os
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from collections.abc import Callable
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 from services.llm_service import call_model, get_token_count
 
@@ -39,7 +40,7 @@ class IterationMetrics:
     improvement_delta: float = 0.0
     cost_estimate: float = 0.0
     stage: str = "pending"
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -62,21 +63,21 @@ class AutonomousSession:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     job_id: str = ""
     config: AutonomousConfig = field(default_factory=AutonomousConfig)
-    iterations: List[IterationMetrics] = field(default_factory=list)
+    iterations: list[IterationMetrics] = field(default_factory=list)
     current_iteration: int = 0
     status: str = "pending"
     stage: IterationStage = IterationStage.GENERATE
     started_at: float = field(default_factory=time.time)
-    completed_at: Optional[float] = None
+    completed_at: float | None = None
     total_tokens: int = 0
     total_duration_ms: float = 0.0
     initial_score: float = 0.0
     final_score: float = 0.0
     improvement_pct: float = 0.0
     total_cost: float = 0.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "id": self.id,
             "job_id": self.job_id,
@@ -99,10 +100,10 @@ class AutonomousSession:
 
 class AutonomousEngine:
     def __init__(self):
-        self.sessions: Dict[str, AutonomousSession] = {}
+        self.sessions: dict[str, AutonomousSession] = {}
         self._lock = threading.Lock()
-        self._evaluators: Dict[str, Callable] = {}
-        self._improvers: Dict[str, Callable] = {}
+        self._evaluators: dict[str, Callable] = {}
+        self._improvers: dict[str, Callable] = {}
         AUTONOMOUS_DIR.mkdir(parents=True, exist_ok=True)
 
     def register_evaluator(self, name: str, fn: Callable) -> None:
@@ -111,7 +112,7 @@ class AutonomousEngine:
     def register_improver(self, name: str, fn: Callable) -> None:
         self._improvers[name] = fn
 
-    def start_session(self, job_id: str, config: Optional[AutonomousConfig] = None) -> AutonomousSession:
+    def start_session(self, job_id: str, config: AutonomousConfig | None = None) -> AutonomousSession:
         config = config or AutonomousConfig()
         session = AutonomousSession(job_id=job_id, config=config)
         with self._lock:
@@ -335,7 +336,7 @@ class AutonomousEngine:
                     full_path.parent.mkdir(parents=True, exist_ok=True)
                     full_path.write_text(content, encoding="utf-8")
 
-    def _collect_test_results(self, job_id: str) -> Dict[str, Any]:
+    def _collect_test_results(self, job_id: str) -> dict[str, Any]:
         from services.test_service import run_pytest
         pr = run_pytest(job_id)
         return {
@@ -372,14 +373,14 @@ class AutonomousEngine:
             score += 0.1 * min(type_hint_count / (total_functions * 3), 1)
         return min(round(score, 3), 1.0)
 
-    def get_session(self, session_id: str) -> Optional[AutonomousSession]:
+    def get_session(self, session_id: str) -> AutonomousSession | None:
         return self.sessions.get(session_id)
 
-    def list_sessions(self, limit: int = 20) -> List[Dict]:
+    def list_sessions(self, limit: int = 20) -> list[dict]:
         sessions = sorted(self.sessions.values(), key=lambda s: s.started_at, reverse=True)
         return [s.to_dict() for s in sessions[:limit]]
 
-    def get_iteration_history(self, session_id: str) -> Dict[str, Any]:
+    def get_iteration_history(self, session_id: str) -> dict[str, Any]:
         session = self.sessions.get(session_id)
         if not session:
             return {"error": "Session not found"}

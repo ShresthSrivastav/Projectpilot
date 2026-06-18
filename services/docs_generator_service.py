@@ -19,7 +19,6 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ DIAGRAMS_DIR = DOCS_DIR / "diagrams"
 BASE_DIR = Path(os.getenv("GENERATED_PROJECTS_DIR", "./generated_projects")).resolve()
 
 
-def generate_all(output_dir: Optional[str] = None) -> Dict[str, str]:
+def generate_all(output_dir: str | None = None) -> dict[str, str]:
     docs_dir = Path(output_dir) if output_dir else DOCS_DIR
     diagrams_dir = docs_dir / "diagrams"
     docs_dir.mkdir(parents=True, exist_ok=True)
@@ -82,7 +81,7 @@ def generate_all(output_dir: Optional[str] = None) -> Dict[str, str]:
     return generated
 
 
-def _discover_agents() -> List[Dict]:
+def _discover_agents() -> list[dict]:
     agents_dir = Path(__file__).parent.parent / "agents"
     agents = []
     if agents_dir.exists():
@@ -105,7 +104,7 @@ def _discover_agents() -> List[Dict]:
     return agents
 
 
-def _discover_routes() -> List[Dict]:
+def _discover_routes() -> list[dict]:
     try:
         from backend.main import app
         routes = []
@@ -127,7 +126,7 @@ def _generate_architecture_doc() -> str:
     routes = _discover_routes()
     lines = [
         "# System Architecture",
-        f"**Version:** 7.0.0",
+        "**Version:** 7.0.0",
         f"**Generated:** {datetime.utcnow().isoformat()}",
         "",
         "## Overview",
@@ -139,7 +138,7 @@ def _generate_architecture_doc() -> str:
         "## Core Components",
         "",
         "### Backend (FastAPI)",
-        f"- **Port:** 8000",
+        "- **Port:** 8000",
         f"- **Routes:** {len(routes)}",
         "- **Framework:** FastAPI with Pydantic v2 validation",
         "",
@@ -672,7 +671,7 @@ See [Plugin System](plugins.md) for extension points.
 """
 
 
-def _generate_index(doc_files: List[str]) -> str:
+def _generate_index(doc_files: list[str]) -> str:
     lines = [
         "# ProjectPilot Documentation",
         "",

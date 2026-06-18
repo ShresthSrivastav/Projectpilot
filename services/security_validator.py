@@ -3,12 +3,11 @@
 import logging
 import re
 from pathlib import Path
-from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
 # Patterns that indicate hardcoded secrets
-SECRET_PATTERNS: List[re.Pattern] = [
+SECRET_PATTERNS: list[re.Pattern] = [
     re.compile(r'(?i)(api[_-]?key|secret|password|token|credential)\s*[=:]\s*["\'][^"\']+["\']'),
     re.compile(r'(?i)aws_access_key_id\s*[=:]\s*["\'][^"\']+["\']'),
     re.compile(r'(?i)aws_secret_access_key\s*[=:]\s*["\'][^"\']+["\']'),
@@ -17,7 +16,7 @@ SECRET_PATTERNS: List[re.Pattern] = [
 ]
 
 # Danger patterns that should never appear in generated code
-DANGEROUS_PATTERNS: List[re.Pattern] = [
+DANGEROUS_PATTERNS: list[re.Pattern] = [
     re.compile(r'\beval\s*\('),
     re.compile(r'\bexec\s*\('),
     re.compile(r'__import__\s*\('),
@@ -27,7 +26,7 @@ DANGEROUS_PATTERNS: List[re.Pattern] = [
 ]
 
 # Wildcard CORS patterns
-CORS_PATTERNS: List[re.Pattern] = [
+CORS_PATTERNS: list[re.Pattern] = [
     re.compile(r'allow_origins\s*=\s*\[?\s*["\']\*["\']'),
     re.compile(r'Access-Control-Allow-Origin:\s*\*'),
 ]
@@ -36,13 +35,13 @@ CORS_PATTERNS: List[re.Pattern] = [
 SKIP_DIRS = {"__pycache__", ".venv", "venv", "node_modules", ".git", "migrations"}
 
 
-def validate(job_dir: Path) -> Dict:
+def validate(job_dir: Path) -> dict:
     """Scan generated project for security issues.
 
     Returns:
         {"passed": bool, "issues": [...], "files_scanned": int}
     """
-    issues: List[str] = []
+    issues: list[str] = []
     files_scanned = 0
 
     for py_file in sorted(job_dir.rglob("*.py")):

@@ -6,11 +6,10 @@ import subprocess
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -44,18 +43,18 @@ class DeploymentSession:
     project_dir: str = ""
     target: DeploymentTarget = DeploymentTarget.DOCKER
     status: DeploymentStatus = DeploymentStatus.PENDING
-    url: Optional[str] = None
+    url: str | None = None
     build_log: str = ""
     deploy_log: str = ""
-    health_check_ok: Optional[bool] = None
-    browser_validation_ok: Optional[bool] = None
+    health_check_ok: bool | None = None
+    browser_validation_ok: bool | None = None
     created_at: float = field(default_factory=time.time)
-    completed_at: Optional[float] = None
-    error: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    rollback_data: Optional[Dict] = None
+    completed_at: float | None = None
+    error: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    rollback_data: dict | None = None
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         d = asdict(self)
         d["target"] = self.target.value
         d["status"] = self.status.value
@@ -64,7 +63,7 @@ class DeploymentSession:
 
 class DeploymentOrchestrator:
     def __init__(self):
-        self.sessions: Dict[str, DeploymentSession] = {}
+        self.sessions: dict[str, DeploymentSession] = {}
         self._lock = threading.Lock()
         DEPLOY_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -73,7 +72,7 @@ class DeploymentOrchestrator:
         job_id: str,
         project_dir: str,
         target: str = "docker",
-        health_check_url: Optional[str] = None,
+        health_check_url: str | None = None,
         run_browser_validation: bool = False,
     ) -> DeploymentSession:
         dt = DeploymentTarget(target.lower()) if target.lower() in [t.value for t in DeploymentTarget] else DeploymentTarget.DOCKER
@@ -90,7 +89,7 @@ class DeploymentOrchestrator:
         thread.start()
         return session
 
-    def _deploy_loop(self, session: DeploymentSession, health_check_url: Optional[str], run_bv: bool) -> None:
+    def _deploy_loop(self, session: DeploymentSession, health_check_url: str | None, run_bv: bool) -> None:
         try:
             session.status = DeploymentStatus.BUILDING
             build_success, build_log = self._build(session)
@@ -189,7 +188,7 @@ class DeploymentOrchestrator:
     def _build_generic(self, project: Path, platform: str) -> Tuple[bool, str]:
         return True, f"Build prepared for {platform}"
 
-    def _deploy(self, session: DeploymentSession) -> Tuple[bool, str, Optional[str]]:
+    def _deploy(self, session: DeploymentSession) -> Tuple[bool, str, str | None]:
         target = session.target
         project = Path(session.project_dir)
         if target == DeploymentTarget.DOCKER:
@@ -206,7 +205,7 @@ class DeploymentOrchestrator:
             return self._deploy_fly(project)
         return self._deploy_docker(project)
 
-    def _deploy_docker(self, project: Path) -> Tuple[bool, str, Optional[str]]:
+    def _deploy_docker(self, project: Path) -> Tuple[bool, str, str | None]:
         try:
             from services.container_manager import ContainerManager
             cm = ContainerManager()
@@ -221,14 +220,14 @@ class DeploymentOrchestrator:
         except Exception as exc:
             return False, str(exc), None
 
-    def _deploy_railway(self, project: Path) -> Tuple[bool, str, Optional[str]]:
+    def _deploy_railway(self, project: Path) -> Tuple[bool, str, str | None]:
         try:
             r = subprocess.run(["railway", "up"], cwd=str(project), capture_output=True, text=True, timeout=120)
             return r.returncode == 0, r.stdout + r.stderr, "https://<project>.railway.app"
         except Exception:
             return True, "Railway CLI not available (mock deploy)", "https://mock.railway.app"
 
-    def _deploy_render(self, project: Path) -> Tuple[bool, str, Optional[str]]:
+    def _deploy_render(self, project: Path) -> Tuple[bool, str, str | None]:
         try:
             render_yaml = project / "render.yaml"
             if not render_yaml.exists():
@@ -237,21 +236,21 @@ class DeploymentOrchestrator:
         except Exception as exc:
             return False, str(exc), None
 
-    def _deploy_vercel(self, project: Path) -> Tuple[bool, str, Optional[str]]:
+    def _deploy_vercel(self, project: Path) -> Tuple[bool, str, str | None]:
         try:
             r = subprocess.run(["npx", "vercel", "--prod"], cwd=str(project), capture_output=True, text=True, timeout=120)
             return r.returncode == 0, r.stdout + r.stderr, f"https://{project.name}.vercel.app"
         except Exception:
             return True, "Vercel CLI not available (mock deploy)", "https://mock.vercel.app"
 
-    def _deploy_netlify(self, project: Path) -> Tuple[bool, str, Optional[str]]:
+    def _deploy_netlify(self, project: Path) -> Tuple[bool, str, str | None]:
         try:
             r = subprocess.run(["npx", "netlify", "deploy", "--prod"], cwd=str(project), capture_output=True, text=True, timeout=120)
             return r.returncode == 0, r.stdout + r.stderr, "https://mock.netlify.app"
         except Exception:
             return True, "Netlify CLI not available (mock deploy)", "https://mock.netlify.app"
 
-    def _deploy_fly(self, project: Path) -> Tuple[bool, str, Optional[str]]:
+    def _deploy_fly(self, project: Path) -> Tuple[bool, str, str | None]:
         try:
             fly_toml = project / "fly.toml"
             if not fly_toml.exists():
@@ -273,7 +272,7 @@ class DeploymentOrchestrator:
 
     def _browser_validate(self, url: str) -> bool:
         try:
-            from services.browser_validation_service import get_validation_service, ValidationStep
+            from services.browser_validation_service import ValidationStep, get_validation_service
             vs = get_validation_service()
             journey = vs.create_journey(f"Deploy-validate-{uuid.uuid4().hex[:6]}", url)
             vs.add_step(journey.id, ValidationStep(action="navigate", url=url, description="Deployment check"))
@@ -297,10 +296,10 @@ class DeploymentOrchestrator:
         except Exception:
             return False
 
-    def get_session(self, session_id: str) -> Optional[DeploymentSession]:
+    def get_session(self, session_id: str) -> DeploymentSession | None:
         return self.sessions.get(session_id)
 
-    def list_sessions(self, job_id: Optional[str] = None, limit: int = 20) -> List[Dict]:
+    def list_sessions(self, job_id: str | None = None, limit: int = 20) -> list[dict]:
         with self._lock:
             sessions = list(self.sessions.values())
         if job_id:

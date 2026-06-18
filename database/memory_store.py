@@ -11,7 +11,7 @@ import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -698,7 +698,7 @@ def store_agent_memory(agent_name: str, job_id: str, key: str, value: str) -> No
         logger.warning("Memory store failed: %s", exc)
 
 
-def get_agent_memory(agent_name: str, key: Optional[str] = None, limit: int = 50) -> List[Dict]:
+def get_agent_memory(agent_name: str, key: str | None = None, limit: int = 50) -> list[dict]:
     try:
         conn = _get_conn()
         if key:
@@ -742,7 +742,7 @@ def record_fix_pattern(error_type: str, error_text: str, file_pattern: str, fix_
         logger.warning("Fix pattern record failed: %s", exc)
 
 
-def get_fix_patterns(error_type: Optional[str] = None, limit: int = 20) -> List[Dict]:
+def get_fix_patterns(error_type: str | None = None, limit: int = 20) -> list[dict]:
     try:
         conn = _get_conn()
         if error_type:
@@ -815,7 +815,7 @@ def record_project_analytics(
         logger.warning("Analytics record failed: %s", exc)
 
 
-def get_project_analytics(limit: int = 50) -> List[Dict]:
+def get_project_analytics(limit: int = 50) -> list[dict]:
     try:
         conn = _get_conn()
         cur = conn.execute(
@@ -839,7 +839,7 @@ def delete_project_analytics(job_id: str) -> bool:
         return False
 
 
-def get_analytics_summary() -> Dict[str, Any]:
+def get_analytics_summary() -> dict[str, Any]:
     try:
         conn = _get_conn()
         projects = conn.execute("SELECT COUNT(*) as c FROM project_analytics").fetchone()
@@ -881,7 +881,7 @@ def set_coding_preference(pref_key: str, pref_value: str, source: str = "", conf
         logger.warning("set_coding_preference failed: %s", exc)
 
 
-def get_coding_preferences(limit: int = 50) -> List[Dict]:
+def get_coding_preferences(limit: int = 50) -> list[dict]:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM coding_preferences ORDER BY confidence DESC, updated_at DESC LIMIT ?", (limit,))
@@ -911,7 +911,7 @@ def save_reusable_component(name: str, component_type: str, code: str, descripti
         logger.warning("save_reusable_component failed: %s", exc)
 
 
-def get_reusable_components(component_type: Optional[str] = None, limit: int = 20) -> List[Dict]:
+def get_reusable_components(component_type: str | None = None, limit: int = 20) -> list[dict]:
     try:
         conn = _get_conn()
         if component_type:
@@ -943,7 +943,7 @@ def save_project_insight(job_id: str, insight_type: str, summary: str, details: 
         logger.warning("save_project_insight failed: %s", exc)
 
 
-def get_project_insights(insight_type: Optional[str] = None, limit: int = 50) -> List[Dict]:
+def get_project_insights(insight_type: str | None = None, limit: int = 50) -> list[dict]:
     try:
         conn = _get_conn()
         if insight_type:
@@ -963,7 +963,7 @@ def get_project_insights(insight_type: Optional[str] = None, limit: int = 50) ->
 
 # ── GitHub Connection CRUD ───────────────────────────────────────────────
 
-def save_github_connection(username: str, data: Dict) -> None:
+def save_github_connection(username: str, data: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1005,7 +1005,7 @@ def delete_github_connection(username: str) -> None:
 
 # ── GitHub Repo CRUD ─────────────────────────────────────────────────────
 
-def save_github_repo(username: str, full_name: str, repo_data: Dict) -> None:
+def save_github_repo(username: str, full_name: str, repo_data: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1020,7 +1020,7 @@ def save_github_repo(username: str, full_name: str, repo_data: Dict) -> None:
         logger.warning("save_github_repo failed: %s", exc)
 
 
-def get_github_repos(username: str = "") -> List[Dict]:
+def get_github_repos(username: str = "") -> list[dict]:
     try:
         conn = _get_conn()
         if username:
@@ -1054,7 +1054,7 @@ def delete_github_repo(full_name: str) -> None:
 # ── Chat Conversations CRUD ───────────────────────────────────────────────
 
 
-def create_chat_conversation(title: str = "New Chat", conversation_id: Optional[str] = None) -> str:
+def create_chat_conversation(title: str = "New Chat", conversation_id: str | None = None) -> str:
     try:
         conn = _get_conn()
         cid = conversation_id or str(uuid.uuid4())
@@ -1069,7 +1069,7 @@ def create_chat_conversation(title: str = "New Chat", conversation_id: Optional[
         return ""
 
 
-def add_chat_message(conversation_id: str, role: str, content: str, tool_calls: Optional[str] = None) -> None:
+def add_chat_message(conversation_id: str, role: str, content: str, tool_calls: str | None = None) -> None:
     try:
         conn = _get_conn()
         mid = str(uuid.uuid4())
@@ -1086,7 +1086,7 @@ def add_chat_message(conversation_id: str, role: str, content: str, tool_calls: 
         logger.warning("add_chat_message failed: %s", exc)
 
 
-def get_chat_messages(conversation_id: str, limit: int = 50) -> List[Dict]:
+def get_chat_messages(conversation_id: str, limit: int = 50) -> list[dict]:
     try:
         conn = _get_conn()
         cur = conn.execute(
@@ -1099,7 +1099,7 @@ def get_chat_messages(conversation_id: str, limit: int = 50) -> List[Dict]:
         return []
 
 
-def list_chat_conversations(limit: int = 20) -> List[Dict]:
+def list_chat_conversations(limit: int = 20) -> list[dict]:
     try:
         conn = _get_conn()
         cur = conn.execute(
@@ -1153,7 +1153,7 @@ def record_cost(job_id: str, session_type: str, tokens_used: int, cost: float,
         logger.warning("record_cost failed: %s", exc)
 
 
-def get_cost_summary(job_id: Optional[str] = None) -> Dict[str, Any]:
+def get_cost_summary(job_id: str | None = None) -> dict[str, Any]:
     try:
         conn = _get_conn()
         if job_id:
@@ -1193,7 +1193,7 @@ def save_iteration_history(job_id: str, session_id: str, iteration_data: str) ->
         logger.warning("save_iteration_history failed: %s", exc)
 
 
-def get_iteration_history(job_id: str, limit: int = 10) -> List[Dict]:
+def get_iteration_history(job_id: str, limit: int = 10) -> list[dict]:
     try:
         conn = _get_conn()
         cur = conn.execute(
@@ -1226,7 +1226,7 @@ def save_graph_session(graph_id: str, job_id: str, graph_data: str, status: str 
         logger.warning("save_graph_session failed: %s", exc)
 
 
-def get_graph_session(graph_id: str) -> Optional[Dict]:
+def get_graph_session(graph_id: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM graph_sessions WHERE id=?", (graph_id,))
@@ -1236,7 +1236,7 @@ def get_graph_session(graph_id: str) -> Optional[Dict]:
         return None
 
 
-def list_graph_sessions(limit: int = 20) -> List[Dict]:
+def list_graph_sessions(limit: int = 20) -> list[dict]:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM graph_sessions ORDER BY created_at DESC LIMIT ?", (limit,))
@@ -1247,7 +1247,7 @@ def list_graph_sessions(limit: int = 20) -> List[Dict]:
 
 # ── Benchmark Results ──────────────────────────────────────────────────────────
 
-def save_benchmark_result(result_data: Dict) -> None:
+def save_benchmark_result(result_data: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1275,7 +1275,7 @@ def save_benchmark_result(result_data: Dict) -> None:
         logger.warning("save_benchmark_result failed: %s", exc)
 
 
-def get_benchmark_results(domain: Optional[str] = None, limit: int = 50) -> List[Dict]:
+def get_benchmark_results(domain: str | None = None, limit: int = 50) -> list[dict]:
     try:
         conn = _get_conn()
         if domain:
@@ -1304,7 +1304,7 @@ def get_benchmark_results(domain: Optional[str] = None, limit: int = 50) -> List
 # ── v11: Organization Tables ─────────────────────────────────────────────────────
 
 
-def save_organization(org_data: Dict) -> None:
+def save_organization(org_data: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1324,7 +1324,7 @@ def save_organization(org_data: Dict) -> None:
         logger.warning("save_organization failed: %s", exc)
 
 
-def get_organization(org_id: str) -> Optional[Dict]:
+def get_organization(org_id: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM organizations WHERE id=?", (org_id,))
@@ -1338,7 +1338,7 @@ def get_organization(org_id: str) -> Optional[Dict]:
         return None
 
 
-def list_organizations_db(limit: int = 50) -> List[Dict]:
+def list_organizations_db(limit: int = 50) -> list[dict]:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM organizations ORDER BY created_at DESC LIMIT ?", (limit,))
@@ -1363,7 +1363,7 @@ def delete_organization(org_id: str) -> bool:
         return False
 
 
-def save_repository(repo_data: Dict) -> None:
+def save_repository(repo_data: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1386,7 +1386,7 @@ def save_repository(repo_data: Dict) -> None:
         logger.warning("save_repository failed: %s", exc)
 
 
-def get_repositories(org_id: str) -> List[Dict]:
+def get_repositories(org_id: str) -> list[dict]:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM repositories WHERE org_id=? ORDER BY name", (org_id,))
@@ -1411,7 +1411,7 @@ def delete_repository(repo_id: str) -> bool:
         return False
 
 
-def save_repository_relationship(rel_data: Dict) -> None:
+def save_repository_relationship(rel_data: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1431,7 +1431,7 @@ def save_repository_relationship(rel_data: Dict) -> None:
         logger.warning("save_repository_relationship failed: %s", exc)
 
 
-def get_repository_relationships(org_id: str) -> List[Dict]:
+def get_repository_relationships(org_id: str) -> list[dict]:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM repository_relationships WHERE org_id=?", (org_id,))
@@ -1440,7 +1440,7 @@ def get_repository_relationships(org_id: str) -> List[Dict]:
         return []
 
 
-def save_cross_repo_change(change_data: Dict) -> None:
+def save_cross_repo_change(change_data: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1460,7 +1460,7 @@ def save_cross_repo_change(change_data: Dict) -> None:
         logger.warning("save_cross_repo_change failed: %s", exc)
 
 
-def get_cross_repo_changes(org_id: str, limit: int = 20) -> List[Dict]:
+def get_cross_repo_changes(org_id: str, limit: int = 20) -> list[dict]:
     try:
         conn = _get_conn()
         cur = conn.execute(
@@ -1479,7 +1479,7 @@ def get_cross_repo_changes(org_id: str, limit: int = 20) -> List[Dict]:
         return []
 
 
-def save_impact_report(report_data: Dict) -> None:
+def save_impact_report(report_data: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1501,7 +1501,7 @@ def save_impact_report(report_data: Dict) -> None:
         logger.warning("save_impact_report failed: %s", exc)
 
 
-def get_impact_reports(org_id: str, limit: int = 20) -> List[Dict]:
+def get_impact_reports(org_id: str, limit: int = 20) -> list[dict]:
     try:
         conn = _get_conn()
         cur = conn.execute(
@@ -1597,7 +1597,7 @@ def delete_repositories_by_org(org_id: str) -> bool:
         return False
 
 
-def get_impact_report_by_id(report_id: str) -> Optional[Dict]:
+def get_impact_report_by_id(report_id: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM impact_reports WHERE id=?", (report_id,))
@@ -1613,7 +1613,7 @@ def get_impact_report_by_id(report_id: str) -> Optional[Dict]:
         return None
 
 
-def get_cross_repo_change(change_id: str) -> Optional[Dict]:
+def get_cross_repo_change(change_id: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM cross_repo_changes WHERE id=?", (change_id,))
@@ -1643,7 +1643,7 @@ def delete_benchmark_result(result_id: str) -> bool:
 # ── v11.1 Plugin & Agent SDK CRUD ─────────────────────────────────────────
 
 
-def mem_save_plugin(plugin_data: Dict) -> None:
+def mem_save_plugin(plugin_data: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1674,7 +1674,7 @@ def mem_save_plugin(plugin_data: Dict) -> None:
         logger.warning("mem_save_plugin failed: %s", exc)
 
 
-def mem_get_plugin(plugin_id: str) -> Optional[Dict]:
+def mem_get_plugin(plugin_id: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM plugins WHERE id=?", (plugin_id,))
@@ -1690,7 +1690,7 @@ def mem_get_plugin(plugin_id: str) -> Optional[Dict]:
         return None
 
 
-def mem_list_plugins(plugin_type: Optional[str] = None, enabled_only: bool = False) -> List[Dict]:
+def mem_list_plugins(plugin_type: str | None = None, enabled_only: bool = False) -> list[dict]:
     try:
         conn = _get_conn()
         query = "SELECT * FROM plugins"
@@ -1729,7 +1729,7 @@ def mem_delete_plugin(plugin_id: str) -> bool:
         return False
 
 
-def mem_save_marketplace_package(pkg_data: Dict) -> None:
+def mem_save_marketplace_package(pkg_data: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1762,7 +1762,7 @@ def mem_save_marketplace_package(pkg_data: Dict) -> None:
         logger.warning("mem_save_marketplace_package failed: %s", exc)
 
 
-def mem_get_marketplace_package(package_id: str) -> Optional[Dict]:
+def mem_get_marketplace_package(package_id: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM marketplace_packages WHERE id=?", (package_id,))
@@ -1778,8 +1778,8 @@ def mem_get_marketplace_package(package_id: str) -> Optional[Dict]:
 
 
 def mem_search_marketplace_packages(
-    query: str = "", package_type: Optional[str] = None, limit: int = 50
-) -> List[Dict]:
+    query: str = "", package_type: str | None = None, limit: int = 50
+) -> list[dict]:
     try:
         conn = _get_conn()
         sql = "SELECT * FROM marketplace_packages WHERE 1=1"
@@ -1816,7 +1816,7 @@ def mem_delete_marketplace_package(package_id: str) -> bool:
         return False
 
 
-def mem_save_custom_agent(agent_data: Dict) -> None:
+def mem_save_custom_agent(agent_data: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1842,7 +1842,7 @@ def mem_save_custom_agent(agent_data: Dict) -> None:
         logger.warning("mem_save_custom_agent failed: %s", exc)
 
 
-def mem_list_custom_agents(enabled_only: bool = False) -> List[Dict]:
+def mem_list_custom_agents(enabled_only: bool = False) -> list[dict]:
     try:
         conn = _get_conn()
         query = "SELECT * FROM custom_agents"
@@ -1875,7 +1875,7 @@ def mem_delete_custom_agent(agent_id: str) -> bool:
         return False
 
 
-def mem_save_custom_workflow(workflow_data: Dict) -> None:
+def mem_save_custom_workflow(workflow_data: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1901,7 +1901,7 @@ def mem_save_custom_workflow(workflow_data: Dict) -> None:
         logger.warning("mem_save_custom_workflow failed: %s", exc)
 
 
-def mem_list_custom_workflows(enabled_only: bool = False) -> List[Dict]:
+def mem_list_custom_workflows(enabled_only: bool = False) -> list[dict]:
     try:
         conn = _get_conn()
         query = "SELECT * FROM custom_workflows"
@@ -1935,7 +1935,7 @@ def mem_delete_custom_workflow(workflow_id: str) -> bool:
 
 # ===== v12.0 Autonomous Evaluation CRUD =====
 
-def mem_save_evaluation_run(run: Dict) -> None:
+def mem_save_evaluation_run(run: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1960,7 +1960,7 @@ def mem_save_evaluation_run(run: Dict) -> None:
         logger.warning("mem_save_evaluation_run failed: %s", exc)
 
 
-def mem_get_evaluation_run(run_id: str) -> Optional[Dict]:
+def mem_get_evaluation_run(run_id: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM evaluation_runs WHERE id=?", (run_id,))
@@ -1970,8 +1970,8 @@ def mem_get_evaluation_run(run_id: str) -> Optional[Dict]:
         return None
 
 
-def mem_list_evaluation_runs(limit: int = 50, trigger_type: Optional[str] = None,
-                             status: Optional[str] = None) -> List[Dict]:
+def mem_list_evaluation_runs(limit: int = 50, trigger_type: str | None = None,
+                             status: str | None = None) -> list[dict]:
     try:
         conn = _get_conn()
         conditions = []
@@ -1993,7 +1993,7 @@ def mem_list_evaluation_runs(limit: int = 50, trigger_type: Optional[str] = None
         return []
 
 
-def mem_save_evaluation_report(report: Dict) -> None:
+def mem_save_evaluation_report(report: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -2018,7 +2018,7 @@ def mem_save_evaluation_report(report: Dict) -> None:
         logger.warning("mem_save_evaluation_report failed: %s", exc)
 
 
-def mem_get_evaluation_report(report_id: str) -> Optional[Dict]:
+def mem_get_evaluation_report(report_id: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM evaluation_reports WHERE id=?", (report_id,))
@@ -2036,8 +2036,8 @@ def mem_get_evaluation_report(report_id: str) -> Optional[Dict]:
         return None
 
 
-def mem_list_evaluation_reports(report_type: Optional[str] = None,
-                                limit: int = 20) -> List[Dict]:
+def mem_list_evaluation_reports(report_type: str | None = None,
+                                limit: int = 20) -> list[dict]:
     try:
         conn = _get_conn()
         if report_type:
@@ -2062,7 +2062,7 @@ def mem_list_evaluation_reports(report_type: Optional[str] = None,
         return []
 
 
-def mem_save_regression(regression: Dict) -> None:
+def mem_save_regression(regression: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -2084,10 +2084,10 @@ def mem_save_regression(regression: Dict) -> None:
         logger.warning("mem_save_regression failed: %s", exc)
 
 
-def mem_list_regressions(category: Optional[str] = None,
-                         severity: Optional[str] = None,
-                         dismissed: Optional[bool] = None,
-                         limit: int = 100) -> List[Dict]:
+def mem_list_regressions(category: str | None = None,
+                         severity: str | None = None,
+                         dismissed: bool | None = None,
+                         limit: int = 100) -> list[dict]:
     try:
         conn = _get_conn()
         conditions = []
@@ -2112,7 +2112,7 @@ def mem_list_regressions(category: Optional[str] = None,
         return []
 
 
-def mem_get_regression(regression_id: str) -> Optional[Dict]:
+def mem_get_regression(regression_id: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM regressions WHERE id=?", (regression_id,))
@@ -2122,7 +2122,7 @@ def mem_get_regression(regression_id: str) -> Optional[Dict]:
         return None
 
 
-def mem_update_regression(regression_id: str, updates: Dict) -> bool:
+def mem_update_regression(regression_id: str, updates: dict) -> bool:
     try:
         conn = _get_conn()
         fields = []
@@ -2147,7 +2147,7 @@ def mem_update_regression(regression_id: str, updates: Dict) -> bool:
         return False
 
 
-def mem_save_leaderboard_entry(entry: Dict) -> None:
+def mem_save_leaderboard_entry(entry: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -2170,9 +2170,9 @@ def mem_save_leaderboard_entry(entry: Dict) -> None:
         logger.warning("mem_save_leaderboard_entry failed: %s", exc)
 
 
-def mem_get_leaderboard(category: Optional[str] = None,
+def mem_get_leaderboard(category: str | None = None,
                         sort_by: str = "score",
-                        limit: int = 20) -> List[Dict]:
+                        limit: int = 20) -> list[dict]:
     try:
         conn = _get_conn()
         valid_sorts = {"score", "autonomy_score", "reliability_score",
@@ -2197,7 +2197,7 @@ def mem_get_leaderboard(category: Optional[str] = None,
         return []
 
 
-def mem_get_leaderboard_entry(entry_id: str) -> Optional[Dict]:
+def mem_get_leaderboard_entry(entry_id: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM leaderboards WHERE id=?", (entry_id,))
@@ -2222,7 +2222,7 @@ def mem_delete_leaderboard_entry(entry_id: str) -> bool:
         return False
 
 
-def mem_get_leaderboard_categories() -> List[str]:
+def mem_get_leaderboard_categories() -> list[str]:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT DISTINCT category FROM leaderboards ORDER BY category")
@@ -2231,7 +2231,7 @@ def mem_get_leaderboard_categories() -> List[str]:
         return []
 
 
-def mem_save_version_snapshot(snapshot: Dict) -> None:
+def mem_save_version_snapshot(snapshot: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -2248,8 +2248,8 @@ def mem_save_version_snapshot(snapshot: Dict) -> None:
         logger.warning("mem_save_version_snapshot failed: %s", exc)
 
 
-def mem_get_version_snapshots(version: Optional[str] = None,
-                              limit: int = 50) -> List[Dict]:
+def mem_get_version_snapshots(version: str | None = None,
+                              limit: int = 50) -> list[dict]:
     try:
         conn = _get_conn()
         if version:
@@ -2270,7 +2270,7 @@ def mem_get_version_snapshots(version: Optional[str] = None,
         return []
 
 
-def mem_save_version_comparison(comparison: Dict) -> None:
+def mem_save_version_comparison(comparison: dict) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -2289,9 +2289,9 @@ def mem_save_version_comparison(comparison: Dict) -> None:
         return None
 
 
-def mem_get_version_comparisons(from_version: Optional[str] = None,
-                                to_version: Optional[str] = None,
-                                limit: int = 20) -> List[Dict]:
+def mem_get_version_comparisons(from_version: str | None = None,
+                                to_version: str | None = None,
+                                limit: int = 20) -> list[dict]:
     try:
         conn = _get_conn()
         conditions = []
@@ -2321,7 +2321,7 @@ def mem_get_version_comparisons(from_version: Optional[str] = None,
 # ── v12 Phase 4 — Scheduler Metadata CRUD ──────────────────────────────────────
 
 
-def mem_save_scheduler_metadata(meta: Dict) -> bool:
+def mem_save_scheduler_metadata(meta: dict) -> bool:
     try:
         conn = _get_conn()
         # Delete any existing row with the same schedule_type to avoid duplicates
@@ -2351,7 +2351,7 @@ def mem_save_scheduler_metadata(meta: Dict) -> bool:
         return False
 
 
-def mem_get_scheduler_metadata(schedule_type: str) -> Optional[Dict]:
+def mem_get_scheduler_metadata(schedule_type: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute(
@@ -2362,7 +2362,7 @@ def mem_get_scheduler_metadata(schedule_type: str) -> Optional[Dict]:
         return None
 
 
-def mem_list_scheduler_metadata(enabled_only: bool = False) -> List[Dict]:
+def mem_list_scheduler_metadata(enabled_only: bool = False) -> list[dict]:
     try:
         conn = _get_conn()
         if enabled_only:
@@ -2387,7 +2387,7 @@ def mem_delete_scheduler_metadata(schedule_type: str) -> bool:
         return False
 
 
-def mem_update_evaluation_run(run_id: str, updates: Dict) -> bool:
+def mem_update_evaluation_run(run_id: str, updates: dict) -> bool:
     try:
         conn = _get_conn()
         allowed = {"status", "autonomy_score", "success_rate", "total_cost",
@@ -2437,7 +2437,7 @@ def mem_count_missed_runs(schedule_type: str, since_timestamp: float) -> int:
 # ── v12.5 — Learning Engine Feedback Loop CRUD ──────────────────────────────
 
 
-def mem_save_learning_feedback(fb: Dict) -> bool:
+def mem_save_learning_feedback(fb: dict) -> bool:
     try:
         conn = _get_conn()
         conn.execute(
@@ -2461,10 +2461,10 @@ def mem_save_learning_feedback(fb: Dict) -> bool:
 
 
 def mem_list_learning_feedback(
-    feedback_type: Optional[str] = None,
-    category: Optional[str] = None,
+    feedback_type: str | None = None,
+    category: str | None = None,
     limit: int = 100,
-) -> List[Dict]:
+) -> list[dict]:
     try:
         conn = _get_conn()
         conditions = []
@@ -2486,7 +2486,7 @@ def mem_list_learning_feedback(
         return []
 
 
-def mem_save_learning_pattern(pattern: Dict) -> bool:
+def mem_save_learning_pattern(pattern: dict) -> bool:
     try:
         conn = _get_conn()
         conn.execute(
@@ -2511,7 +2511,7 @@ def mem_save_learning_pattern(pattern: Dict) -> bool:
         return False
 
 
-def mem_get_learning_pattern(pattern_id: str) -> Optional[Dict]:
+def mem_get_learning_pattern(pattern_id: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM learning_feedback_patterns WHERE id=?", (pattern_id,))
@@ -2527,11 +2527,11 @@ def mem_get_learning_pattern(pattern_id: str) -> Optional[Dict]:
 
 
 def mem_list_learning_patterns(
-    pattern_type: Optional[str] = None,
-    category: Optional[str] = None,
+    pattern_type: str | None = None,
+    category: str | None = None,
     min_confidence: float = 0.0,
     limit: int = 100,
-) -> List[Dict]:
+) -> list[dict]:
     try:
         conn = _get_conn()
         conditions = []
@@ -2562,7 +2562,7 @@ def mem_list_learning_patterns(
         return []
 
 
-def mem_save_learning_recommendation(rec: Dict) -> bool:
+def mem_save_learning_recommendation(rec: dict) -> bool:
     try:
         conn = _get_conn()
         conn.execute(
@@ -2588,7 +2588,7 @@ def mem_save_learning_recommendation(rec: Dict) -> bool:
         return False
 
 
-def mem_get_learning_recommendation(rec_id: str) -> Optional[Dict]:
+def mem_get_learning_recommendation(rec_id: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute(
@@ -2604,11 +2604,11 @@ def mem_get_learning_recommendation(rec_id: str) -> Optional[Dict]:
 
 
 def mem_list_learning_recommendations(
-    recommendation_type: Optional[str] = None,
-    category: Optional[str] = None,
-    status: Optional[str] = None,
+    recommendation_type: str | None = None,
+    category: str | None = None,
+    status: str | None = None,
     limit: int = 100,
-) -> List[Dict]:
+) -> list[dict]:
     try:
         conn = _get_conn()
         conditions = []
@@ -2639,9 +2639,9 @@ def mem_list_learning_recommendations(
 
 
 def mem_get_learning_insights(
-    category: Optional[str] = None,
+    category: str | None = None,
     limit: int = 20,
-) -> List[Dict]:
+) -> list[dict]:
     """Aggregate learning insights from feedback, patterns, and recommendations."""
     try:
         insights = []
@@ -2707,7 +2707,7 @@ def mem_get_learning_insights(
 # Campaign CRUD
 # ═══════════════════════════════════════════════════════════════════════════
 
-def mem_save_campaign(campaign: Dict) -> bool:
+def mem_save_campaign(campaign: dict) -> bool:
     try:
         conn = _get_conn()
         conn.execute(
@@ -2737,7 +2737,7 @@ def mem_save_campaign(campaign: Dict) -> bool:
         return False
 
 
-def mem_get_campaign(campaign_id: str) -> Optional[Dict]:
+def mem_get_campaign(campaign_id: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM campaigns WHERE id=?", (campaign_id,))
@@ -2753,7 +2753,7 @@ def mem_get_campaign(campaign_id: str) -> Optional[Dict]:
         return None
 
 
-def mem_list_campaigns(limit: int = 50, status: Optional[str] = None) -> List[Dict]:
+def mem_list_campaigns(limit: int = 50, status: str | None = None) -> list[dict]:
     try:
         conn = _get_conn()
         conditions = []
@@ -2779,7 +2779,7 @@ def mem_list_campaigns(limit: int = 50, status: Optional[str] = None) -> List[Di
         return []
 
 
-def mem_update_campaign(campaign_id: str, updates: Dict) -> bool:
+def mem_update_campaign(campaign_id: str, updates: dict) -> bool:
     try:
         conn = _get_conn()
         allowed = {
@@ -2819,7 +2819,7 @@ def mem_delete_campaign(campaign_id: str) -> bool:
 
 # ── Campaign Runs ────────────────────────────────────────────────────────────
 
-def mem_save_campaign_run(run: Dict) -> bool:
+def mem_save_campaign_run(run: dict) -> bool:
     try:
         conn = _get_conn()
         conn.execute(
@@ -2856,7 +2856,7 @@ def mem_save_campaign_run(run: Dict) -> bool:
         return False
 
 
-def mem_get_campaign_run(run_id: str) -> Optional[Dict]:
+def mem_get_campaign_run(run_id: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute("SELECT * FROM campaign_runs WHERE id=?", (run_id,))
@@ -2873,11 +2873,11 @@ def mem_get_campaign_run(run_id: str) -> Optional[Dict]:
 
 
 def mem_list_campaign_runs(
-    campaign_id: Optional[str] = None,
-    domain: Optional[str] = None,
-    status: Optional[str] = None,
+    campaign_id: str | None = None,
+    domain: str | None = None,
+    status: str | None = None,
     limit: int = 500,
-) -> List[Dict]:
+) -> list[dict]:
     try:
         conn = _get_conn()
         conditions = []
@@ -2909,7 +2909,7 @@ def mem_list_campaign_runs(
         return []
 
 
-def mem_update_campaign_run(run_id: str, updates: Dict) -> bool:
+def mem_update_campaign_run(run_id: str, updates: dict) -> bool:
     try:
         conn = _get_conn()
         allowed = {
@@ -2936,7 +2936,7 @@ def mem_update_campaign_run(run_id: str, updates: Dict) -> bool:
         return False
 
 
-def mem_count_campaign_runs(campaign_id: Optional[str] = None, status: Optional[str] = None) -> int:
+def mem_count_campaign_runs(campaign_id: str | None = None, status: str | None = None) -> int:
     try:
         conn = _get_conn()
         conditions = []

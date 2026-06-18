@@ -2,11 +2,10 @@
 import json
 import logging
 import uuid
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 SEVERITY_HIGH = "high"
 SEVERITY_MEDIUM = "medium"
@@ -27,7 +26,7 @@ class RegressionAlert:
     detected_at: str = ""
     dismissed: bool = False
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -43,7 +42,7 @@ class RegressionDetector:
         if hasattr(self, "_initialized"):
             return
         self._initialized = True
-        self._alerts: Dict[str, RegressionAlert] = {}
+        self._alerts: dict[str, RegressionAlert] = {}
         self._logger = logging.getLogger("RegressionDetector")
         self._storage_dir = Path("evaluation_data")
         self._storage_dir.mkdir(parents=True, exist_ok=True)
@@ -74,7 +73,7 @@ class RegressionDetector:
             return SEVERITY_MEDIUM
         return SEVERITY_LOW
 
-    def check_autonomy_score(self, previous: float, current: float, run_id: str = "") -> Optional[RegressionAlert]:
+    def check_autonomy_score(self, previous: float, current: float, run_id: str = "") -> RegressionAlert | None:
         if previous <= 0:
             return None
         drop_pct = ((previous - current) / previous) * 100
@@ -88,14 +87,14 @@ class RegressionDetector:
                 severity=self._severity(drop_pct),
                 message=f"Autonomy score dropped {drop_pct:.1f}% ({previous:.2f} → {current:.2f})",
                 run_id=run_id,
-                detected_at=datetime.now(timezone.utc).isoformat(),
+                detected_at=datetime.now(UTC).isoformat(),
             )
             self._alerts[alert.id] = alert
             self._save_alerts()
             return alert
         return None
 
-    def check_success_rate(self, previous: float, current: float, run_id: str = "") -> Optional[RegressionAlert]:
+    def check_success_rate(self, previous: float, current: float, run_id: str = "") -> RegressionAlert | None:
         if previous <= 0:
             return None
         drop_pct = ((previous - current) / previous) * 100
@@ -109,14 +108,14 @@ class RegressionDetector:
                 severity=self._severity(drop_pct),
                 message=f"Success rate dropped {drop_pct:.1f}% ({previous:.2f} → {current:.2f})",
                 run_id=run_id,
-                detected_at=datetime.now(timezone.utc).isoformat(),
+                detected_at=datetime.now(UTC).isoformat(),
             )
             self._alerts[alert.id] = alert
             self._save_alerts()
             return alert
         return None
 
-    def check_cost_increase(self, previous: float, current: float, run_id: str = "") -> Optional[RegressionAlert]:
+    def check_cost_increase(self, previous: float, current: float, run_id: str = "") -> RegressionAlert | None:
         if previous <= 0:
             return None
         increase_pct = ((current - previous) / previous) * 100
@@ -130,14 +129,14 @@ class RegressionDetector:
                 severity=self._severity(increase_pct),
                 message=f"Cost increased {increase_pct:.1f}% ({previous:.2f} → {current:.2f})",
                 run_id=run_id,
-                detected_at=datetime.now(timezone.utc).isoformat(),
+                detected_at=datetime.now(UTC).isoformat(),
             )
             self._alerts[alert.id] = alert
             self._save_alerts()
             return alert
         return None
 
-    def check_runtime_increase(self, previous: float, current: float, run_id: str = "") -> Optional[RegressionAlert]:
+    def check_runtime_increase(self, previous: float, current: float, run_id: str = "") -> RegressionAlert | None:
         if previous <= 0:
             return None
         increase_pct = ((current - previous) / previous) * 100
@@ -151,14 +150,14 @@ class RegressionDetector:
                 severity=self._severity(increase_pct),
                 message=f"Runtime increased {increase_pct:.1f}% ({previous:.0f}ms → {current:.0f}ms)",
                 run_id=run_id,
-                detected_at=datetime.now(timezone.utc).isoformat(),
+                detected_at=datetime.now(UTC).isoformat(),
             )
             self._alerts[alert.id] = alert
             self._save_alerts()
             return alert
         return None
 
-    def check_deployment_failures(self, previous: float, current: float, run_id: str = "") -> Optional[RegressionAlert]:
+    def check_deployment_failures(self, previous: float, current: float, run_id: str = "") -> RegressionAlert | None:
         drop_pct = ((previous - current) / max(previous, 0.01)) * 100
         if drop_pct > 5:
             alert = RegressionAlert(
@@ -170,14 +169,14 @@ class RegressionDetector:
                 severity=self._severity(drop_pct),
                 message=f"Deployment success rate dropped {drop_pct:.1f}% ({previous:.2f} → {current:.2f})",
                 run_id=run_id,
-                detected_at=datetime.now(timezone.utc).isoformat(),
+                detected_at=datetime.now(UTC).isoformat(),
             )
             self._alerts[alert.id] = alert
             self._save_alerts()
             return alert
         return None
 
-    def check_benchmark_regression(self, previous: float, current: float, domain: str = "", run_id: str = "") -> Optional[RegressionAlert]:
+    def check_benchmark_regression(self, previous: float, current: float, domain: str = "", run_id: str = "") -> RegressionAlert | None:
         if previous <= 0:
             return None
         drop_pct = ((previous - current) / previous) * 100
@@ -191,7 +190,7 @@ class RegressionDetector:
                 severity=self._severity(drop_pct),
                 message=f"Benchmark {domain or 'score'} dropped {drop_pct:.1f}% ({previous:.2f} → {current:.2f})",
                 run_id=run_id,
-                detected_at=datetime.now(timezone.utc).isoformat(),
+                detected_at=datetime.now(UTC).isoformat(),
             )
             self._alerts[alert.id] = alert
             self._save_alerts()
@@ -199,8 +198,8 @@ class RegressionDetector:
         return None
 
     def run_all_checks(
-        self, previous: Dict[str, float], current: Dict[str, float], run_id: str = ""
-    ) -> List[RegressionAlert]:
+        self, previous: dict[str, float], current: dict[str, float], run_id: str = ""
+    ) -> list[RegressionAlert]:
         alerts = []
         check = self.check_autonomy_score(previous.get("autonomy_score", 0), current.get("autonomy_score", 0), run_id)
         if check:
@@ -220,8 +219,8 @@ class RegressionDetector:
         return alerts
 
     def get_alerts(
-        self, category: Optional[str] = None, severity: Optional[str] = None, limit: int = 50
-    ) -> List[RegressionAlert]:
+        self, category: str | None = None, severity: str | None = None, limit: int = 50
+    ) -> list[RegressionAlert]:
         results = list(self._alerts.values())
         if category:
             results = [a for a in results if a.category == category]
@@ -230,7 +229,7 @@ class RegressionDetector:
         results.sort(key=lambda a: a.detected_at, reverse=True)
         return results[:limit]
 
-    def get_alert(self, alert_id: str) -> Optional[RegressionAlert]:
+    def get_alert(self, alert_id: str) -> RegressionAlert | None:
         return self._alerts.get(alert_id)
 
     def dismiss_alert(self, alert_id: str) -> bool:

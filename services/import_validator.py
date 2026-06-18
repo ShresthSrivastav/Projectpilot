@@ -5,21 +5,20 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
 FATAL_ERRORS = {"ModuleNotFoundError", "ImportError", "SyntaxError"}
 
 
-def validate(job_dir: Path) -> Dict:
+def validate(job_dir: Path) -> dict:
     """Try to compile + import every Python module in the project.
 
     Returns:
         {"passed": bool, "errors": [...], "files_checked": int}
     """
     py_files = sorted(job_dir.rglob("*.py"))
-    errors: List[str] = []
+    errors: list[str] = []
 
     for py_file in py_files:
         rel = str(py_file.relative_to(job_dir))
@@ -55,14 +54,14 @@ def validate(job_dir: Path) -> Dict:
     }
 
 
-def _extract_imports(py_file: Path) -> List[str]:
+def _extract_imports(py_file: Path) -> list[str]:
     """Return top-level third-party module names imported in the file."""
     try:
         tree = ast.parse(py_file.read_text())
     except SyntaxError:
         return []
 
-    names: List[str] = []
+    names: list[str] = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -84,7 +83,7 @@ def _classify_error(stderr: str) -> str:
     return "ImportError"
 
 
-def _get_parent_env() -> Dict:
+def _get_parent_env() -> dict:
     import os
     return dict(os.environ)
 
@@ -99,8 +98,7 @@ except AttributeError:
         "hashlib", "base64", "uuid", "subprocess", "threading", "asyncio",
         "logging", "warnings", "contextlib", "copy", "inspect", "ast",
         "importlib", "io", "textwrap", "string", "random", "statistics",
-        "http", "urllib", "xml", "html", "csv", "sqlite3", "json",
-        "argparse", "configparser", "tempfile", "shutil", "glob", "fnmatch",
+        "http", "urllib", "xml", "html", "csv", "sqlite3", "argparse", "configparser", "tempfile", "shutil", "glob", "fnmatch",
         "unittest", "doctest", "pdb", "traceback", "pprint",
         "dis", "tokenize", "pickle", "shelve", "marshal",
         "zipfile", "tarfile", "gzip", "bz2", "lzma",

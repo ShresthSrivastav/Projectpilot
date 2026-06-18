@@ -1,6 +1,6 @@
 """Workspace — browse local projects and GitHub repositories with full management UI."""
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
 import streamlit as st
@@ -8,7 +8,7 @@ import streamlit as st
 BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 
 
-def _get(path: str, timeout: int = 10) -> Optional[Dict]:
+def _get(path: str, timeout: int = 10) -> dict | None:
     try:
         r = requests.get(f"{BACKEND}{path}", timeout=timeout)
         r.raise_for_status()
@@ -17,7 +17,7 @@ def _get(path: str, timeout: int = 10) -> Optional[Dict]:
         return None
 
 
-def _post(path: str, data: Any, timeout: int = 15) -> Optional[Dict]:
+def _post(path: str, data: Any, timeout: int = 15) -> dict | None:
     try:
         r = requests.post(f"{BACKEND}{path}", json=data, timeout=timeout)
         if not r.ok:
@@ -154,7 +154,7 @@ def _show_local_projects():
                 st.error(str(exc))
 
 
-def _show_test_results(detail: Dict):
+def _show_test_results(detail: dict):
     tt = detail.get("test_total", 0)
     if tt <= 0:
         return
@@ -221,9 +221,9 @@ def _show_test_results(detail: Dict):
                                 st.success(f"Added: {', '.join(adds)}")
                             after = fdata.get("after", {})
                             if after.get("passed"):
-                                st.success(f"\u2705 All tests pass after fix!")
+                                st.success("\u2705 All tests pass after fix!")
                             else:
-                                st.error(f"\u274c Tests still failing.")
+                                st.error("\u274c Tests still failing.")
                             with st.expander("Before / After Test Output"):
                                 col1, col2 = st.columns(2)
                                 col1.markdown("**Before**")
@@ -293,7 +293,7 @@ def _show_changelog(jid: str):
         pass
 
 
-def _show_logs(detail: Dict):
+def _show_logs(detail: dict):
     logs = detail.get("logs", [])
     if logs:
         with st.expander("Agent Logs", expanded=False):
@@ -309,11 +309,11 @@ def _show_logs(detail: Dict):
 #   GitHub Integration Section
 # 
 
-def _gh_get(path: str, timeout: int = 10) -> Optional[Dict]:
+def _gh_get(path: str, timeout: int = 10) -> dict | None:
     return _get(path, timeout)
 
 
-def _gh_post(path: str, data: Any = None, timeout: int = 15) -> Optional[Dict]:
+def _gh_post(path: str, data: Any = None, timeout: int = 15) -> dict | None:
     return _post(path, data or {}, timeout)
 
 

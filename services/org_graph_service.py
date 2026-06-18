@@ -7,11 +7,11 @@ import threading
 import time
 import uuid
 from collections import defaultdict
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -55,11 +55,11 @@ class RepositoryNode:
     default_branch: str = "main"
     file_count: int = 0
     total_lines: int = 0
-    indexed_at: Optional[float] = None
-    last_commit: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    indexed_at: float | None = None
+    last_commit: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -77,7 +77,7 @@ class CrossRepoDependency:
     verified: bool = False
     detected_at: float = field(default_factory=time.time)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -92,13 +92,13 @@ class OrgEntity:
     line_start: int = 0
     line_end: int = 0
     docstring: str = ""
-    imports: List[str] = field(default_factory=list)
-    calls: List[str] = field(default_factory=list)
-    extends: List[str] = field(default_factory=list)
-    implements: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    imports: list[str] = field(default_factory=list)
+    calls: list[str] = field(default_factory=list)
+    extends: list[str] = field(default_factory=list)
+    implements: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -107,14 +107,14 @@ class Organization:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
     description: str = ""
-    repositories: Dict[str, RepositoryNode] = field(default_factory=dict)
-    dependencies: Dict[str, CrossRepoDependency] = field(default_factory=dict)
-    entities: Dict[str, OrgEntity] = field(default_factory=dict)
+    repositories: dict[str, RepositoryNode] = field(default_factory=dict)
+    dependencies: dict[str, CrossRepoDependency] = field(default_factory=dict)
+    entities: dict[str, OrgEntity] = field(default_factory=dict)
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -133,17 +133,17 @@ class ImpactReport:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     organization_id: str = ""
     query: str = ""
-    affected_repos: List[str] = field(default_factory=list)
-    affected_files: List[Dict[str, Any]] = field(default_factory=list)
-    affected_entities: List[Dict[str, Any]] = field(default_factory=list)
-    dependencies_traversed: List[Dict[str, Any]] = field(default_factory=list)
+    affected_repos: list[str] = field(default_factory=list)
+    affected_files: list[dict[str, Any]] = field(default_factory=list)
+    affected_entities: list[dict[str, Any]] = field(default_factory=list)
+    dependencies_traversed: list[dict[str, Any]] = field(default_factory=list)
     impact_score: float = 0.0
     risk_level: str = "low"
-    recommendations: List[str] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
     report_markdown: str = ""
     created_at: float = field(default_factory=time.time)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -221,11 +221,11 @@ class OrganizationGraph:
         self._save()
         return True
 
-    def get_repository(self, repo_id: str) -> Optional[RepositoryNode]:
+    def get_repository(self, repo_id: str) -> RepositoryNode | None:
         with self._lock:
             return self.org.repositories.get(repo_id)
 
-    def list_repositories(self) -> List[RepositoryNode]:
+    def list_repositories(self) -> list[RepositoryNode]:
         with self._lock:
             return list(self.org.repositories.values())
 
@@ -250,7 +250,7 @@ class OrganizationGraph:
 
     # ── Repository Indexing ─────────────────────────────────────────────────────
 
-    def index_repository(self, repo_id: str) -> Dict[str, Any]:
+    def index_repository(self, repo_id: str) -> dict[str, Any]:
         repo = self.get_repository(repo_id)
         if not repo:
             return {"error": f"Repository {repo_id} not found"}
@@ -288,7 +288,7 @@ class OrganizationGraph:
         logger.info("Indexed repo %s: %d files, %d entities", repo.name, stats["files_scanned"], stats["entities_found"])
         return stats
 
-    def _parse_entities(self, content: str, repo_name: str, rel_path: str, suffix: str) -> List[OrgEntity]:
+    def _parse_entities(self, content: str, repo_name: str, rel_path: str, suffix: str) -> list[OrgEntity]:
         entities = []
         # Parse imports
         imports = []
@@ -349,7 +349,7 @@ class OrganizationGraph:
             func_name = next(g for g in match.groups() if g)
 
             # Skip if inside a class (handled above)
-            class_line = max([0] + [content[:match.start()].rfind(f"\nclass "), content[:match.start()].rfind(f"\nclass\t")])
+            class_line = max([0] + [content[:match.start()].rfind("\nclass "), content[:match.start()].rfind("\nclass\t")])
             if class_line > 0:
                 after_class = content[class_line:match.start()]
                 if after_class.count("\n") < 50:
@@ -375,7 +375,7 @@ class OrganizationGraph:
             entities = list(self.org.entities.values())
             repos = {r.name: r.id for r in self.org.repositories.values()}
 
-        new_deps: Dict[str, CrossRepoDependency] = {}
+        new_deps: dict[str, CrossRepoDependency] = {}
 
         for entity in entities:
             if entity.entity_type != "class":
@@ -395,9 +395,9 @@ class OrganizationGraph:
 
     def _find_cross_repo_dependency(
         self, source_repo: str, source_file: str, source_symbol: str,
-        target_text: str, repos: Dict[str, str], entities: List[OrgEntity],
+        target_text: str, repos: dict[str, str], entities: list[OrgEntity],
         rel_type: str,
-    ) -> Optional[CrossRepoDependency]:
+    ) -> CrossRepoDependency | None:
         target_repo = ""
         target_file = ""
         target_symbol = ""
@@ -465,10 +465,10 @@ class OrganizationGraph:
             entities = list(self.org.entities.values())
             deps = list(self.org.dependencies.values())
 
-        affected_repos: Set[str] = set()
-        affected_files: List[Dict] = []
-        affected_entities: List[Dict] = []
-        deps_traversed: List[Dict] = []
+        affected_repos: set[str] = set()
+        affected_files: list[dict] = []
+        affected_entities: list[dict] = []
+        deps_traversed: list[dict] = []
 
         # Phase 1: Find direct matches
         for entity in entities:
@@ -562,7 +562,7 @@ class OrganizationGraph:
                      query, report.impact_score, report.risk_level, len(affected_repos))
         return report
 
-    def _extract_keywords(self, query: str) -> List[str]:
+    def _extract_keywords(self, query: str) -> list[str]:
         keywords = re.findall(r'\b[a-zA-Z_]\w+\b', query.lower())
         stopwords = {"the", "a", "an", "is", "are", "was", "were", "be", "been",
                      "has", "have", "had", "do", "does", "did", "will", "would",
@@ -582,7 +582,7 @@ class OrganizationGraph:
                      "need", "want", "please", "make", "create", "new"}
         return [k for k in keywords if k not in stopwords and len(k) > 2][:20]
 
-    def _match_keywords(self, entity: OrgEntity, keywords: List[str]) -> float:
+    def _match_keywords(self, entity: OrgEntity, keywords: list[str]) -> float:
         text = f"{entity.name} {entity.file_path} {entity.docstring} {' '.join(entity.imports)} {' '.join(entity.extends)}".lower()
         score = 0.0
         for kw in keywords:
@@ -592,7 +592,7 @@ class OrganizationGraph:
                 score += 2.0
         return score / max(len(keywords), 1)
 
-    def _generate_recommendations(self, affected_repos: Set[str], deps: List[Dict], risk: str) -> List[str]:
+    def _generate_recommendations(self, affected_repos: set[str], deps: list[dict], risk: str) -> list[str]:
         recommendations = []
         if len(affected_repos) == 1:
             recommendations.append(f"Change is contained to 1 repository: {list(affected_repos)[0]}")
@@ -615,36 +615,36 @@ class OrganizationGraph:
 
     def _generate_impact_markdown(self, report: ImpactReport) -> str:
         lines = [
-            f"# Impact Analysis Report",
-            f"",
+            "# Impact Analysis Report",
+            "",
             f"**Query:** {report.query}",
             f"**Impact Score:** {report.impact_score:.1f}/100",
             f"**Risk Level:** {report.risk_level.upper()}",
             f"**Affected Repositories:** {len(report.affected_repos)}",
             f"**Affected Files:** {len(report.affected_files)}",
-            f"**Generated:** {datetime.now(timezone.utc).isoformat()}",
-            f"",
-            f"## Affected Repositories",
-            f"",
+            f"**Generated:** {datetime.now(UTC).isoformat()}",
+            "",
+            "## Affected Repositories",
+            "",
         ]
         for repo in sorted(report.affected_repos):
             lines.append(f"- {repo}")
 
-        lines.extend([f"", f"## Affected Files", f""])
+        lines.extend(["", "## Affected Files", ""])
         for f in report.affected_files[:30]:
             lines.append(f"- `{f['repo']}/{f['file']}` ({f['type']}, score: {f['match_score']:.1f})")
 
         if report.affected_entities:
-            lines.extend([f"", f"## Affected Entities", f""])
+            lines.extend(["", "## Affected Entities", ""])
             for e in report.affected_entities[:20]:
                 lines.append(f"- `{e['full_name']}` ({e['entity_type']})")
 
         if report.dependencies_traversed:
-            lines.extend([f"", f"## Cross-Repo Dependencies Traversed", f""])
+            lines.extend(["", "## Cross-Repo Dependencies Traversed", ""])
             for d in report.dependencies_traversed[:15]:
                 lines.append(f"- {d['source_repo']} -> {d['target_repo']} ({d['relationship']})")
 
-        lines.extend([f"", f"## Recommendations", f""])
+        lines.extend(["", "## Recommendations", ""])
         for r in report.recommendations:
             lines.append(f"- {r}")
 
@@ -670,7 +670,7 @@ class OrganizationGraph:
         except Exception as exc:
             logger.warning("Save impact report failed: %s", exc)
 
-    def get_impact_report(self, report_id: str) -> Optional[ImpactReport]:
+    def get_impact_report(self, report_id: str) -> ImpactReport | None:
         report_dir = ORG_DATA_DIR / "impact_reports"
         for f in report_dir.glob("*.json"):
             if report_id in f.stem:
@@ -681,7 +681,7 @@ class OrganizationGraph:
                     logger.warning("Load impact report failed: %s", exc)
         return None
 
-    def list_impact_reports(self, limit: int = 20) -> List[Dict]:
+    def list_impact_reports(self, limit: int = 20) -> list[dict]:
         report_dir = ORG_DATA_DIR / "impact_reports"
         if not report_dir.exists():
             return []
@@ -701,7 +701,7 @@ class OrganizationGraph:
                 continue
         return reports
 
-    def get_graph_data(self) -> Dict[str, Any]:
+    def get_graph_data(self) -> dict[str, Any]:
         """Return graph visualization data."""
         with self._lock:
             repos = list(self.org.repositories.values())
@@ -724,7 +724,7 @@ class OrganizationGraph:
 
         return {"nodes": nodes, "edges": edges}
 
-    def get_health(self) -> Dict[str, Any]:
+    def get_health(self) -> dict[str, Any]:
         with self._lock:
             repo_count = len(self.org.repositories)
             dep_count = len(self.org.dependencies)
@@ -746,7 +746,7 @@ class OrgGraphAnalyzer:
     def __init__(self, graph: OrganizationGraph):
         self.graph = graph
 
-    def find_shared_dependencies(self) -> List[Dict[str, Any]]:
+    def find_shared_dependencies(self) -> list[dict[str, Any]]:
         """Find libraries/shared components that multiple repos depend on."""
         dep_map = defaultdict(list)
         for dep in self.graph.org.dependencies.values():
@@ -762,7 +762,7 @@ class OrgGraphAnalyzer:
                 })
         return sorted(shared, key=lambda x: x["count"], reverse=True)
 
-    def find_orphan_repos(self) -> List[str]:
+    def find_orphan_repos(self) -> list[str]:
         """Find repos with no dependencies to or from other repos."""
         all_repos = {r.name for r in self.graph.org.repositories.values()}
         connected = set()
@@ -771,7 +771,7 @@ class OrgGraphAnalyzer:
             connected.add(dep.target_repo)
         return list(all_repos - connected)
 
-    def find_critical_path(self) -> List[str]:
+    def find_critical_path(self) -> list[str]:
         """Find the most depended-upon repos (single points of failure)."""
         dep_count = defaultdict(int)
         for dep in self.graph.org.dependencies.values():
@@ -781,7 +781,7 @@ class OrgGraphAnalyzer:
 
 # ── Singleton ──────────────────────────────────────────────────────────────────
 
-_org_graphs: Dict[str, OrganizationGraph] = {}
+_org_graphs: dict[str, OrganizationGraph] = {}
 _org_lock = threading.Lock()
 
 
@@ -796,7 +796,7 @@ def create_organization(name: str, description: str = "") -> OrganizationGraph:
     return graph
 
 
-def get_organization(org_id: str) -> Optional[OrganizationGraph]:
+def get_organization(org_id: str) -> OrganizationGraph | None:
     with _org_lock:
         if org_id in _org_graphs:
             return _org_graphs[org_id]
@@ -828,7 +828,7 @@ def get_organization(org_id: str) -> Optional[OrganizationGraph]:
     return None
 
 
-def list_organizations() -> List[Dict[str, Any]]:
+def list_organizations() -> list[dict[str, Any]]:
     orgs = []
     for f in ORG_DATA_DIR.glob("org_*.json"):
         try:

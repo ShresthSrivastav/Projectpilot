@@ -1,13 +1,12 @@
 """Diagram Service — generates Mermaid.js architecture diagrams from blueprint data."""
-from typing import Any, Dict, List
-
+from typing import Any
 
 
 def _escape_mermaid(text: str) -> str:
     return text.replace('"', "#quot;").replace("(", "[").replace(")", "]")
 
 
-def generate_component_diagram(blueprint: Dict[str, Any]) -> str:
+def generate_component_diagram(blueprint: dict[str, Any]) -> str:
     files = blueprint.get("files", [])
     tech_stack = blueprint.get("tech_stack", {})
     routes = blueprint.get("routes", [])
@@ -41,7 +40,7 @@ def generate_component_diagram(blueprint: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def generate_er_diagram(blueprint: Dict[str, Any]) -> str:
+def generate_er_diagram(blueprint: dict[str, Any]) -> str:
     tables = blueprint.get("db_tables", [])
     if not tables:
         return "erDiagram\n    No tables defined"
@@ -68,7 +67,7 @@ def generate_er_diagram(blueprint: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def generate_flow_diagram(agents: List[str]) -> str:
+def generate_flow_diagram(agents: list[str]) -> str:
     lines = ["flowchart LR"]
     for i, agent in enumerate(agents):
         n = agent.replace(" ", "_")
@@ -86,7 +85,7 @@ def generate_flow_diagram(agents: List[str]) -> str:
     return "\n".join(lines)
 
 
-def generate_architecture_markdown(blueprint: Dict[str, Any], agents: List[str]) -> str:
+def generate_architecture_markdown(blueprint: dict[str, Any], agents: list[str]) -> str:
     component = generate_component_diagram(blueprint)
     er = generate_er_diagram(blueprint)
     flow = generate_flow_diagram(agents)
@@ -117,7 +116,7 @@ def generate_architecture_markdown(blueprint: Dict[str, Any], agents: List[str])
     return md
 
 
-def generate_project_overview_markdown(project_name: str, file_count: int, test_results: Dict) -> str:
+def generate_project_overview_markdown(project_name: str, file_count: int, test_results: dict) -> str:
     md = f"# {project_name} — Project Overview\n\n"
     md += f"- **Files:** {file_count}\n"
     md += f"- **Tests:** {test_results.get('total', 0)} collected, "

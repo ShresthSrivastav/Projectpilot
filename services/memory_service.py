@@ -8,18 +8,22 @@ Provides high-level API for storing and retrieving:
 """
 import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from database.memory_store import (
-    get_coding_preferences, set_coding_preference,
-    get_reusable_components, get_fix_patterns, record_fix_pattern,
-    get_project_insights, save_project_insight,
+    get_coding_preferences,
+    get_fix_patterns,
+    get_project_insights,
+    get_reusable_components,
+    record_fix_pattern,
+    save_project_insight,
+    set_coding_preference,
 )
 
 logger = logging.getLogger(__name__)
 
 
-def learn_from_project(job_id: str, requirements: Dict, blueprint: Dict, test_results: Dict) -> Dict[str, Any]:
+def learn_from_project(job_id: str, requirements: dict, blueprint: dict, test_results: dict) -> dict[str, Any]:
     insights = {}
     try:
         tech_stack = blueprint.get("tech_stack", {})
@@ -58,7 +62,7 @@ def learn_from_project(job_id: str, requirements: Dict, blueprint: Dict, test_re
     return insights
 
 
-def get_context_for_prompt(prompt: str, job_id: Optional[str] = None) -> Dict[str, Any]:
+def get_context_for_prompt(prompt: str, job_id: str | None = None) -> dict[str, Any]:
     context = {}
     try:
         prefs = get_coding_preferences(limit=10)

@@ -6,10 +6,10 @@ import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -38,13 +38,13 @@ class CampaignRunResult:
     benchmark_success: bool = False
     error: str = ""
     created_at: float = field(default_factory=time.time)
-    completed_at: Optional[float] = None
+    completed_at: float | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: Dict) -> "CampaignRunResult":
+    def from_dict(cls, d: dict) -> "CampaignRunResult":
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
@@ -71,20 +71,20 @@ class BenchmarkCampaignService:
             return
         self._initialized = True
         self._lock = threading.Lock()
-        self._executor: Optional[ThreadPoolExecutor] = None
+        self._executor: ThreadPoolExecutor | None = None
         CAMPAIGN_BASE_DIR.mkdir(parents=True, exist_ok=True)
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
         REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
     def create_campaign(
         self,
-        domains: Optional[List[str]] = None,
+        domains: list[str] | None = None,
         runs_per_domain: int = 10,
         name: str = "",
         parallel: bool = True,
         max_workers: int = DEFAULT_MAX_WORKERS,
         model: str = "local",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         from database.memory_store import mem_save_campaign
 
         if not domains:
@@ -118,10 +118,12 @@ class BenchmarkCampaignService:
         mem_save_campaign(campaign)
         return campaign
 
-    def run_campaign(self, campaign_id: str) -> Dict[str, Any]:
+    def run_campaign(self, campaign_id: str) -> dict[str, Any]:
         from database.memory_store import (
-            mem_get_campaign, mem_update_campaign,
-            mem_save_campaign_run, mem_list_campaign_runs,
+            mem_get_campaign,
+            mem_list_campaign_runs,
+            mem_save_campaign_run,
+            mem_update_campaign,
         )
         from services.benchmark_service import get_benchmark_service
 
@@ -150,7 +152,7 @@ class BenchmarkCampaignService:
         existing_runs = mem_list_campaign_runs(campaign_id=campaign_id)
         completed_map = {(r["domain"], r["iteration"]): r for r in existing_runs}
 
-        pending_runs: List[Dict] = []
+        pending_runs: list[dict] = []
         for domain in domains:
             for iteration in range(1, runs_per_domain + 1):
                 key = (domain, iteration)
@@ -183,7 +185,7 @@ class BenchmarkCampaignService:
     def _execute_parallel(
         self,
         bsvc: Any,
-        runs: List[Dict],
+        runs: list[dict],
         max_workers: int,
         model: str,
         campaign_id: str,
@@ -207,8 +209,8 @@ class BenchmarkCampaignService:
         self._executor.shutdown(wait=False)
         self._executor = None
 
-    def _execute_single(self, bsvc: Any, run: Dict, model: str, campaign_id: str) -> None:
-        from database.memory_store import mem_update_campaign_run, mem_update_campaign
+    def _execute_single(self, bsvc: Any, run: dict, model: str, campaign_id: str) -> None:
+        from database.memory_store import mem_update_campaign, mem_update_campaign_run
 
         try:
             mem_update_campaign_run(run["id"], {"status": "running"})
@@ -277,8 +279,7 @@ class BenchmarkCampaignService:
         })
 
     def _finalize_campaign(self, campaign_id: str) -> None:
-        from database.memory_store import mem_get_campaign, mem_update_campaign
-        from database.memory_store import mem_list_campaign_runs
+        from database.memory_store import mem_get_campaign, mem_list_campaign_runs, mem_update_campaign
 
         campaign = mem_get_campaign(campaign_id)
         if not campaign:
@@ -335,7 +336,7 @@ class BenchmarkCampaignService:
 
     # ── Resume ────────────────────────────────────────────────────────
 
-    def resume_interrupted_campaign(self, campaign_id: str) -> Dict[str, Any]:
+    def resume_interrupted_campaign(self, campaign_id: str) -> dict[str, Any]:
         from database.memory_store import mem_get_campaign, mem_update_campaign
         campaign = mem_get_campaign(campaign_id)
         if not campaign:
@@ -345,7 +346,7 @@ class BenchmarkCampaignService:
         mem_update_campaign(campaign_id, {"status": "pending"})
         return self.run_campaign(campaign_id)
 
-    def detect_interrupted_campaigns(self) -> List[Dict]:
+    def detect_interrupted_campaigns(self) -> list[dict]:
         from database.memory_store import mem_list_campaigns
         campaigns = mem_list_campaigns()
         interrupted = []
@@ -358,13 +359,13 @@ class BenchmarkCampaignService:
 
     # ── Reports ─────────────────────────────────────────────────────────
 
-    def _get_runs_for_campaign(self, campaign_id: str) -> List[Dict]:
+    def _get_runs_for_campaign(self, campaign_id: str) -> list[dict]:
         from database.memory_store import mem_list_campaign_runs
         return mem_list_campaign_runs(campaign_id=campaign_id)
 
     def _generate_domain_reports(self, campaign_id: str) -> None:
         runs = self._get_runs_for_campaign(campaign_id)
-        by_domain: Dict[str, List[Dict]] = {}
+        by_domain: dict[str, list[dict]] = {}
         for r in runs:
             by_domain.setdefault(r["domain"], []).append(r)
 
@@ -376,7 +377,7 @@ class BenchmarkCampaignService:
             with open(filepath, "w") as f:
                 json.dump(report, f, indent=2, default=str)
 
-    def _build_domain_report(self, domain: str, runs: List[Dict]) -> Dict:
+    def _build_domain_report(self, domain: str, runs: list[dict]) -> dict:
         completed = [r for r in runs if r["status"] == "completed"]
         failed = [r for r in runs if r["status"] == "failed"]
 
@@ -433,7 +434,7 @@ class BenchmarkCampaignService:
 
         report = {
             "campaign_id": campaign_id,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
             "total_domains": len(by_domain),
             "total_runs_planned": len(runs),
             "total_completed": len(completed),
@@ -453,8 +454,8 @@ class BenchmarkCampaignService:
         with open(filepath, "w") as f:
             json.dump(report, f, indent=2, default=str)
 
-    def _build_all_domain_reports(self, runs: List[Dict]) -> Dict[str, Dict]:
-        by_domain: Dict[str, List[Dict]] = {}
+    def _build_all_domain_reports(self, runs: list[dict]) -> dict[str, dict]:
+        by_domain: dict[str, list[dict]] = {}
         for r in runs:
             by_domain.setdefault(r["domain"], []).append(r)
         return {d: self._build_domain_report(d, druns) for d, druns in by_domain.items()}
@@ -462,7 +463,7 @@ class BenchmarkCampaignService:
     def _generate_leaderboard_report(self, campaign_id: str) -> None:
         runs = self._get_runs_for_campaign(campaign_id)
         completed = [r for r in runs if r["status"] == "completed"]
-        by_domain: Dict[str, List[Dict]] = {}
+        by_domain: dict[str, list[dict]] = {}
         for r in completed:
             by_domain.setdefault(r["domain"], []).append(r)
 
@@ -489,7 +490,7 @@ class BenchmarkCampaignService:
         for i, e in enumerate(entries):
             e["rank"] = i + 1
 
-        domain_leaders: Dict[str, Dict] = {}
+        domain_leaders: dict[str, dict] = {}
         for e in entries:
             domain = e["domain"]
             if domain not in domain_leaders or e["autonomy_score"] > domain_leaders[domain]["autonomy_score"]:
@@ -497,7 +498,7 @@ class BenchmarkCampaignService:
 
         report = {
             "campaign_id": campaign_id,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
             "overall_leader": entries[0] if entries else None,
             "best_autonomy_score": entries[0]["autonomy_score"] if entries else 0,
             "domain_leaders": domain_leaders,
@@ -510,7 +511,7 @@ class BenchmarkCampaignService:
             json.dump(report, f, indent=2, default=str)
 
     @staticmethod
-    def _compute_aggregate_score(scores: List[float], deploy_ok: int, bench_ok: int, completed: List) -> float:
+    def _compute_aggregate_score(scores: list[float], deploy_ok: int, bench_ok: int, completed: list) -> float:
         if not scores:
             return 0.0
         avg_score = sum(scores) / len(scores)
@@ -520,7 +521,7 @@ class BenchmarkCampaignService:
 
     # ── Query ───────────────────────────────────────────────────────────
 
-    def get_campaign_status(self, campaign_id: str) -> Optional[Dict[str, Any]]:
+    def get_campaign_status(self, campaign_id: str) -> dict[str, Any] | None:
         from database.memory_store import mem_get_campaign
         campaign = mem_get_campaign(campaign_id)
         if not campaign:
@@ -532,8 +533,8 @@ class BenchmarkCampaignService:
     def get_campaign_results(
         self,
         campaign_id: str,
-        domain: Optional[str] = None,
-    ) -> List[Dict]:
+        domain: str | None = None,
+    ) -> list[dict]:
         from database.memory_store import mem_list_campaign_runs
         return mem_list_campaign_runs(campaign_id=campaign_id, domain=domain)
 
@@ -541,7 +542,7 @@ class BenchmarkCampaignService:
         self,
         campaign_id: str,
         report_type: str = "aggregate",
-    ) -> Optional[Dict]:
+    ) -> dict | None:
         filepath = REPORTS_DIR / f"{report_type}_{campaign_id[:8]}.json"
         if filepath.exists():
             with open(filepath) as f:
@@ -553,18 +554,18 @@ class BenchmarkCampaignService:
                     return json.load(f)
         return None
 
-    def get_campaign_leaderboard(self, campaign_id: str) -> Optional[Dict]:
+    def get_campaign_leaderboard(self, campaign_id: str) -> dict | None:
         filepath = REPORTS_DIR / f"leaderboard_{campaign_id[:8]}.json"
         if filepath.exists():
             with open(filepath) as f:
                 return json.load(f)
         return None
 
-    def list_campaigns(self, limit: int = 50) -> List[Dict]:
+    def list_campaigns(self, limit: int = 50) -> list[dict]:
         from database.memory_store import mem_list_campaigns
         return mem_list_campaigns(limit=limit)
 
-    def get_domain_report(self, campaign_id: str, domain: str) -> Optional[Dict]:
+    def get_domain_report(self, campaign_id: str, domain: str) -> dict | None:
         filepath = REPORTS_DIR / "domains" / f"{domain}_{campaign_id[:8]}.json"
         if filepath.exists():
             with open(filepath) as f:

@@ -1,13 +1,21 @@
 """GitHub Agent Service — AI-powered repo analysis, PR review, bug fixing, improvements."""
 import json
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from services.github_service import (
+    add_issue_comment,
+    create_issue,
+    get_file_content,
+    get_pr_files,
+    get_repo_info,
+    list_branches,
+    list_commits,
+    list_issues,
+    list_pull_requests,
+)
+from services.github_service import (
     list_files as gh_list_files,
-    get_file_content, list_issues, list_pull_requests,
-    get_pr_files, create_issue, add_issue_comment,
-    get_repo_info, list_branches, list_commits,
 )
 from services.llm_service import call_model
 
@@ -52,7 +60,7 @@ def _read_key_files(token: str, full_name: str, max_chars: int = 8000) -> str:
     return "\n\n".join(contents)
 
 
-def analyze_repository(token: str, full_name: str, model: str = "local") -> Dict[str, Any]:
+def analyze_repository(token: str, full_name: str, model: str = "local") -> dict[str, Any]:
     try:
         context = _repo_context(token, full_name)
         files_content = _read_key_files(token, full_name)
@@ -80,7 +88,7 @@ def analyze_repository(token: str, full_name: str, model: str = "local") -> Dict
         return {"status": "error", "full_name": full_name, "error": str(exc)}
 
 
-def review_pull_request(token: str, full_name: str, pr_number: int, model: str = "local") -> Dict[str, Any]:
+def review_pull_request(token: str, full_name: str, pr_number: int, model: str = "local") -> dict[str, Any]:
     try:
         prs = list_pull_requests(token, full_name)
         pr = next((p for p in prs if p["number"] == pr_number), None)
@@ -119,7 +127,7 @@ def review_pull_request(token: str, full_name: str, pr_number: int, model: str =
         return {"status": "error", "error": str(exc)}
 
 
-def fix_issue(token: str, full_name: str, issue_number: int, model: str = "local") -> Dict[str, Any]:
+def fix_issue(token: str, full_name: str, issue_number: int, model: str = "local") -> dict[str, Any]:
     try:
         issues = list_issues(token, full_name)
         issue = next((i for i in issues if i["number"] == issue_number), None)
@@ -152,7 +160,7 @@ def fix_issue(token: str, full_name: str, issue_number: int, model: str = "local
         return {"status": "error", "error": str(exc)}
 
 
-def suggest_improvements(token: str, full_name: str, model: str = "local") -> Dict[str, Any]:
+def suggest_improvements(token: str, full_name: str, model: str = "local") -> dict[str, Any]:
     try:
         context = _repo_context(token, full_name)
         files_content = _read_key_files(token, full_name)

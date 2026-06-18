@@ -1,9 +1,9 @@
 """Base Plugin SDK — interface for creating custom plugins."""
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class PluginType(Enum):
@@ -21,13 +21,13 @@ class PluginManifest:
     author: str = ""
     description: str = ""
     plugin_type: str = "tool"
-    dependencies: List[str] = field(default_factory=list)
-    permissions: List[str] = field(default_factory=list)
+    dependencies: list[str] = field(default_factory=list)
+    permissions: list[str] = field(default_factory=list)
     compatibility: str = ">=11.0.0"
     entry_point: str = ""
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     def to_yaml(self) -> str:
@@ -40,22 +40,22 @@ class PluginManifest:
             f"compatibility: {self.compatibility}",
         ]
         if self.dependencies:
-            lines.append(f"dependencies:\n" + "\n".join(f"  - {d}" for d in self.dependencies))
+            lines.append("dependencies:\n" + "\n".join(f"  - {d}" for d in self.dependencies))
         if self.permissions:
-            lines.append(f"permissions:\n" + "\n".join(f"  - {p}" for p in self.permissions))
+            lines.append("permissions:\n" + "\n".join(f"  - {p}" for p in self.permissions))
         if self.tags:
-            lines.append(f"tags:\n" + "\n".join(f"  - {t}" for t in self.tags))
+            lines.append("tags:\n" + "\n".join(f"  - {t}" for t in self.tags))
         return "\n".join(lines)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "PluginManifest":
+    def from_dict(cls, data: dict[str, Any]) -> "PluginManifest":
         return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
 
 
 class BasePlugin(ABC):
     manifest: PluginManifest = field(default_factory=lambda: PluginManifest(name="unnamed"))
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or {}
         self._enabled: bool = False
         self._logger = logging.getLogger(f"plugin.{self.manifest.name}")
@@ -69,7 +69,7 @@ class BasePlugin(ABC):
         ...
 
     @abstractmethod
-    def configure(self, config: Dict[str, Any]) -> bool:
+    def configure(self, config: dict[str, Any]) -> bool:
         ...
 
     @abstractmethod

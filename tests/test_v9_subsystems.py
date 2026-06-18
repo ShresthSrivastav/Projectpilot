@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 class TestTaskGraphEngine:
     def test_create_graph(self):
-        from services.graph_engine import TaskGraph, Task
+        from services.graph_engine import Task, TaskGraph
         g = TaskGraph()
         t1 = Task(name="Task 1")
         t2 = Task(name="Task 2", deps=[t1.id])
@@ -25,7 +25,7 @@ class TestTaskGraphEngine:
         assert t2.id in g.tasks
 
     def test_dependency_tracking(self):
-        from services.graph_engine import TaskGraph, Task
+        from services.graph_engine import Task, TaskGraph
         g = TaskGraph()
         t1 = Task(name="A")
         t2 = Task(name="B")
@@ -39,7 +39,7 @@ class TestTaskGraphEngine:
         assert len(t2.dependents) == 1
 
     def test_topological_order(self):
-        from services.graph_engine import TaskGraph, Task
+        from services.graph_engine import Task, TaskGraph
         g = TaskGraph()
         t1 = Task(name="A")
         t2 = Task(name="B", deps=[t1.id])
@@ -52,7 +52,7 @@ class TestTaskGraphEngine:
         assert order.index(t2.id) < order.index(t3.id)
 
     def test_ready_tasks(self):
-        from services.graph_engine import TaskGraph, Task
+        from services.graph_engine import Task, TaskGraph
         g = TaskGraph()
         t1 = Task(name="A")
         t2 = Task(name="B", deps=[t1.id])
@@ -67,7 +67,7 @@ class TestTaskGraphEngine:
         assert ready2[0].id == t2.id
 
     def test_status_transitions(self):
-        from services.graph_engine import TaskGraph, Task, TaskStatus
+        from services.graph_engine import Task, TaskGraph, TaskStatus
         g = TaskGraph()
         t = Task(name="Test")
         g.add_task(t)
@@ -78,7 +78,7 @@ class TestTaskGraphEngine:
         assert g.tasks[t.id].status == TaskStatus.COMPLETED
 
     def test_checkpoint_save_load(self):
-        from services.graph_engine import TaskGraph, Task
+        from services.graph_engine import Task, TaskGraph
         g = TaskGraph()
         t1 = Task(name="Checkpoint A")
         t2 = Task(name="Checkpoint B", deps=[t1.id])
@@ -99,7 +99,7 @@ class TestTaskGraphEngine:
         assert "Requirements Analysis" in names
 
     def test_visualize_mermaid(self):
-        from services.graph_engine import TaskGraph, Task
+        from services.graph_engine import Task, TaskGraph
         g = TaskGraph()
         t1 = Task(name="Node 1")
         t2 = Task(name="Node 2", deps=[t1.id])
@@ -121,7 +121,7 @@ class TestKnowledgeGraph:
             kg.build_from_repo("/nonexistent/path")
 
     def test_parse_python_file(self):
-        from services.knowledge_graph import KnowledgeGraph, FileNode
+        from services.knowledge_graph import FileNode, KnowledgeGraph
         kg = KnowledgeGraph()
         content = """
 import os
@@ -146,7 +146,7 @@ def helper_func():
         assert any("get" in str(a).lower() or "GET" in str(a.get("method", "")) for a in node.apis if isinstance(a.get("method"), str))
 
     def test_parse_js_file(self):
-        from services.knowledge_graph import KnowledgeGraph, FileNode
+        from services.knowledge_graph import FileNode, KnowledgeGraph
         kg = KnowledgeGraph()
         content = """
 import React from 'react';
@@ -161,7 +161,7 @@ export function App() {
         assert "App" in node.exports
 
     def test_impact_analysis(self):
-        from services.knowledge_graph import KnowledgeGraph, FileNode
+        from services.knowledge_graph import FileNode, KnowledgeGraph
         kg = KnowledgeGraph()
         kg.files["src/main.py"] = FileNode(path="src/main.py", imports=["src.utils"])
         kg.files["src/utils.py"] = FileNode(path="src/utils.py", classes=["Helper"])
@@ -182,7 +182,7 @@ export function App() {
         assert isinstance(tests, list)
 
     def test_query_apis(self):
-        from services.knowledge_graph import KnowledgeGraph, FileNode
+        from services.knowledge_graph import FileNode, KnowledgeGraph
         kg = KnowledgeGraph()
         kg.files["app.py"] = FileNode(path="app.py", apis=[{"method": "GET", "path": "/api/users", "handler": "list"}])
         apis = kg.query_apis()
@@ -190,7 +190,7 @@ export function App() {
         assert apis[0]["method"] == "GET"
 
     def test_architecture_summary(self):
-        from services.knowledge_graph import KnowledgeGraph, FileNode
+        from services.knowledge_graph import FileNode, KnowledgeGraph
         kg = KnowledgeGraph()
         kg.files["main.py"] = FileNode(path="main.py", apis=[{"method": "GET", "path": "/"}], tech_stack=["python"])
         summary = kg.get_architecture_summary()
@@ -198,7 +198,7 @@ export function App() {
         assert summary["api_count"] == 1
 
     def test_mermaid_viz(self):
-        from services.knowledge_graph import KnowledgeGraph, FileNode
+        from services.knowledge_graph import FileNode, KnowledgeGraph
         kg = KnowledgeGraph()
         kg.files["a.py"] = FileNode(path="a.py")
         kg.files["b.py"] = FileNode(path="b.py")
@@ -213,7 +213,7 @@ export function App() {
 
 class TestDebateSystem:
     def test_debate_session_creation(self):
-        from services.debate_system import DebateSession, DebateConfig
+        from services.debate_system import DebateConfig, DebateSession
         config = DebateConfig(solvers=["local"])
         session = DebateSession(topic="Write a Python function to sort a list", config=config)
         assert session.id
@@ -221,7 +221,7 @@ class TestDebateSystem:
         assert session.round.value == "independent"
 
     def test_consensus_weighted(self):
-        from services.debate_system import DebateSession, SolverResult, ConsensusMethod
+        from services.debate_system import ConsensusMethod, DebateSession, SolverResult
         session = DebateSession(topic="test")
         session.config.consensus_method = ConsensusMethod.WEIGHTED
         r1 = SolverResult(solver_id="a", solver_name="A", solution="solution a with enough length to exceed the minimum threshold of fifty characters for validation purposes", confidence=0.9)
@@ -234,7 +234,7 @@ class TestDebateSystem:
         assert score > 0
 
     def test_quality_evaluation(self):
-        from services.debate_system import DebateSystem, DebateSession, SolverResult
+        from services.debate_system import DebateSession, DebateSystem, SolverResult
         ds = DebateSystem()
         session = DebateSession(topic="test")
         session.results = [
@@ -339,7 +339,7 @@ class TestBrowserValidation:
 
 class TestAutonomousEngine:
     def test_create_session(self):
-        from services.autonomous_service import AutonomousEngine, AutonomousConfig
+        from services.autonomous_service import AutonomousConfig, AutonomousEngine
         engine = AutonomousEngine()
         config = AutonomousConfig(max_iterations=3, quality_threshold=0.5)
         session = engine.start_session("job-123", config=config)
@@ -364,7 +364,7 @@ class TestAutonomousEngine:
         assert len(sessions) >= 2
 
     def test_iteration_history(self):
-        from services.autonomous_service import AutonomousEngine, AutonomousConfig, IterationMetrics
+        from services.autonomous_service import AutonomousConfig, AutonomousEngine, IterationMetrics
         engine = AutonomousEngine()
         session = engine.start_session("job-history", AutonomousConfig(max_iterations=2))
         m1 = IterationMetrics(iteration=1, score=0.5, tokens_used=100, test_passed=5, test_total=10)
@@ -391,7 +391,7 @@ class TestAutonomousEngine:
             assert score >= 0.5
 
     def test_session_to_dict(self):
-        from services.autonomous_service import AutonomousSession, AutonomousConfig
+        from services.autonomous_service import AutonomousConfig, AutonomousSession
         session = AutonomousSession(job_id="test", config=AutonomousConfig(max_iterations=5))
         d = session.to_dict()
         assert d["job_id"] == "test"
@@ -409,7 +409,7 @@ class TestAutonomousEngine:
 
 class TestCostTracking:
     def test_record_cost(self):
-        from database.memory_store import record_cost, get_cost_summary
+        from database.memory_store import get_cost_summary, record_cost
         record_cost("job-cost-1", "test", 100, 0.001, 500, "local")
         summary = get_cost_summary("job-cost-1")
         assert summary["sessions"] >= 1
@@ -422,15 +422,16 @@ class TestCostTracking:
         assert "tokens" in summary
 
     def test_save_iteration_history(self):
-        from database.memory_store import save_iteration_history, get_iteration_history
         import json
+
+        from database.memory_store import get_iteration_history, save_iteration_history
         data = json.dumps([{"iteration": 1, "score": 0.5}])
         save_iteration_history("job-iter", "session-iter-1", data)
         history = get_iteration_history("job-iter")
         assert len(history) >= 1
 
     def test_save_graph_session(self):
-        from database.memory_store import save_graph_session, get_graph_session
+        from database.memory_store import get_graph_session, save_graph_session
         save_graph_session("graph-test-1", "job-graph", '{"tasks": {}}', "built")
         saved = get_graph_session("graph-test-1")
         assert saved is not None
@@ -444,6 +445,7 @@ class TestAPI:
     @pytest.fixture
     def client(self):
         from fastapi.testclient import TestClient
+
         from backend.main import app
         return TestClient(app)
 

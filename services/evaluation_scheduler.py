@@ -13,11 +13,12 @@ import random
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timedelta, timezone
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any
 
 
 class ScheduleInterval(Enum):
@@ -43,20 +44,20 @@ class EvaluationRun:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     schedule: str = "on_demand"
     status: str = "pending"
-    benchmark_domains: List[str] = field(default_factory=list)
+    benchmark_domains: list[str] = field(default_factory=list)
     autonomy_score: float = 0.0
     success_rate: float = 0.0
     total_cost: float = 0.0
     avg_runtime_ms: float = 0.0
     healing_rate: float = 0.0
     deployment_success_rate: float = 0.0
-    score_breakdown: Dict[str, float] = field(default_factory=dict)
-    started_at: Optional[str] = None
-    completed_at: Optional[str] = None
+    score_breakdown: dict[str, float] = field(default_factory=dict)
+    started_at: str | None = None
+    completed_at: str | None = None
     triggered_by: str = "system"
-    error: Optional[str] = None
+    error: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -75,10 +76,10 @@ class EvaluationScheduler:
         if hasattr(self, "_initialized"):
             return
         self._initialized = True
-        self._runs: Dict[str, EvaluationRun] = {}
-        self._handlers: Dict[str, Callable] = {}
-        self._timer: Optional[threading.Thread] = None
-        self._weekly_timer: Optional[threading.Thread] = None
+        self._runs: dict[str, EvaluationRun] = {}
+        self._handlers: dict[str, Callable] = {}
+        self._timer: threading.Thread | None = None
+        self._weekly_timer: threading.Thread | None = None
         self._running = False
         self._weekly_running = False
         self._executor = ThreadPoolExecutor(max_workers=4)
@@ -134,7 +135,7 @@ class EvaluationScheduler:
         except Exception as e:
             self._logger.warning("Failed to persist run %s: %s", run.id, e)
 
-    def _update_run_status(self, run: EvaluationRun, updates: Dict) -> None:
+    def _update_run_status(self, run: EvaluationRun, updates: dict) -> None:
         from database.memory_store import mem_update_evaluation_run
         for key, val in updates.items():
             if hasattr(run, key):
@@ -150,7 +151,7 @@ class EvaluationScheduler:
     def trigger_run(
         self,
         schedule: str = "on_demand",
-        domains: Optional[List[str]] = None,
+        domains: list[str] | None = None,
         triggered_by: str = "system",
     ) -> EvaluationRun:
         run = EvaluationRun(
@@ -158,7 +159,7 @@ class EvaluationScheduler:
             status=RunStatus.PENDING.value,
             benchmark_domains=domains or [],
             triggered_by=triggered_by,
-            started_at=datetime.now(timezone.utc).isoformat(),
+            started_at=datetime.now(UTC).isoformat(),
         )
         self._runs[run.id] = run
         self._persist_run(run)
@@ -236,7 +237,7 @@ class EvaluationScheduler:
                 "cost_efficiency": max(0, 1.0 - run.total_cost / 1000),
             }
             run.status = RunStatus.COMPLETED.value
-            run.completed_at = datetime.now(timezone.utc).isoformat()
+            run.completed_at = datetime.now(UTC).isoformat()
             self._update_run_status(run, {
                 "status": "completed",
                 "autonomy_score": run.autonomy_score,
@@ -258,7 +259,7 @@ class EvaluationScheduler:
         except Exception as e:
             run.status = RunStatus.FAILED.value
             run.error = str(e)
-            run.completed_at = datetime.now(timezone.utc).isoformat()
+            run.completed_at = datetime.now(UTC).isoformat()
             self._update_run_status(run, {
                 "status": "failed",
                 "error_log": str(e),
@@ -268,7 +269,7 @@ class EvaluationScheduler:
 
     # ── Recovery ───────────────────────────────────────────────────────────────
 
-    def recover_state(self) -> Dict[str, Any]:
+    def recover_state(self) -> dict[str, Any]:
         """On startup: detect pending/running runs, mark stale, return recovery summary."""
         from database.memory_store import mem_list_evaluation_runs, mem_update_evaluation_run
         now = time.time()
@@ -318,13 +319,14 @@ class EvaluationScheduler:
         self._logger.info("Recovery: %s", recovery)
         return recovery
 
-    def check_missed_runs(self) -> List[Dict[str, Any]]:
+    def check_missed_runs(self) -> list[dict[str, Any]]:
         """Check if any scheduled runs were missed since last execution and trigger recovery."""
         from database.memory_store import (
-            mem_get_scheduler_metadata, mem_count_missed_runs,
+            mem_count_missed_runs,
+            mem_get_scheduler_metadata,
             mem_save_scheduler_metadata,
         )
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         now_ts = now.timestamp()
         triggered = []
 
@@ -371,8 +373,8 @@ class EvaluationScheduler:
         recovery_window_hours: float = 6.0,
     ) -> bool:
         """Persist schedule configuration to SQLite (deterministic id per type)."""
-        from database.memory_store import mem_save_scheduler_metadata, mem_get_scheduler_metadata
-        now = datetime.now(timezone.utc).timestamp()
+        from database.memory_store import mem_get_scheduler_metadata, mem_save_scheduler_metadata
+        now = datetime.now(UTC).timestamp()
         existing = mem_get_scheduler_metadata(schedule_type)
         meta = {
             "id": existing["id"] if existing else f"sched_{schedule_type}",
@@ -419,7 +421,7 @@ class EvaluationScheduler:
 
         def _loop():
             while self._weekly_running:
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
                 target_hour, target_minute = (int(x) for x in execution_time_utc.split(":"))
                 current_dow = now.weekday()
                 days_ahead = (day_of_week - current_dow) % 7
@@ -448,12 +450,12 @@ class EvaluationScheduler:
 
     # ── Queries ────────────────────────────────────────────────────────────────
 
-    def get_run(self, run_id: str) -> Optional[EvaluationRun]:
+    def get_run(self, run_id: str) -> EvaluationRun | None:
         return self._runs.get(run_id)
 
     def list_runs(
-        self, limit: int = 50, schedule: Optional[str] = None, status: Optional[str] = None
-    ) -> List[EvaluationRun]:
+        self, limit: int = 50, schedule: str | None = None, status: str | None = None
+    ) -> list[EvaluationRun]:
         results = list(self._runs.values())
         if schedule:
             results = [r for r in results if r.schedule == schedule]

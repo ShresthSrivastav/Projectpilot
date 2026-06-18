@@ -2,9 +2,9 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -15,11 +15,11 @@ class BenchmarkCriteria:
     expected: Any = None
     evaluator: str = "exact_match"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "BenchmarkCriteria":
+    def from_dict(cls, data: dict[str, Any]) -> "BenchmarkCriteria":
         return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
 
 
@@ -31,16 +31,16 @@ class BenchmarkTest:
     expected_output: str = ""
     timeout: int = 60
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
 class BaseBenchmarkPack(ABC):
-    def __init__(self, domain: str = "", pack_dir: Optional[Path] = None):
+    def __init__(self, domain: str = "", pack_dir: Path | None = None):
         self.domain = domain or self.__class__.__name__.lower()
         self.pack_dir = pack_dir or Path(f"benchmarks/{self.domain}")
-        self.criteria: List[BenchmarkCriteria] = []
-        self.tests: List[BenchmarkTest] = []
+        self.criteria: list[BenchmarkCriteria] = []
+        self.tests: list[BenchmarkTest] = []
         self._logger = logging.getLogger(f"benchmark.{self.domain}")
 
     @abstractmethod
@@ -48,18 +48,18 @@ class BaseBenchmarkPack(ABC):
         ...
 
     @abstractmethod
-    def load_tests(self) -> List[BenchmarkTest]:
+    def load_tests(self) -> list[BenchmarkTest]:
         ...
 
     @abstractmethod
-    def load_criteria(self) -> List[BenchmarkCriteria]:
+    def load_criteria(self) -> list[BenchmarkCriteria]:
         ...
 
     @abstractmethod
-    def evaluate(self, results: Dict[str, Any]) -> Dict[str, Any]:
+    def evaluate(self, results: dict[str, Any]) -> dict[str, Any]:
         ...
 
-    def get_manifest(self) -> Dict[str, Any]:
+    def get_manifest(self) -> dict[str, Any]:
         return {
             "domain": self.domain,
             "pack_dir": str(self.pack_dir),

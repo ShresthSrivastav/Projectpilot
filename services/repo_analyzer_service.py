@@ -19,7 +19,7 @@ import uuid
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from services.llm_service import call_model
 
@@ -29,7 +29,7 @@ REPO_WORK_DIR = Path(os.getenv("REPO_WORK_DIR", "./repo_analysis"))
 MAX_FILE_SIZE = int(os.getenv("REPO_MAX_FILE_SIZE", "50000"))
 SUPPORTED_EXTENSIONS = {".py", ".js", ".ts", ".jsx", ".tsx", ".html", ".css", ".json", ".yaml", ".yml"}
 
-_FRAMEWORK_PATTERNS: Dict[str, List[str]] = {
+_FRAMEWORK_PATTERNS: dict[str, list[str]] = {
     "FastAPI": ["from fastapi import", "from fastapi.", "FastAPI()"],
     "Flask": ["from flask import", "from flask.", "Flask("],
     "Django": ["from django.", "django.urls", "django.conf"],
@@ -43,7 +43,7 @@ _FRAMEWORK_PATTERNS: Dict[str, List[str]] = {
 _CLANG_EXTENSIONS = {".py", ".js", ".ts", ".jsx", ".tsx"}
 
 
-def analyze_repository(repo_path: str, job_id: Optional[str] = None, model: str = "local") -> Dict[str, Any]:
+def analyze_repository(repo_path: str, job_id: str | None = None, model: str = "local") -> dict[str, Any]:
     path = Path(repo_path)
     if not path.exists():
         raise FileNotFoundError(f"Repository path not found: {repo_path}")
@@ -91,10 +91,10 @@ def analyze_repository(repo_path: str, job_id: Optional[str] = None, model: str 
 def improve_repository(
     repo_path: str,
     model: str = "local",
-    job_id: Optional[str] = None,
+    job_id: str | None = None,
     auto_fix: bool = True,
     generate_tests: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     analysis = analyze_repository(repo_path, job_id=job_id, model=model)
     path = Path(repo_path)
     changes = {"fixed_files": [], "new_tests": [], "errors": []}
@@ -134,7 +134,7 @@ def create_pr(
     title: str = "Automated code quality improvements",
     body: str = "AI-driven improvements including fixes, tests, and documentation.",
     model: str = "local",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     from services.github_service import create_branch, create_pull_request
 
     path = Path(repo_path)
@@ -165,7 +165,7 @@ def create_pr(
     }
 
 
-def _scan_files(path: Path) -> Dict[str, str]:
+def _scan_files(path: Path) -> dict[str, str]:
     files = {}
     for fp in sorted(path.rglob("*")):
         if not fp.is_file():
@@ -186,8 +186,8 @@ def _scan_files(path: Path) -> Dict[str, str]:
     return files
 
 
-def _detect_languages(files: Dict[str, str]) -> Dict[str, int]:
-    ext_count: Dict[str, int] = defaultdict(int)
+def _detect_languages(files: dict[str, str]) -> dict[str, int]:
+    ext_count: dict[str, int] = defaultdict(int)
     for name in files:
         ext = Path(name).suffix
         if ext:
@@ -198,7 +198,7 @@ def _detect_languages(files: Dict[str, str]) -> Dict[str, int]:
     return {lang_map.get(k, k): v for k, v in sorted(ext_count.items(), key=lambda x: -x[1])}
 
 
-def _detect_framework(files: Dict[str, str]) -> Optional[str]:
+def _detect_framework(files: dict[str, str]) -> str | None:
     for name, content in files.items():
         for framework, patterns in _FRAMEWORK_PATTERNS.items():
             for pattern in patterns:
@@ -207,8 +207,8 @@ def _detect_framework(files: Dict[str, str]) -> Optional[str]:
     return None
 
 
-def _build_dependency_graph(files: Dict[str, str], base_path: Path) -> Dict[str, List[str]]:
-    graph: Dict[str, List[str]] = {}
+def _build_dependency_graph(files: dict[str, str], base_path: Path) -> dict[str, list[str]]:
+    graph: dict[str, list[str]] = {}
     for name, content in files.items():
         deps = []
         ext = Path(name).suffix
@@ -226,7 +226,7 @@ def _build_dependency_graph(files: Dict[str, str], base_path: Path) -> Dict[str,
     return graph
 
 
-def _analyze_architecture(files: Dict[str, str], framework: Optional[str], dep_graph: Dict[str, List[str]]) -> Dict:
+def _analyze_architecture(files: dict[str, str], framework: str | None, dep_graph: dict[str, list[str]]) -> dict:
     folders = defaultdict(list)
     for name in files:
         parts = name.split("/")
@@ -248,7 +248,7 @@ def _analyze_architecture(files: Dict[str, str], framework: Optional[str], dep_g
     }
 
 
-def _find_entry_points(files: Dict[str, str], framework: Optional[str]) -> List[str]:
+def _find_entry_points(files: dict[str, str], framework: str | None) -> list[str]:
     candidates = []
     for name in files:
         if "main" in name or "app" in name:
@@ -256,7 +256,7 @@ def _find_entry_points(files: Dict[str, str], framework: Optional[str]) -> List[
     return candidates[:5]
 
 
-def _detect_code_smells(files: Dict[str, str], base_path: Path) -> List[Dict]:
+def _detect_code_smells(files: dict[str, str], base_path: Path) -> list[dict]:
     smells = []
     for name, content in files.items():
         ext = Path(name).suffix
@@ -292,7 +292,7 @@ def _detect_code_smells(files: Dict[str, str], base_path: Path) -> List[Dict]:
     return smells
 
 
-def _detect_security_issues(files: Dict[str, str], base_path: Path) -> List[Dict]:
+def _detect_security_issues(files: dict[str, str], base_path: Path) -> list[dict]:
     issues = []
     patterns = [
         ("hardcoded_secret", r"(?:api_key|secret|password|token)\s*=\s*['\"][A-Za-z0-9_\-]{16,}['\"]", "high"),
@@ -315,7 +315,7 @@ def _detect_security_issues(files: Dict[str, str], base_path: Path) -> List[Dict
     return issues
 
 
-def _assess_quality(files: Dict[str, str], base_path: Path) -> Dict:
+def _assess_quality(files: dict[str, str], base_path: Path) -> dict:
     docstring_count = 0
     function_count = 0
     class_count = 0
@@ -333,7 +333,7 @@ def _assess_quality(files: Dict[str, str], base_path: Path) -> Dict:
     }
 
 
-def _assess_test_coverage(files: Dict[str, str]) -> Dict:
+def _assess_test_coverage(files: dict[str, str]) -> dict:
     source_files = [f for f in files if not f.startswith("tests/") and not f.startswith("test_")]
     test_files = [f for f in files if f.startswith("tests/") or f.startswith("test_")]
     return {
@@ -344,7 +344,7 @@ def _assess_test_coverage(files: Dict[str, str]) -> Dict:
     }
 
 
-def _find_missing_tests(files: Dict[str, str]) -> List[str]:
+def _find_missing_tests(files: dict[str, str]) -> list[str]:
     source_files = [f for f in files if not f.startswith("tests/") and not f.startswith("test_")]
     test_files = {f.replace("tests/", "").replace("test_", "") for f in files if f.startswith("tests/") or f.startswith("test_")}
     missing = []
@@ -356,7 +356,7 @@ def _find_missing_tests(files: Dict[str, str]) -> List[str]:
     return missing
 
 
-def _generate_test_file(base_path: Path, src_file: str, model: str) -> Optional[str]:
+def _generate_test_file(base_path: Path, src_file: str, model: str) -> str | None:
     src_path = base_path / src_file
     if not src_path.exists():
         return None
@@ -390,7 +390,7 @@ def _generate_test_file(base_path: Path, src_file: str, model: str) -> Optional[
     return None
 
 
-def _apply_llm_fix(base_path: Path, issue: Dict, model: str) -> Optional[str]:
+def _apply_llm_fix(base_path: Path, issue: dict, model: str) -> str | None:
     file_path = base_path / issue.get("file", "")
     if not file_path.exists():
         return None
@@ -414,7 +414,7 @@ def _apply_llm_fix(base_path: Path, issue: Dict, model: str) -> Optional[str]:
     return None
 
 
-def _run_validation(base_path: Path) -> Dict:
+def _run_validation(base_path: Path) -> dict:
     result = {"syntax_ok": True, "tests_passed": None, "errors": []}
     # Syntax check Python files
     for fp in base_path.rglob("*.py"):
@@ -449,23 +449,23 @@ def _git_commit_and_push(path: Path, branch: str, message: str):
         logger.warning("Git commit/push failed: %s", exc)
 
 
-def _generate_summary(architecture: Dict, code_smells: List, security: List, quality: Dict, coverage: Dict) -> str:
+def _generate_summary(architecture: dict, code_smells: list, security: list, quality: dict, coverage: dict) -> str:
     parts = [
-        f"# Repository Analysis Summary",
-        f"",
+        "# Repository Analysis Summary",
+        "",
         f"**Framework:** {architecture.get('framework', 'Unknown')}",
         f"**Total files:** {architecture.get('total_files', 0)}",
         f"**Test coverage:** {coverage.get('test_ratio', 0):.0%}",
         f"**Documentation ratio:** {quality.get('documentation_ratio', 0):.0%}",
-        f"",
-        f"## Issues Found",
+        "",
+        "## Issues Found",
         f"- Code smells: {len(code_smells)}",
         f"- Security issues: {len(security)}",
         f"- Functions: {quality.get('total_functions', 0)}",
         f"- Classes: {quality.get('total_classes', 0)}",
         f"- Docstrings: {quality.get('docstring_blocks', 0)}",
-        f"",
-        f"## Recommendations",
+        "",
+        "## Recommendations",
     ]
     if coverage.get("needs_improvement"):
         parts.append("- Add more tests to improve coverage")
@@ -476,7 +476,7 @@ def _generate_summary(architecture: Dict, code_smells: List, security: List, qua
     return "\n".join(parts)
 
 
-def _format_architecture_report(results: Dict) -> str:
+def _format_architecture_report(results: dict) -> str:
     arch = results.get("architecture", {})
     deps = results.get("dependency_graph", {})
     lines = [
@@ -506,7 +506,7 @@ def _format_architecture_report(results: Dict) -> str:
     return "\n".join(lines)
 
 
-def _format_security_report(issues: List[Dict]) -> str:
+def _format_security_report(issues: list[dict]) -> str:
     lines = [
         "# Security Report",
         f"**Generated:** {datetime.utcnow().isoformat()}",
@@ -522,7 +522,7 @@ def _format_security_report(issues: List[Dict]) -> str:
     return "\n".join(lines)
 
 
-def _format_quality_report(quality: Dict, smells: List) -> str:
+def _format_quality_report(quality: dict, smells: list) -> str:
     lines = [
         "# Quality Report",
         f"**Generated:** {datetime.utcnow().isoformat()}",
@@ -543,7 +543,7 @@ def _format_quality_report(quality: Dict, smells: List) -> str:
     return "\n".join(lines)
 
 
-def _format_coverage_report(coverage: Dict) -> str:
+def _format_coverage_report(coverage: dict) -> str:
     lines = [
         "# Test Coverage Report",
         f"**Generated:** {datetime.utcnow().isoformat()}",
@@ -566,5 +566,5 @@ def _write_report(path: Path, filename: str, content: str):
     logger.info("Report written: %s", reports_dir / filename)
 
 
-def get_supported_frameworks() -> List[str]:
+def get_supported_frameworks() -> list[str]:
     return list(_FRAMEWORK_PATTERNS.keys())

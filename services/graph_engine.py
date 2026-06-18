@@ -6,10 +6,11 @@ import threading
 import time
 import uuid
 from collections import defaultdict, deque
-from dataclasses import dataclass, field, asdict
+from collections.abc import Callable
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -39,23 +40,23 @@ class Task:
     description: str = ""
     priority: TaskPriority = TaskPriority.NORMAL
     status: TaskStatus = TaskStatus.PENDING
-    deps: List[str] = field(default_factory=list)
-    dependents: List[str] = field(default_factory=list)
-    agent_func: Optional[Callable] = None
+    deps: list[str] = field(default_factory=list)
+    dependents: list[str] = field(default_factory=list)
+    agent_func: Callable | None = None
     agent_name: str = ""
-    args: Dict[str, Any] = field(default_factory=dict)
-    kwargs: Dict[str, Any] = field(default_factory=dict)
+    args: dict[str, Any] = field(default_factory=dict)
+    kwargs: dict[str, Any] = field(default_factory=dict)
     result: Any = None
-    error: Optional[str] = None
-    started_at: Optional[float] = None
-    completed_at: Optional[float] = None
+    error: str | None = None
+    started_at: float | None = None
+    completed_at: float | None = None
     duration_ms: float = 0.0
     retry_count: int = 0
     max_retries: int = 3
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    checkpoint_data: Optional[str] = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    checkpoint_data: str | None = None
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         d = asdict(self)
         d["status"] = self.status.value
         d["priority"] = self.priority.value
@@ -63,7 +64,7 @@ class Task:
         return d
 
     @staticmethod
-    def from_dict(data: Dict) -> "Task":
+    def from_dict(data: dict) -> "Task":
         t = Task(
             id=data["id"],
             name=data.get("name", ""),
@@ -93,19 +94,19 @@ class Task:
 class Checkpoint:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     graph_id: str = ""
-    tasks: Dict[str, Dict] = field(default_factory=dict)
+    tasks: dict[str, dict] = field(default_factory=dict)
     created_at: float = field(default_factory=time.time)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class TaskGraph:
-    def __init__(self, graph_id: Optional[str] = None):
+    def __init__(self, graph_id: str | None = None):
         self.id = graph_id or str(uuid.uuid4())
-        self.tasks: Dict[str, Task] = {}
+        self.tasks: dict[str, Task] = {}
         self._lock = threading.Lock()
-        self._event_handlers: Dict[str, List[Callable]] = defaultdict(list)
-        self._execution_graph: Dict[str, List[str]] = defaultdict(list)
-        self.metadata: Dict[str, Any] = {}
+        self._event_handlers: dict[str, list[Callable]] = defaultdict(list)
+        self._execution_graph: dict[str, list[str]] = defaultdict(list)
+        self.metadata: dict[str, Any] = {}
         Path(CHECKPOINT_DIR).mkdir(parents=True, exist_ok=True)
         logger.info("TaskGraph %s initialized", self.id[:8])
 
@@ -130,10 +131,10 @@ class TaskGraph:
             self._execution_graph[task_id].append(depends_on)
             self._emit("dependency_added", {"task_id": task_id, "depends_on": depends_on})
 
-    def get_task(self, task_id: str) -> Optional[Task]:
+    def get_task(self, task_id: str) -> Task | None:
         return self.tasks.get(task_id)
 
-    def get_ready_tasks(self) -> List[Task]:
+    def get_ready_tasks(self) -> list[Task]:
         with self._lock:
             ready = []
             for t in self.tasks.values():
@@ -146,7 +147,7 @@ class TaskGraph:
                     ready.append(t)
             return ready
 
-    def get_blocked_tasks(self) -> List[Task]:
+    def get_blocked_tasks(self) -> list[Task]:
         with self._lock:
             blocked = []
             for t in self.tasks.values():
@@ -192,7 +193,7 @@ class TaskGraph:
                 self.tasks[task_id].status = TaskStatus.SKIPPED
                 self._emit("task_skipped", {"task_id": task_id})
 
-    def get_topological_order(self) -> List[str]:
+    def get_topological_order(self) -> list[str]:
         with self._lock:
             in_degree = {tid: len(t.deps) for tid, t in self.tasks.items()}
             queue = deque([tid for tid, d in in_degree.items() if d == 0])
@@ -208,10 +209,10 @@ class TaskGraph:
                 logger.warning("Graph %s has cycles — %d/%d tasks ordered", self.id[:8], len(order), len(self.tasks))
             return order
 
-    def get_critical_path(self) -> List[Task]:
+    def get_critical_path(self) -> list[Task]:
         order = self.get_topological_order()
-        dist = {tid: 0 for tid in self.tasks}
-        prev = {tid: None for tid in self.tasks}
+        dist = dict.fromkeys(self.tasks, 0)
+        prev = dict.fromkeys(self.tasks)
         for tid in order:
             for dep in self.tasks[tid].dependents:
                 cost = 1 + self.tasks[tid].duration_ms / 1000.0
@@ -225,7 +226,7 @@ class TaskGraph:
             max_tid = prev[max_tid]
         return list(reversed(path))
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "id": self.id,
             "tasks": {tid: t.to_dict() for tid, t in self.tasks.items()},
@@ -253,7 +254,7 @@ class TaskGraph:
         return cp
 
     def load_checkpoint(self, checkpoint_id: str) -> Optional["TaskGraph"]:
-        for fpath in Path(CHECKPOINT_DIR).glob(f"graph_*.json"):
+        for fpath in Path(CHECKPOINT_DIR).glob("graph_*.json"):
             try:
                 data = json.loads(fpath.read_text())
                 if data.get("id") == checkpoint_id:
@@ -266,7 +267,7 @@ class TaskGraph:
                 logger.warning("Failed loading checkpoint %s: %s", fpath, exc)
         return None
 
-    def list_checkpoints(self) -> List[Dict]:
+    def list_checkpoints(self) -> list[dict]:
         checkpoints = []
         for fpath in sorted(Path(CHECKPOINT_DIR).glob("graph_*.json")):
             try:
@@ -311,9 +312,9 @@ class GraphExecutor:
         self.max_workers = max_workers
         self._running = False
         self._lock = threading.Lock()
-        self._workers: Dict[str, threading.Thread] = {}
+        self._workers: dict[str, threading.Thread] = {}
 
-    def execute(self, task_timeout: Optional[float] = None) -> Dict[str, Any]:
+    def execute(self, task_timeout: float | None = None) -> dict[str, Any]:
         self._running = True
         results = {}
         errors = {}
@@ -388,7 +389,7 @@ class GraphExecutor:
         self._running = False
         logger.info("Graph execution cancelled")
 
-    def get_status(self) -> Dict:
+    def get_status(self) -> dict:
         return self.graph.to_dict()
 
     def resume_from_checkpoint(self, checkpoint_id: str) -> Optional["GraphExecutor"]:
@@ -403,7 +404,7 @@ class PlanBuilder:
         self.graph = TaskGraph()
         self._task_counter = 0
 
-    def add_stage(self, name: str, agent_name: str, deps: Optional[List[str]] = None,
+    def add_stage(self, name: str, agent_name: str, deps: list[str] | None = None,
                   priority: TaskPriority = TaskPriority.NORMAL,
                   description: str = "", **kwargs) -> str:
         deps = deps or []
@@ -419,7 +420,7 @@ class PlanBuilder:
         return self.graph.add_task(task)
 
     def build_standard_plan(self, prompt: str, job_id: str, model: str = "local",
-                            stack: Optional[Dict] = None) -> TaskGraph:
+                            stack: dict | None = None) -> TaskGraph:
         self.graph.metadata = {"prompt": prompt[:200], "job_id": job_id, "model": model}
         req_id = self.add_stage("Requirements Analysis", "RequirementAgent",
                                 description="Analyze requirements from user prompt",
@@ -451,12 +452,12 @@ class PlanBuilder:
 
 
 def create_pipeline_graph(prompt: str, job_id: str, model: str = "local",
-                           stack: Optional[Dict] = None) -> TaskGraph:
+                           stack: dict | None = None) -> TaskGraph:
     builder = PlanBuilder()
     return builder.build_standard_plan(prompt, job_id, model, stack)
 
 
 def execute_graph(graph: TaskGraph, max_workers: int = 4,
-                  task_timeout: Optional[float] = None) -> Dict[str, Any]:
+                  task_timeout: float | None = None) -> dict[str, Any]:
     executor = GraphExecutor(graph, max_workers=max_workers)
     return executor.execute(task_timeout=task_timeout)

@@ -722,11 +722,16 @@ class TestIntegration:
 
     def test_learning_feedback_database_crud(self):
         """Verify database CRUD operations work for all 3 learning tables."""
-        from database.memory_store import (
-            mem_save_learning_feedback, mem_list_learning_feedback,
-            mem_save_learning_pattern, mem_save_learning_recommendation, mem_get_learning_pattern, mem_get_learning_recommendation,
-        )
         import time
+
+        from database.memory_store import (
+            mem_get_learning_pattern,
+            mem_get_learning_recommendation,
+            mem_list_learning_feedback,
+            mem_save_learning_feedback,
+            mem_save_learning_pattern,
+            mem_save_learning_recommendation,
+        )
         now = time.time()
 
         # Feedback

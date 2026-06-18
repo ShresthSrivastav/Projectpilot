@@ -12,9 +12,10 @@ import logging
 import os
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -32,24 +33,24 @@ class AgentTelemetry:
     runtime_ms: int = 0
     success_count: int = 0
     failure_count: int = 0
-    started_at: Optional[str] = None
+    started_at: str | None = None
     last_heartbeat: str = ""
 
 
 @dataclass
 class DashboardEvent:
     event_type: str
-    data: Dict[str, Any]
+    data: dict[str, Any]
     timestamp: float = field(default_factory=time.time)
 
 
-_agents: Dict[str, AgentTelemetry] = {}
+_agents: dict[str, AgentTelemetry] = {}
 _agent_lock = threading.Lock()
-_timeline: List[DashboardEvent] = []
+_timeline: list[DashboardEvent] = []
 _timeline_lock = threading.Lock()
 _MAX_TIMELINE = 1000
 
-_ws_clients: Set[Callable[[DashboardEvent], None]] = set()
+_ws_clients: set[Callable[[DashboardEvent], None]] = set()
 _ws_lock = threading.Lock()
 
 _START_TIME = time.time()
@@ -71,7 +72,7 @@ def update_agent_status(
     tokens: int = 0,
     cost: float = 0.0,
     runtime: int = 0,
-    success: Optional[bool] = None,
+    success: bool | None = None,
 ) -> AgentTelemetry:
     with _agent_lock:
         agent = _agents.get(name)
@@ -102,11 +103,11 @@ def update_agent_status(
         return agent
 
 
-def _get_running_agents() -> List[str]:
+def _get_running_agents() -> list[str]:
     return [n for n, a in _agents.items() if a.status == "running"]
 
 
-def get_agent(name: str) -> Optional[Dict]:
+def get_agent(name: str) -> dict | None:
     with _agent_lock:
         agent = _agents.get(name)
         if agent:
@@ -128,7 +129,7 @@ def get_agent(name: str) -> Optional[Dict]:
         return None
 
 
-def get_all_agents() -> List[Dict]:
+def get_all_agents() -> list[dict]:
     with _agent_lock:
         return [{
             "name": a.agent_name,
@@ -144,7 +145,7 @@ def get_all_agents() -> List[Dict]:
         } for a in sorted(_agents.values(), key=lambda x: x.last_heartbeat or "", reverse=True)]
 
 
-def get_dashboard_status() -> Dict[str, Any]:
+def get_dashboard_status() -> dict[str, Any]:
     with _agent_lock:
         agents = get_all_agents()
         running = sum(1 for a in agents if a["status"] == "running")
@@ -172,7 +173,7 @@ def get_dashboard_status() -> Dict[str, Any]:
     }
 
 
-def get_timeline(limit: int = 100, job_id: Optional[str] = None) -> List[Dict]:
+def get_timeline(limit: int = 100, job_id: str | None = None) -> list[dict]:
     with _timeline_lock:
         events = list(_timeline[-limit:])
         if job_id:
@@ -183,7 +184,7 @@ def get_timeline(limit: int = 100, job_id: Optional[str] = None) -> List[Dict]:
         ]
 
 
-def _publish_event(event_type: str, data: Dict[str, Any]):
+def _publish_event(event_type: str, data: dict[str, Any]):
     event = DashboardEvent(event_type=event_type, data=data)
     with _timeline_lock:
         _timeline.append(event)
@@ -210,7 +211,7 @@ def unsubscribe(callback: Callable):
         _ws_clients.discard(callback)
 
 
-def get_execution_graph(agent_name: Optional[str] = None) -> List[Dict]:
+def get_execution_graph(agent_name: str | None = None) -> list[dict]:
     events = get_timeline(200)
     if agent_name:
         events = [e for e in events if e["data"].get("agent") == agent_name]
@@ -251,7 +252,7 @@ def record_task_completion(agent_name: str, task_name: str, duration_ms: int, to
     })
 
 
-def track_memory_usage() -> Dict[str, float]:
+def track_memory_usage() -> dict[str, float]:
     try:
         import psutil
         process = psutil.Process(os.getpid())

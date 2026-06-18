@@ -6,13 +6,15 @@ import threading
 import time
 import uuid
 from collections import defaultdict
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from database.memory_store import (
-    record_fix_pattern, get_fix_patterns,
-    save_project_insight, get_project_insights,
+    get_fix_patterns,
+    get_project_insights,
+    record_fix_pattern,
+    save_project_insight,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,21 +41,21 @@ class LearnedPattern:
     value: str = ""
     success_count: int = 1
     confidence: float = 1.0
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
     job_id: str = ""
     created_at: float = field(default_factory=time.time)
     last_used: float = field(default_factory=time.time)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return asdict(self)
 
 
 class LearningEngine:
     def __init__(self):
-        self.patterns: Dict[str, LearnedPattern] = {}
+        self.patterns: dict[str, LearnedPattern] = {}
         self._lock = threading.Lock()
-        self._index: Dict[str, List[str]] = defaultdict(list)
+        self._index: dict[str, list[str]] = defaultdict(list)
         LEARNING_DIR.mkdir(parents=True, exist_ok=True)
         self._load_patterns()
 
@@ -67,7 +69,7 @@ class LearningEngine:
         except Exception as exc:
             logger.warning("Learn fix failed: %s", exc)
 
-    def learn_architecture(self, description: str, blueprint: Dict, job_id: str = "") -> None:
+    def learn_architecture(self, description: str, blueprint: dict, job_id: str = "") -> None:
         try:
             key = f"arch:{hash(description[:100])}"
             self._store_pattern(PatternType.ARCHITECTURE, key, json.dumps(blueprint),
@@ -77,7 +79,7 @@ class LearningEngine:
         except Exception as exc:
             logger.warning("Learn architecture failed: %s", exc)
 
-    def learn_deployment(self, target: str, config: Dict, success: bool, job_id: str = "") -> None:
+    def learn_deployment(self, target: str, config: dict, success: bool, job_id: str = "") -> None:
         if success:
             key = f"deploy:{target}:{hash(json.dumps(config, sort_keys=True)[:100])}"
             self._store_pattern(PatternType.DEPLOYMENT, key, json.dumps(config),
@@ -97,7 +99,7 @@ class LearningEngine:
                                 tags=[agent_name, outcome], job_id=job_id)
 
     def _store_pattern(self, ptype: PatternType, key: str, value: str,
-                       tags: Optional[List[str]] = None, confidence: float = 1.0,
+                       tags: list[str] | None = None, confidence: float = 1.0,
                        job_id: str = "") -> None:
         tags = tags or []
         with self._lock:
@@ -118,27 +120,27 @@ class LearningEngine:
                     self._index[tag].append(key)
         self._save_patterns()
 
-    def retrieve_fixes(self, error_type: Optional[str] = None, limit: int = 10) -> List[Dict]:
+    def retrieve_fixes(self, error_type: str | None = None, limit: int = 10) -> list[dict]:
         try:
             results = get_fix_patterns(error_type=error_type, limit=limit)
             return [dict(r) for r in results]
         except Exception:
             return []
 
-    def recommend_architecture(self, tech_stack: Optional[List[str]] = None, limit: int = 5) -> List[Dict]:
+    def recommend_architecture(self, tech_stack: list[str] | None = None, limit: int = 5) -> list[dict]:
         return self._search(PatternType.ARCHITECTURE, tech_stack, limit)
 
-    def recommend_deployment(self, target: Optional[str] = None, limit: int = 5) -> List[Dict]:
+    def recommend_deployment(self, target: str | None = None, limit: int = 5) -> list[dict]:
         return self._search(PatternType.DEPLOYMENT, [target] if target else None, limit)
 
-    def recommend_prompts(self, score_min: float = 0.7, limit: int = 5) -> List[Dict]:
+    def recommend_prompts(self, score_min: float = 0.7, limit: int = 5) -> list[dict]:
         with self._lock:
             candidates = [p for p in self.patterns.values()
                          if p.pattern_type == PatternType.PROMPT.value and p.confidence >= score_min]
             candidates.sort(key=lambda p: p.confidence, reverse=True)
             return [p.to_dict() for p in candidates[:limit]]
 
-    def _search(self, ptype: PatternType, tags: Optional[List[str]], limit: int) -> List[Dict]:
+    def _search(self, ptype: PatternType, tags: list[str] | None, limit: int) -> list[dict]:
         with self._lock:
             candidates = [p for p in self.patterns.values() if p.pattern_type == ptype.value]
             if tags:
@@ -146,7 +148,7 @@ class LearningEngine:
             candidates.sort(key=lambda p: (p.confidence, p.success_count), reverse=True)
             return [p.to_dict() for p in candidates[:limit]]
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         with self._lock:
             type_counts = defaultdict(int)
             for p in self.patterns.values():
@@ -160,7 +162,7 @@ class LearningEngine:
                 "top_tags": dict(sorted(self._index.items(), key=lambda x: -len(x[1]))[:10]),
             }
 
-    def get_context_for_job(self, job_id: str) -> Dict[str, Any]:
+    def get_context_for_job(self, job_id: str) -> dict[str, Any]:
         fixes = self.retrieve_fixes(limit=5)
         archs = self.recommend_architecture(limit=3)
         prompts = self.recommend_prompts(limit=3)

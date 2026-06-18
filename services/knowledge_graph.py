@@ -4,9 +4,9 @@ import logging
 import re
 import threading
 from collections import defaultdict
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -15,19 +15,19 @@ logger = logging.getLogger(__name__)
 class FileNode:
     path: str
     file_type: str = ""
-    imports: List[str] = field(default_factory=list)
-    exports: List[str] = field(default_factory=list)
-    classes: List[str] = field(default_factory=list)
-    functions: List[str] = field(default_factory=list)
-    apis: List[Dict] = field(default_factory=list)
-    dependencies: List[str] = field(default_factory=list)
-    dependents: List[str] = field(default_factory=list)
-    test_files: List[str] = field(default_factory=list)
+    imports: list[str] = field(default_factory=list)
+    exports: list[str] = field(default_factory=list)
+    classes: list[str] = field(default_factory=list)
+    functions: list[str] = field(default_factory=list)
+    apis: list[dict] = field(default_factory=list)
+    dependencies: list[str] = field(default_factory=list)
+    dependents: list[str] = field(default_factory=list)
+    test_files: list[str] = field(default_factory=list)
     size_bytes: int = 0
     line_count: int = 0
     complexity: float = 0.0
-    tech_stack: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    tech_stack: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -36,26 +36,26 @@ class Relationship:
     target: str
     rel_type: str  # imports, extends, implements, calls, tests, api_depends, service_depends
     weight: float = 1.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class ImpactResult:
-    affected_files: List[Dict]
+    affected_files: list[dict]
     impact_score: float
-    breaking_changes: List[str]
-    cascade_paths: List[List[str]]
-    recommendations: List[str]
+    breaking_changes: list[str]
+    cascade_paths: list[list[str]]
+    recommendations: list[str]
 
 
 class KnowledgeGraph:
-    def __init__(self, repo_path: Optional[str] = None):
+    def __init__(self, repo_path: str | None = None):
         self.repo_path = Path(repo_path) if repo_path else None
-        self.files: Dict[str, FileNode] = {}
-        self.relationships: List[Relationship] = []
+        self.files: dict[str, FileNode] = {}
+        self.relationships: list[Relationship] = []
         self._lock = threading.Lock()
-        self._adjacency: Dict[str, Set[str]] = defaultdict(set)
-        self._reverse_adj: Dict[str, Set[str]] = defaultdict(set)
+        self._adjacency: dict[str, set[str]] = defaultdict(set)
+        self._reverse_adj: dict[str, set[str]] = defaultdict(set)
 
     def build_from_repo(self, repo_path: str) -> int:
         self.repo_path = Path(repo_path)
@@ -189,7 +189,7 @@ class KnowledgeGraph:
                                            metadata={"method": api["method"], "path": api["path"]})
                         self.relationships.append(rel)
 
-    def _resolve_import(self, current_path: str, imp: str) -> Optional[str]:
+    def _resolve_import(self, current_path: str, imp: str) -> str | None:
         parts = imp.split(".")
         for i in range(len(parts), 0, -1):
             prefix = ".".join(parts[:i])
@@ -212,7 +212,7 @@ class KnowledgeGraph:
                 return fpath
         return None
 
-    def find_test_files(self, source_path: str) -> List[str]:
+    def find_test_files(self, source_path: str) -> list[str]:
         tests = []
         stem = Path(source_path).stem
         parent = Path(source_path).parent
@@ -236,13 +236,13 @@ class KnowledgeGraph:
                     tests.append(fpath)
         return tests
 
-    def impact_analysis(self, changed_files: List[str]) -> ImpactResult:
-        visited: Set[str] = set()
-        cascade: List[List[str]] = []
-        affected: Dict[str, float] = {}
-        breaking: List[str] = []
+    def impact_analysis(self, changed_files: list[str]) -> ImpactResult:
+        visited: set[str] = set()
+        cascade: list[list[str]] = []
+        affected: dict[str, float] = {}
+        breaking: list[str] = []
 
-        def bfs(start: str, path: List[str]) -> None:
+        def bfs(start: str, path: list[str]) -> None:
             queue = [(start, path)]
             while queue:
                 current, cur_path = queue.pop(0)
@@ -275,7 +275,7 @@ class KnowledgeGraph:
             recommendations=self._generate_recommendations(changed_files, affected_files, breaking),
         )
 
-    def _check_breaking(self, changed: str, dependent: str, breaking: List[str]) -> None:
+    def _check_breaking(self, changed: str, dependent: str, breaking: list[str]) -> None:
         if changed in self.files and dependent in self.files:
             changed_node = self.files[changed]
             dep_node = self.files[dependent]
@@ -283,7 +283,7 @@ class KnowledgeGraph:
                 if any(cls in imp for imp in dep_node.imports):
                     breaking.append(f"Class '{cls}' change in {changed} affects {dependent}")
 
-    def _generate_recommendations(self, changed: List[str], affected: List[Dict], breaking: List[str]) -> List[str]:
+    def _generate_recommendations(self, changed: list[str], affected: list[dict], breaking: list[str]) -> list[str]:
         recs = []
         if breaking:
             recs.append(f"Address {len(breaking)} breaking changes before deployment")
@@ -297,7 +297,7 @@ class KnowledgeGraph:
                 recs.append(f"No tests found for {cf} — consider adding test coverage")
         return recs
 
-    def query_apis(self) -> List[Dict]:
+    def query_apis(self) -> list[dict]:
         apis = []
         for path, node in self.files.items():
             for api in node.apis:
@@ -309,7 +309,7 @@ class KnowledgeGraph:
                 })
         return sorted(apis, key=lambda x: (x["path"], x["method"]))
 
-    def query_dependency_graph(self, module: Optional[str] = None) -> Dict[str, Any]:
+    def query_dependency_graph(self, module: str | None = None) -> dict[str, Any]:
         if module:
             sub_graph = {k: v for k, v in self.files.items() if module in k}
         else:
@@ -319,23 +319,23 @@ class KnowledgeGraph:
                  if r.source in sub_graph or r.target in sub_graph]
         return {"nodes": nodes, "edges": edges, "node_count": len(nodes), "edge_count": len(edges)}
 
-    def query_service_dependencies(self) -> Dict[str, List[str]]:
-        deps: Dict[str, List[str]] = defaultdict(list)
+    def query_service_dependencies(self) -> dict[str, list[str]]:
+        deps: dict[str, list[str]] = defaultdict(list)
         for path, node in self.files.items():
             for imp in node.imports:
                 if any(service in imp for service in ["service", "api", "client", "db", "redis", "mq", "queue"]):
                     deps[path].append(imp)
         return dict(deps)
 
-    def query_test_mappings(self) -> Dict[str, List[str]]:
-        mappings: Dict[str, List[str]] = {}
+    def query_test_mappings(self) -> dict[str, list[str]]:
+        mappings: dict[str, list[str]] = {}
         for path, node in self.files.items():
             tests = self.find_test_files(path)
             if tests:
                 mappings[path] = tests
         return mappings
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "repo_path": str(self.repo_path) if self.repo_path else "",
             "files": {p: asdict(n) for p, n in self.files.items()},
@@ -344,8 +344,8 @@ class KnowledgeGraph:
             "relationship_count": len(self.relationships),
         }
 
-    def get_architecture_summary(self) -> Dict[str, Any]:
-        tech_stacks: Dict[str, int] = defaultdict(int)
+    def get_architecture_summary(self) -> dict[str, Any]:
+        tech_stacks: dict[str, int] = defaultdict(int)
         api_count = 0
         test_count = 0
         for node in self.files.values():

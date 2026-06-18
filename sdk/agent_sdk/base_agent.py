@@ -2,35 +2,35 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
 class AgentCapability:
     name: str
     description: str
-    parameters: Dict[str, Any] = field(default_factory=dict)
+    parameters: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class AgentLifecycleHook:
-    on_initialize: Optional[str] = None
-    on_plan: Optional[str] = None
-    on_execute: Optional[str] = None
-    on_validate: Optional[str] = None
-    on_cleanup: Optional[str] = None
+    on_initialize: str | None = None
+    on_plan: str | None = None
+    on_execute: str | None = None
+    on_validate: str | None = None
+    on_cleanup: str | None = None
 
 
 class BaseAgent(ABC):
     name: str = ""
     description: str = ""
     version: str = "1.0.0"
-    capabilities: List[AgentCapability] = []
+    capabilities: list[AgentCapability] = []
     lifecycle_hooks: AgentLifecycleHook = field(default_factory=AgentLifecycleHook)
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or {}
-        self._state: Dict[str, Any] = {}
+        self._state: dict[str, Any] = {}
         self._logger = logging.getLogger(f"agent.{self.name}")
 
     @abstractmethod
@@ -38,22 +38,22 @@ class BaseAgent(ABC):
         ...
 
     @abstractmethod
-    def plan(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def plan(self, context: dict[str, Any]) -> dict[str, Any]:
         ...
 
     @abstractmethod
-    def execute(self, plan: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, plan: dict[str, Any]) -> dict[str, Any]:
         ...
 
     @abstractmethod
-    def validate(self, result: Dict[str, Any]) -> bool:
+    def validate(self, result: dict[str, Any]) -> bool:
         ...
 
     @abstractmethod
     def cleanup(self) -> None:
         ...
 
-    def get_manifest(self) -> Dict[str, Any]:
+    def get_manifest(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "description": self.description,
@@ -62,7 +62,7 @@ class BaseAgent(ABC):
             "hooks": {k: v for k, v in asdict(self.lifecycle_hooks).items() if v},
         }
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         return dict(self._state)
 
     def set_state(self, key: str, value: Any) -> None:

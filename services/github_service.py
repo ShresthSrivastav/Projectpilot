@@ -1,18 +1,20 @@
 """GitHub Service — OAuth, repo management, branches, commits, PRs, issues, sync."""
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
+from git import GitCommandError, Repo
 from github import Github
 from github.Auth import Token as GhToken
-from git import Repo, GitCommandError
 
 from database.memory_store import (
-    get_github_connection, save_github_connection, delete_github_connection,
+    delete_github_connection,
+    get_github_connection,
+    save_github_connection,
 )
-from services.token_crypto import encrypt_token, decrypt_token, mask_token
+from services.token_crypto import decrypt_token, encrypt_token, mask_token
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +27,7 @@ def _get_client(token: str) -> Github:
 
 # ── Connection Management ────────────────────────────────────────────────
 
-def connect_github(token: str, username: str = "") -> Dict[str, Any]:
+def connect_github(token: str, username: str = "") -> dict[str, Any]:
     g = _get_client(token)
     user = g.get_user()
     login = username or user.login
@@ -37,7 +39,7 @@ def connect_github(token: str, username: str = "") -> Dict[str, Any]:
         "name": user.name or login,
         "email": user.email or "",
         "public_repos": user.public_repos,
-        "connected_at": datetime.now(timezone.utc).isoformat(),
+        "connected_at": datetime.now(UTC).isoformat(),
     }
     save_github_connection(login, data)
     # Return masked token in response, never plaintext
@@ -51,14 +53,14 @@ def disconnect_github(username: str) -> None:
     delete_github_connection(username)
 
 
-def get_connection(username: str) -> Optional[Dict]:
+def get_connection(username: str) -> dict | None:
     raw = get_github_connection(username)
     if raw:
         raw["token"] = decrypt_token(raw.get("token", ""))
     return raw
 
 
-def list_connections() -> List[Dict]:
+def list_connections() -> list[dict]:
     raw_list = get_github_connection() or []
     for conn in raw_list:
         conn["token"] = decrypt_token(conn.get("token", ""))
@@ -83,7 +85,7 @@ def _mask_gh_token_in_args(func_name: str, args: tuple, kwargs: dict) -> tuple:
 
 # ── Repository Operations ────────────────────────────────────────────────
 
-def list_repos(token: str, username: str = "") -> List[Dict]:
+def list_repos(token: str, username: str = "") -> list[dict]:
     g = _get_client(token)
     user = g.get_user(username) if username else g.get_user()
     repos = []
@@ -107,7 +109,7 @@ def list_repos(token: str, username: str = "") -> List[Dict]:
     return repos
 
 
-def get_repo_info(token: str, full_name: str) -> Optional[Dict]:
+def get_repo_info(token: str, full_name: str) -> dict | None:
     try:
         g = _get_client(token)
         r = g.get_repo(full_name)
@@ -136,7 +138,7 @@ def get_repo_info(token: str, full_name: str) -> Optional[Dict]:
         return None
 
 
-def search_repos(token: str, query: str) -> List[Dict]:
+def search_repos(token: str, query: str) -> list[dict]:
     g = _get_client(token)
     results = []
     for r in g.search_repositories(query, sort="updated", order="desc")[:20]:
@@ -153,7 +155,7 @@ def search_repos(token: str, query: str) -> List[Dict]:
 
 # ── Branch Operations ────────────────────────────────────────────────────
 
-def list_branches(token: str, full_name: str) -> List[Dict]:
+def list_branches(token: str, full_name: str) -> list[dict]:
     g = _get_client(token)
     r = g.get_repo(full_name)
     branches = []
@@ -166,7 +168,7 @@ def list_branches(token: str, full_name: str) -> List[Dict]:
     return branches
 
 
-def create_branch(token: str, full_name: str, branch: str, source_branch: str = "") -> Dict:
+def create_branch(token: str, full_name: str, branch: str, source_branch: str = "") -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     source = source_branch or r.default_branch
@@ -175,7 +177,7 @@ def create_branch(token: str, full_name: str, branch: str, source_branch: str = 
     return {"name": branch, "source": source, "sha": src_sha}
 
 
-def delete_branch(token: str, full_name: str, branch: str) -> Dict:
+def delete_branch(token: str, full_name: str, branch: str) -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     ref = r.get_git_ref(f"heads/{branch}")
@@ -185,7 +187,7 @@ def delete_branch(token: str, full_name: str, branch: str) -> Dict:
 
 # ── File Operations ──────────────────────────────────────────────────────
 
-def get_file_content(token: str, full_name: str, path: str, ref: str = "") -> Optional[Dict]:
+def get_file_content(token: str, full_name: str, path: str, ref: str = "") -> dict | None:
     try:
         g = _get_client(token)
         r = g.get_repo(full_name)
@@ -207,7 +209,7 @@ def get_file_content(token: str, full_name: str, path: str, ref: str = "") -> Op
         return None
 
 
-def create_file(token: str, full_name: str, path: str, content: str, message: str, branch: str = "") -> Dict:
+def create_file(token: str, full_name: str, path: str, content: str, message: str, branch: str = "") -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     branch = branch or r.default_branch
@@ -220,7 +222,7 @@ def create_file(token: str, full_name: str, path: str, content: str, message: st
     }
 
 
-def update_file(token: str, full_name: str, path: str, content: str, message: str, sha: str, branch: str = "") -> Dict:
+def update_file(token: str, full_name: str, path: str, content: str, message: str, sha: str, branch: str = "") -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     branch = branch or r.default_branch
@@ -233,7 +235,7 @@ def update_file(token: str, full_name: str, path: str, content: str, message: st
     }
 
 
-def delete_file(token: str, full_name: str, path: str, message: str, sha: str, branch: str = "") -> Dict:
+def delete_file(token: str, full_name: str, path: str, message: str, sha: str, branch: str = "") -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     branch = branch or r.default_branch
@@ -241,7 +243,7 @@ def delete_file(token: str, full_name: str, path: str, message: str, sha: str, b
     return {"commit": result["commit"].sha}
 
 
-def list_files(token: str, full_name: str, path: str = "", ref: str = "") -> List[Dict]:
+def list_files(token: str, full_name: str, path: str = "", ref: str = "") -> list[dict]:
     try:
         g = _get_client(token)
         r = g.get_repo(full_name)
@@ -267,10 +269,10 @@ def list_files(token: str, full_name: str, path: str = "", ref: str = "") -> Lis
 
 # ── Commit Operations ────────────────────────────────────────────────────
 
-def list_commits(token: str, full_name: str, branch: str = "", since: str = "", until: str = "") -> List[Dict]:
+def list_commits(token: str, full_name: str, branch: str = "", since: str = "", until: str = "") -> list[dict]:
     g = _get_client(token)
     r = g.get_repo(full_name)
-    kwargs: Dict = {}
+    kwargs: dict = {}
     if branch:
         kwargs["sha"] = branch
     if since:
@@ -305,7 +307,7 @@ def get_commit_diff(token: str, full_name: str, sha: str) -> str:
 
 # ── Pull Request Operations ──────────────────────────────────────────────
 
-def list_pull_requests(token: str, full_name: str, state: str = "open") -> List[Dict]:
+def list_pull_requests(token: str, full_name: str, state: str = "open") -> list[dict]:
     g = _get_client(token)
     r = g.get_repo(full_name)
     prs = []
@@ -331,7 +333,7 @@ def list_pull_requests(token: str, full_name: str, state: str = "open") -> List[
     return prs
 
 
-def create_pull_request(token: str, full_name: str, title: str, head: str, base: str, body: str = "", draft: bool = False) -> Dict:
+def create_pull_request(token: str, full_name: str, title: str, head: str, base: str, body: str = "", draft: bool = False) -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     pr = r.create_pull(title=title, body=body, head=head, base=base, draft=draft)
@@ -344,7 +346,7 @@ def create_pull_request(token: str, full_name: str, title: str, head: str, base:
     }
 
 
-def merge_pull_request(token: str, full_name: str, pr_number: int, commit_message: str = "", merge_method: str = "merge") -> Dict:
+def merge_pull_request(token: str, full_name: str, pr_number: int, commit_message: str = "", merge_method: str = "merge") -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     pr = r.get_pull(pr_number)
@@ -359,7 +361,7 @@ def get_pr_diff(token: str, full_name: str, pr_number: int) -> str:
     return pr.get_files()
 
 
-def get_pr_files(token: str, full_name: str, pr_number: int) -> List[Dict]:
+def get_pr_files(token: str, full_name: str, pr_number: int) -> list[dict]:
     g = _get_client(token)
     r = g.get_repo(full_name)
     pr = r.get_pull(pr_number)
@@ -379,10 +381,10 @@ def get_pr_files(token: str, full_name: str, pr_number: int) -> List[Dict]:
 
 # ── Issue Operations ─────────────────────────────────────────────────────
 
-def list_issues(token: str, full_name: str, state: str = "open", labels: str = "") -> List[Dict]:
+def list_issues(token: str, full_name: str, state: str = "open", labels: str = "") -> list[dict]:
     g = _get_client(token)
     r = g.get_repo(full_name)
-    kwargs: Dict = {"state": state, "sort": "updated", "direction": "desc"}
+    kwargs: dict = {"state": state, "sort": "updated", "direction": "desc"}
     if labels:
         kwargs["labels"] = labels.split(",")
     issues = []
@@ -403,7 +405,7 @@ def list_issues(token: str, full_name: str, state: str = "open", labels: str = "
     return issues
 
 
-def create_issue(token: str, full_name: str, title: str, body: str = "", labels: List[str] = None, assignees: List[str] = None) -> Dict:
+def create_issue(token: str, full_name: str, title: str, body: str = "", labels: list[str] = None, assignees: list[str] = None) -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     issue = r.create_issue(title=title, body=body, labels=labels or [], assignees=assignees or [])
@@ -416,11 +418,11 @@ def create_issue(token: str, full_name: str, title: str, body: str = "", labels:
     }
 
 
-def update_issue(token: str, full_name: str, issue_number: int, title: str = "", body: str = "", state: str = "") -> Dict:
+def update_issue(token: str, full_name: str, issue_number: int, title: str = "", body: str = "", state: str = "") -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     issue = r.get_issue(issue_number)
-    kwargs: Dict = {}
+    kwargs: dict = {}
     if title:
         kwargs["title"] = title
     if body:
@@ -436,14 +438,14 @@ def update_issue(token: str, full_name: str, issue_number: int, title: str = "",
     }
 
 
-def add_issue_comment(token: str, full_name: str, issue_number: int, body: str) -> Dict:
+def add_issue_comment(token: str, full_name: str, issue_number: int, body: str) -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     comment = r.get_issue(issue_number).create_comment(body)
     return {"id": comment.id, "body": body, "created_at": comment.created_at.isoformat() if comment.created_at else ""}
 
 
-def list_issue_comments(token: str, full_name: str, issue_number: int) -> List[Dict]:
+def list_issue_comments(token: str, full_name: str, issue_number: int) -> list[dict]:
     g = _get_client(token)
     r = g.get_repo(full_name)
     comments = []
@@ -463,7 +465,7 @@ def _clone_dir(full_name: str) -> Path:
     return Path(CLONE_BASE) / full_name.replace("/", "_")
 
 
-def clone_repo(token: str, full_name: str, branch: str = "") -> Dict:
+def clone_repo(token: str, full_name: str, branch: str = "") -> dict:
     dest = _clone_dir(full_name)
     if dest.exists():
         return {"status": "already_cloned", "path": str(dest)}
@@ -483,7 +485,7 @@ def clone_repo(token: str, full_name: str, branch: str = "") -> Dict:
         return {"status": "error", "error": "Clone failed. Check token permissions."}
 
 
-def pull_repo(token: str, full_name: str, branch: str = "") -> Dict:
+def pull_repo(token: str, full_name: str, branch: str = "") -> dict:
     dest = _clone_dir(full_name)
     if not dest.exists():
         return clone_repo(token, full_name, branch)
@@ -498,7 +500,7 @@ def pull_repo(token: str, full_name: str, branch: str = "") -> Dict:
         return {"status": "error", "error": str(exc)}
 
 
-def get_local_repo_status(full_name: str) -> Optional[Dict]:
+def get_local_repo_status(full_name: str) -> dict | None:
     dest = _clone_dir(full_name)
     if not dest.exists():
         return None
@@ -518,7 +520,7 @@ def get_local_repo_status(full_name: str) -> Optional[Dict]:
         return {"error": str(exc)}
 
 
-def local_file_list(full_name: str, path: str = "") -> List[Dict]:
+def local_file_list(full_name: str, path: str = "") -> list[dict]:
     dest = _clone_dir(full_name)
     base = dest / path if path else dest
     if not base.exists():
@@ -534,7 +536,7 @@ def local_file_list(full_name: str, path: str = "") -> List[Dict]:
     return files
 
 
-def local_read_file(full_name: str, path: str) -> Optional[str]:
+def local_read_file(full_name: str, path: str) -> str | None:
     dest = _clone_dir(full_name) / path
     if not dest.exists() or not dest.is_file():
         return None
@@ -544,7 +546,7 @@ def local_read_file(full_name: str, path: str) -> Optional[str]:
         return None
 
 
-def local_write_file(full_name: str, path: str, content: str, message: str = "") -> Dict:
+def local_write_file(full_name: str, path: str, content: str, message: str = "") -> dict:
     dest = _clone_dir(full_name) / path
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(content, encoding="utf-8")
@@ -555,7 +557,7 @@ def local_write_file(full_name: str, path: str, content: str, message: str = "")
     return {"path": path, "size": len(content), "committed": bool(message)}
 
 
-def local_commit_and_push(full_name: str, message: str, branch: str = "") -> Dict:
+def local_commit_and_push(full_name: str, message: str, branch: str = "") -> dict:
     dest = _clone_dir(full_name)
     if not dest.exists():
         return {"status": "error", "error": "Repo not cloned locally"}
@@ -575,7 +577,7 @@ def local_commit_and_push(full_name: str, message: str, branch: str = "") -> Dic
 
 # ── Webhook Management ───────────────────────────────────────────────────
 
-def list_webhooks(token: str, full_name: str) -> List[Dict]:
+def list_webhooks(token: str, full_name: str) -> list[dict]:
     g = _get_client(token)
     r = g.get_repo(full_name)
     hooks = []
@@ -591,7 +593,7 @@ def list_webhooks(token: str, full_name: str) -> List[Dict]:
     return hooks
 
 
-def create_webhook(token: str, full_name: str, webhook_url: str, events: List[str] = None) -> Dict:
+def create_webhook(token: str, full_name: str, webhook_url: str, events: list[str] = None) -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     hook = r.create_hook(
@@ -603,7 +605,7 @@ def create_webhook(token: str, full_name: str, webhook_url: str, events: List[st
     return {"id": hook.id, "url": webhook_url, "events": hook.events}
 
 
-def delete_webhook(token: str, full_name: str, hook_id: int) -> Dict:
+def delete_webhook(token: str, full_name: str, hook_id: int) -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     hook = r.get_hook(hook_id)

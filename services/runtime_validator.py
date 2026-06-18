@@ -5,14 +5,13 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, Optional
-from urllib.request import urlopen, Request
 from urllib.error import URLError
+from urllib.request import Request, urlopen
 
 logger = logging.getLogger(__name__)
 
 
-def validate(job_dir: Path, timeout: int = 30) -> Dict:
+def validate(job_dir: Path, timeout: int = 30) -> dict:
     """Start the generated application, wait for it, and hit /health.
 
     Installs dependencies first if requirements.txt exists.
@@ -78,7 +77,7 @@ def validate(job_dir: Path, timeout: int = 30) -> Dict:
     return {"passed": True, "error": None, "health": health_result, "port": port, "command": str(cmd)}
 
 
-def _install_deps(job_dir: Path) -> Optional[str]:
+def _install_deps(job_dir: Path) -> str | None:
     req_file = job_dir / "requirements.txt"
     if not req_file.exists():
         return None
@@ -110,7 +109,7 @@ def _install_deps(job_dir: Path) -> Optional[str]:
     return None
 
 
-def _find_entry(job_dir: Path) -> Optional[Path]:
+def _find_entry(job_dir: Path) -> Path | None:
     candidates = ["backend/main.py", "app.py", "main.py", "run.py"]
     for c in candidates:
         p = (job_dir / c).resolve()

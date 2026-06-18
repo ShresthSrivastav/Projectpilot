@@ -13,7 +13,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -47,11 +47,11 @@ def is_available() -> bool:
 
 def run_python(
     code: str,
-    requirements: Optional[List[str]] = None,
+    requirements: list[str] | None = None,
     timeout: int = SANDBOX_TIMEOUT,
     memory: str = SANDBOX_MEMORY,
     cpus: str = SANDBOX_CPU,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if _check_docker():
         return _run_docker(code, requirements, timeout, memory, cpus)
     return _run_subprocess(code, requirements, timeout)
@@ -59,11 +59,11 @@ def run_python(
 
 def _run_docker(
     code: str,
-    requirements: Optional[List[str]],
+    requirements: list[str] | None,
     timeout: int,
     memory: str,
     cpus: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="sandbox_") as tmpdir:
         tmp_path = Path(tmpdir)
 
@@ -149,9 +149,9 @@ def _run_docker(
 
 def _run_subprocess(
     code: str,
-    requirements: Optional[List[str]],
+    requirements: list[str] | None,
     timeout: int,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     t0 = time.monotonic()
     with tempfile.TemporaryDirectory(prefix="sandbox_") as tmpdir:
         tmp_path = Path(tmpdir)

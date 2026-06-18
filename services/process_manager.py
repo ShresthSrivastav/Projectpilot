@@ -7,10 +7,9 @@ import subprocess
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -38,23 +37,23 @@ SUPPORTED_RUNTIMES = {
 @dataclass
 class ProcessResult:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    pid: Optional[int] = None
-    port: Optional[int] = None
+    pid: int | None = None
+    port: int | None = None
     status: ProcessStatus = ProcessStatus.PENDING
     stdout: str = ""
     stderr: str = ""
-    exit_code: Optional[int] = None
+    exit_code: int | None = None
     duration_ms: float = 0.0
-    started_at: Optional[float] = None
-    completed_at: Optional[float] = None
-    error: Optional[str] = None
+    started_at: float | None = None
+    completed_at: float | None = None
+    error: str | None = None
     runtime_type: str = "python"
 
 
 class ProcessManager:
     def __init__(self):
-        self.processes: Dict[str, ProcessResult] = {}
-        self._subprocesses: Dict[int, subprocess.Popen] = {}
+        self.processes: dict[str, ProcessResult] = {}
+        self._subprocesses: dict[int, subprocess.Popen] = {}
         self._lock = threading.Lock()
         self._port_counter = 8000
 
@@ -87,9 +86,9 @@ class ProcessManager:
 
     def run(
         self,
-        command: Optional[List[str]] = None,
+        command: list[str] | None = None,
         working_dir: str = "",
-        env_vars: Optional[Dict[str, str]] = None,
+        env_vars: dict[str, str] | None = None,
         timeout: int = 300,
         runtime_type: str = "",
         serve: bool = False,
@@ -162,9 +161,9 @@ class ProcessManager:
 
     def run_detached(
         self,
-        command: Optional[List[str]] = None,
+        command: list[str] | None = None,
         working_dir: str = "",
-        env_vars: Optional[Dict[str, str]] = None,
+        env_vars: dict[str, str] | None = None,
         timeout: int = 300,
         runtime_type: str = "",
     ) -> ProcessResult:
@@ -197,8 +196,8 @@ class ProcessManager:
                 self.processes[proc.id] = proc
 
             def _reader(pid: int, popen: subprocess.Popen, proc_id: str, tm: int):
-                import select as sel
                 import errno
+                import select as sel
                 stdout_chunks, stderr_chunks = [], []
                 start = time.time()
                 try:
@@ -253,19 +252,19 @@ class ProcessManager:
 
     def run_async(
         self,
-        command: Optional[List[str]] = None,
+        command: list[str] | None = None,
         working_dir: str = "",
-        env_vars: Optional[Dict[str, str]] = None,
+        env_vars: dict[str, str] | None = None,
         timeout: int = 300,
         runtime_type: str = "",
     ) -> str:
         proc = self.run(command, working_dir, env_vars, timeout, runtime_type)
         return proc.id
 
-    def get_process(self, process_id: str) -> Optional[ProcessResult]:
+    def get_process(self, process_id: str) -> ProcessResult | None:
         return self.processes.get(process_id)
 
-    def list_processes(self, limit: int = 50) -> List[Dict]:
+    def list_processes(self, limit: int = 50) -> list[dict]:
         with self._lock:
             procs = sorted(self.processes.values(), key=lambda p: p.started_at or 0, reverse=True)
         return [asdict(p) for p in procs[:limit]]
@@ -320,7 +319,7 @@ class ProcessManager:
         except Exception as exc:
             logger.warning("Log write failed: %s", exc)
 
-    def get_process_log(self, process_id: str) -> Optional[str]:
+    def get_process_log(self, process_id: str) -> str | None:
         log_dir = Path(os.getenv("PROCESS_LOG_DIR", "./process_logs"))
         log_path = log_dir / f"{process_id[:8]}.log"
         if log_path.exists():

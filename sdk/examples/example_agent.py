@@ -1,9 +1,9 @@
 """Example Custom Agent — Documentation Generator Agent.
 Shows how any developer can create a custom agent without modifying platform source code.
 """
-from typing import Any, Dict
+from typing import Any
 
-from sdk.agent_sdk.base_agent import BaseAgent, AgentCapability, AgentLifecycleHook
+from sdk.agent_sdk.base_agent import AgentCapability, AgentLifecycleHook, BaseAgent
 
 
 class DocGenAgent(BaseAgent):
@@ -23,7 +23,7 @@ class DocGenAgent(BaseAgent):
         self._state["ready"] = True
         return True
 
-    def plan(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def plan(self, context: dict[str, Any]) -> dict[str, Any]:
         project_path = context.get("project_path", ".")
         return {
             "steps": [
@@ -34,7 +34,7 @@ class DocGenAgent(BaseAgent):
             "estimated_tokens": 5000,
         }
 
-    def execute(self, plan: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, plan: dict[str, Any]) -> dict[str, Any]:
         results = []
         for step in plan.get("steps", []):
             if step["action"] == "scan_project":
@@ -45,7 +45,7 @@ class DocGenAgent(BaseAgent):
                 results.append({"action": "generate_api_docs", "status": "completed", "output": "docs/api.md"})
         return {"results": results, "status": "completed"}
 
-    def validate(self, result: Dict[str, Any]) -> bool:
+    def validate(self, result: dict[str, Any]) -> bool:
         return result.get("status") == "completed"
 
     def cleanup(self) -> None:

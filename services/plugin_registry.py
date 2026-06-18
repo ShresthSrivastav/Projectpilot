@@ -7,9 +7,9 @@ import logging
 import sys
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import yaml
 
@@ -24,11 +24,11 @@ class PluginEntry:
     enabled: bool = False
     installed_at: str = ""
     updated_at: str = ""
-    resource_limits: Dict[str, Any] = field(default_factory=lambda: {"cpu": 1, "memory_mb": 256})
-    permissions_granted: List[str] = field(default_factory=list)
+    resource_limits: dict[str, Any] = field(default_factory=lambda: {"cpu": 1, "memory_mb": 256})
+    permissions_granted: list[str] = field(default_factory=list)
     checksum: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "manifest": self.manifest.to_dict(),
@@ -56,8 +56,8 @@ class PluginRegistry:
         self._initialized = True
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(parents=True, exist_ok=True)
-        self._plugins: Dict[str, PluginEntry] = {}
-        self._plugin_instances: Dict[str, BasePlugin] = {}
+        self._plugins: dict[str, PluginEntry] = {}
+        self._plugin_instances: dict[str, BasePlugin] = {}
         self._logger = logging.getLogger("PluginRegistry")
         self._load_index()
 
@@ -97,7 +97,7 @@ class PluginRegistry:
             return ""
         return hashlib.sha256(path.read_bytes()).hexdigest()
 
-    def _validate_manifest(self, manifest: PluginManifest) -> List[str]:
+    def _validate_manifest(self, manifest: PluginManifest) -> list[str]:
         errors = []
         if not manifest.name:
             errors.append("Plugin name is required")
@@ -118,8 +118,8 @@ class PluginRegistry:
     def install_plugin(
         self,
         source: str,
-        manifest: Optional[PluginManifest] = None,
-        permissions: Optional[List[str]] = None,
+        manifest: PluginManifest | None = None,
+        permissions: list[str] | None = None,
     ) -> PluginEntry:
         source_path = Path(source)
         if source_path.exists() and source_path.suffix == ".py":
@@ -146,8 +146,8 @@ class PluginRegistry:
             manifest=manifest,
             source=source,
             enabled=False,
-            installed_at=datetime.now(timezone.utc).isoformat(),
-            updated_at=datetime.now(timezone.utc).isoformat(),
+            installed_at=datetime.now(UTC).isoformat(),
+            updated_at=datetime.now(UTC).isoformat(),
             permissions_granted=permissions or manifest.permissions,
             checksum=checksum if 'checksum' in dir() else self._compute_checksum(source),
         )
@@ -273,7 +273,7 @@ class PluginRegistry:
             except Exception as e:
                 self._logger.error("Could not load plugin %s: %s", plugin_id, e)
                 return False
-        entry.updated_at = datetime.now(timezone.utc).isoformat()
+        entry.updated_at = datetime.now(UTC).isoformat()
         self._save_index()
         return True
 
@@ -282,13 +282,13 @@ class PluginRegistry:
         if entry is None:
             return False
         entry.enabled = False
-        entry.updated_at = datetime.now(timezone.utc).isoformat()
+        entry.updated_at = datetime.now(UTC).isoformat()
         self._save_index()
         return True
 
     def update_plugin(
-        self, plugin_id: str, source: str, manifest: Optional[PluginManifest] = None
-    ) -> Optional[PluginEntry]:
+        self, plugin_id: str, source: str, manifest: PluginManifest | None = None
+    ) -> PluginEntry | None:
         entry = self._plugins.get(plugin_id)
         if entry is None:
             return None
@@ -308,7 +308,7 @@ class PluginRegistry:
 
         entry.source = source
         entry.manifest = manifest
-        entry.updated_at = datetime.now(timezone.utc).isoformat()
+        entry.updated_at = datetime.now(UTC).isoformat()
         entry.checksum = self._compute_checksum(source)
         self._save_index()
 
@@ -345,12 +345,12 @@ class PluginRegistry:
         except Exception:
             return False
 
-    def get_plugin(self, plugin_id: str) -> Optional[PluginEntry]:
+    def get_plugin(self, plugin_id: str) -> PluginEntry | None:
         return self._plugins.get(plugin_id)
 
     def list_plugins(
-        self, plugin_type: Optional[str] = None, enabled_only: bool = False
-    ) -> List[PluginEntry]:
+        self, plugin_type: str | None = None, enabled_only: bool = False
+    ) -> list[PluginEntry]:
         results = list(self._plugins.values())
         if plugin_type:
             results = [p for p in results if p.manifest.plugin_type == plugin_type]
@@ -358,7 +358,7 @@ class PluginRegistry:
             results = [p for p in results if p.enabled]
         return results
 
-    def get_plugin_instance(self, plugin_id: str) -> Optional[BasePlugin]:
+    def get_plugin_instance(self, plugin_id: str) -> BasePlugin | None:
         return self._plugin_instances.get(plugin_id)
 
     def call_plugin_hook(self, plugin_id: str, hook: str, *args, **kwargs) -> Any:

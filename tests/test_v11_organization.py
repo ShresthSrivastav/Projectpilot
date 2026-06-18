@@ -5,7 +5,6 @@ import time
 import uuid
 from pathlib import Path
 
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
@@ -225,7 +224,7 @@ class TestImpactAnalysis:
 
 class TestOrgGraphAnalyzer:
     def test_find_shared_dependencies(self):
-        from services.org_graph_service import create_organization, OrgGraphAnalyzer
+        from services.org_graph_service import OrgGraphAnalyzer, create_organization
         graph = create_organization("analyze-org")
         graph.add_repository("lib-common", "/p1")
         graph.add_repository("service-a", "/p2")
@@ -238,7 +237,7 @@ class TestOrgGraphAnalyzer:
         assert shared[0]["target"] == "lib-common"
 
     def test_find_orphan_repos(self):
-        from services.org_graph_service import create_organization, OrgGraphAnalyzer
+        from services.org_graph_service import OrgGraphAnalyzer, create_organization
         graph = create_organization("analyze-org2")
         graph.add_repository("connected-a", "/p1")
         graph.add_repository("connected-b", "/p2")
@@ -249,7 +248,7 @@ class TestOrgGraphAnalyzer:
         assert "orphan-repo" in orphans
 
     def test_find_critical_path(self):
-        from services.org_graph_service import create_organization, OrgGraphAnalyzer
+        from services.org_graph_service import OrgGraphAnalyzer, create_organization
         graph = create_organization("analyze-org3")
         graph.add_repository("shared-lib", "/p1")
         graph.add_repository("service-a", "/p2")
@@ -302,8 +301,8 @@ class TestEntityParsing:
 
 class TestMultiRepoEditor:
     def test_plan_change(self):
-        from services.org_graph_service import create_organization
         from services.multi_repo_editor import get_multi_repo_editor
+        from services.org_graph_service import create_organization
         graph = create_organization("editor-org")
         graph.add_repository("repo-a", _make_temp_repo("editor_repo_a", {"file.txt": "old"}))
         editor = get_multi_repo_editor(graph)
@@ -313,16 +312,16 @@ class TestMultiRepoEditor:
         assert "repo-a" in cc.changes
 
     def test_plan_change_nonexistent_repo(self):
-        from services.org_graph_service import create_organization
         from services.multi_repo_editor import get_multi_repo_editor
+        from services.org_graph_service import create_organization
         graph = create_organization("editor-org2")
         editor = get_multi_repo_editor(graph)
         cc = editor.plan_change(graph.org.id, "change", {"nonexistent": {"f.txt": "x"}})
         assert cc.changes["nonexistent"].repo_path == ""
 
     def test_list_changes(self):
-        from services.org_graph_service import create_organization
         from services.multi_repo_editor import get_multi_repo_editor
+        from services.org_graph_service import create_organization
         graph = create_organization("editor-org3")
         editor = get_multi_repo_editor(graph)
         editor.plan_change(graph.org.id, "c1", {})
@@ -331,8 +330,8 @@ class TestMultiRepoEditor:
         assert len(changes) >= 2
 
     def test_get_status(self):
-        from services.org_graph_service import create_organization
         from services.multi_repo_editor import get_multi_repo_editor
+        from services.org_graph_service import create_organization
         graph = create_organization("editor-org4")
         editor = get_multi_repo_editor(graph)
         cc = editor.plan_change(graph.org.id, "status test", {})
@@ -346,8 +345,8 @@ class TestMultiRepoEditor:
 
 class TestCrossRepoValidation:
     def test_api_compatibility_empty(self):
-        from services.org_graph_service import create_organization
         from services.cross_repo_validation import get_cross_repo_validator
+        from services.org_graph_service import create_organization
         graph = create_organization("val-org1")
         validator = get_cross_repo_validator(graph)
         result = validator.validate_api_compatibility(graph.org.id)
@@ -355,8 +354,8 @@ class TestCrossRepoValidation:
         assert result.passed
 
     def test_shared_libraries_empty(self):
-        from services.org_graph_service import create_organization
         from services.cross_repo_validation import get_cross_repo_validator
+        from services.org_graph_service import create_organization
         graph = create_organization("val-org2")
         validator = get_cross_repo_validator(graph)
         result = validator.validate_shared_libraries(graph.org.id)
@@ -364,32 +363,32 @@ class TestCrossRepoValidation:
         assert result.passed
 
     def test_schema_compatibility_empty(self):
-        from services.org_graph_service import create_organization
         from services.cross_repo_validation import get_cross_repo_validator
+        from services.org_graph_service import create_organization
         graph = create_organization("val-org3")
         validator = get_cross_repo_validator(graph)
         result = validator.validate_schema_compatibility(graph.org.id)
         assert result.validation_type == "schema_compatibility"
 
     def test_deployment_consistency_empty(self):
-        from services.org_graph_service import create_organization
         from services.cross_repo_validation import get_cross_repo_validator
+        from services.org_graph_service import create_organization
         graph = create_organization("val-org4")
         validator = get_cross_repo_validator(graph)
         result = validator.validate_deployment_consistency(graph.org.id)
         assert result.validation_type == "deployment_consistency"
 
     def test_documentation_coverage(self):
-        from services.org_graph_service import create_organization
         from services.cross_repo_validation import get_cross_repo_validator
+        from services.org_graph_service import create_organization
         graph = create_organization("val-org5")
         validator = get_cross_repo_validator(graph)
         result = validator.validate_documentation_coverage(graph.org.id)
         assert result.validation_type == "documentation_coverage"
 
     def test_run_all_validations(self):
-        from services.org_graph_service import create_organization
         from services.cross_repo_validation import get_cross_repo_validator
+        from services.org_graph_service import create_organization
         graph = create_organization("val-org6")
         validator = get_cross_repo_validator(graph)
         results = validator.run_all_validations(graph.org.id)
@@ -399,16 +398,16 @@ class TestCrossRepoValidation:
             assert key in results
 
     def test_get_result_not_found(self):
-        from services.org_graph_service import create_organization
         from services.cross_repo_validation import get_cross_repo_validator
+        from services.org_graph_service import create_organization
         graph = create_organization("val-org7")
         validator = get_cross_repo_validator(graph)
         r = validator.get_result("nonexistent")
         assert r is None
 
     def test_list_results(self):
-        from services.org_graph_service import create_organization
         from services.cross_repo_validation import get_cross_repo_validator
+        from services.org_graph_service import create_organization
         graph = create_organization("val-org8")
         validator = get_cross_repo_validator(graph)
         validator.validate_api_compatibility(graph.org.id)
@@ -432,7 +431,7 @@ class TestDatabaseCRUD:
         init_db()
 
     def test_save_and_get_organization(self):
-        from database.memory_store import save_organization, get_organization
+        from database.memory_store import get_organization, save_organization
         oid = str(uuid.uuid4())
         save_organization({"id": oid, "name": "db-org", "description": "test", "repo_count": 0, "entity_count": 0, "metadata": {}, "created_at": time.time(), "updated_at": time.time()})
         org = get_organization(oid)
@@ -440,7 +439,7 @@ class TestDatabaseCRUD:
         assert org["name"] == "db-org"
 
     def test_list_organizations_db(self):
-        from database.memory_store import save_organization, list_organizations_db, delete_organization
+        from database.memory_store import delete_organization, list_organizations_db, save_organization
         oid = str(uuid.uuid4())
         save_organization({"id": oid, "name": "list-org", "description": "", "repo_count": 0, "entity_count": 0, "metadata": {}, "created_at": time.time(), "updated_at": time.time()})
         orgs = list_organizations_db()
@@ -449,7 +448,7 @@ class TestDatabaseCRUD:
         delete_organization(oid)
 
     def test_delete_organization(self):
-        from database.memory_store import save_organization, delete_organization, get_organization
+        from database.memory_store import delete_organization, get_organization, save_organization
         oid = str(uuid.uuid4())
         save_organization({"id": oid, "name": "del-org", "description": "", "repo_count": 0, "entity_count": 0, "metadata": {}, "created_at": time.time(), "updated_at": time.time()})
         ok = delete_organization(oid)
@@ -457,7 +456,7 @@ class TestDatabaseCRUD:
         assert get_organization(oid) is None
 
     def test_save_and_get_repository(self):
-        from database.memory_store import save_repository, get_repositories, delete_repository
+        from database.memory_store import delete_repository, get_repositories, save_repository
         oid = str(uuid.uuid4())
         rid = str(uuid.uuid4())
         save_repository({"id": rid, "org_id": oid, "name": "db-repo", "path": "/p", "category": "backend", "language": "python", "url": "", "description": "", "file_count": 0, "indexed_at": None, "metadata": {}})
@@ -467,7 +466,11 @@ class TestDatabaseCRUD:
         delete_repository(rid)
 
     def test_save_and_get_relationship(self):
-        from database.memory_store import save_repository_relationship, get_repository_relationships, delete_repository_relationship
+        from database.memory_store import (
+            delete_repository_relationship,
+            get_repository_relationships,
+            save_repository_relationship,
+        )
         oid = str(uuid.uuid4())
         rel_id = str(uuid.uuid4())
         save_repository_relationship({"id": rel_id, "org_id": oid, "source_repo": "a", "target_repo": "b", "source_file": "", "target_file": "", "relationship": "depends_on", "weight": 1.0, "verified": True})
@@ -477,7 +480,7 @@ class TestDatabaseCRUD:
         delete_repository_relationship(rel_id)
 
     def test_save_and_get_impact_report(self):
-        from database.memory_store import save_impact_report, get_impact_reports, delete_impact_report
+        from database.memory_store import delete_impact_report, get_impact_reports, save_impact_report
         oid = str(uuid.uuid4())
         rpt_id = str(uuid.uuid4())
         save_impact_report({"id": rpt_id, "org_id": oid, "query": "test query", "affected_repos": ["a"], "affected_files": [], "impact_score": 50.0, "risk_level": "medium", "recommendations": ["fix"], "report_markdown": "# Report", "created_at": time.time()})
@@ -487,7 +490,7 @@ class TestDatabaseCRUD:
         delete_impact_report(rpt_id)
 
     def test_get_impact_report_by_id(self):
-        from database.memory_store import save_impact_report, get_impact_report_by_id, delete_impact_report
+        from database.memory_store import delete_impact_report, get_impact_report_by_id, save_impact_report
         rpt_id = str(uuid.uuid4())
         save_impact_report({"id": rpt_id, "org_id": "o1", "query": "q", "affected_repos": [], "affected_files": [], "impact_score": 0, "risk_level": "low", "recommendations": [], "report_markdown": "", "created_at": time.time()})
         rpt = get_impact_report_by_id(rpt_id)
@@ -496,7 +499,12 @@ class TestDatabaseCRUD:
         delete_impact_report(rpt_id)
 
     def test_save_and_get_cross_repo_change(self):
-        from database.memory_store import save_cross_repo_change, get_cross_repo_changes, get_cross_repo_change, delete_cross_repo_change
+        from database.memory_store import (
+            delete_cross_repo_change,
+            get_cross_repo_change,
+            get_cross_repo_changes,
+            save_cross_repo_change,
+        )
         oid = str(uuid.uuid4())
         chg_id = str(uuid.uuid4())
         save_cross_repo_change({"id": chg_id, "org_id": oid, "branch_name": "b1", "description": "desc", "repos_affected": ["a"], "files_changed": [], "status": "pending", "pr_urls": [], "created_at": time.time(), "completed_at": None})
@@ -509,7 +517,7 @@ class TestDatabaseCRUD:
         delete_cross_repo_change(chg_id)
 
     def test_delete_cross_repo_change(self):
-        from database.memory_store import save_cross_repo_change, delete_cross_repo_change, get_cross_repo_change
+        from database.memory_store import delete_cross_repo_change, get_cross_repo_change, save_cross_repo_change
         chg_id = str(uuid.uuid4())
         save_cross_repo_change({"id": chg_id, "org_id": "o1", "branch_name": "b", "description": "d", "repos_affected": [], "files_changed": [], "status": "pending", "pr_urls": [], "created_at": time.time(), "completed_at": None})
         ok = delete_cross_repo_change(chg_id)
@@ -517,7 +525,7 @@ class TestDatabaseCRUD:
         assert get_cross_repo_change(chg_id) is None
 
     def test_delete_impact_report(self):
-        from database.memory_store import save_impact_report, delete_impact_report, get_impact_report_by_id
+        from database.memory_store import delete_impact_report, get_impact_report_by_id, save_impact_report
         rpt_id = str(uuid.uuid4())
         save_impact_report({"id": rpt_id, "org_id": "o1", "query": "q", "affected_repos": [], "affected_files": [], "impact_score": 0, "risk_level": "low", "recommendations": [], "report_markdown": "", "created_at": time.time()})
         ok = delete_impact_report(rpt_id)
@@ -525,8 +533,13 @@ class TestDatabaseCRUD:
         assert get_impact_report_by_id(rpt_id) is None
 
     def test_org_cascade_deletes(self):
-        from database.memory_store import (save_organization, save_repository, get_repositories,
-                                           delete_organization, delete_repositories_by_org)
+        from database.memory_store import (
+            delete_organization,
+            delete_repositories_by_org,
+            get_repositories,
+            save_organization,
+            save_repository,
+        )
         oid = str(uuid.uuid4())
         save_organization({"id": oid, "name": "cascade-org", "description": "", "repo_count": 0, "entity_count": 0, "metadata": {}, "created_at": time.time(), "updated_at": time.time()})
         save_repository({"id": str(uuid.uuid4()), "org_id": oid, "name": "cascade-repo", "path": "/p", "category": "other", "language": "", "url": "", "description": "", "file_count": 0, "indexed_at": None, "metadata": {}})
@@ -573,8 +586,9 @@ class TestDatabaseCRUD:
 
 class TestOrganizationAPI:
     def test_health_endpoint_has_version(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.get("/health")
         assert resp.status_code == 200
@@ -582,8 +596,9 @@ class TestOrganizationAPI:
         assert "version" in data
 
     def test_list_organizations(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.get("/organization/list")
         assert resp.status_code == 200
@@ -591,8 +606,9 @@ class TestOrganizationAPI:
         assert "organizations" in data
 
     def test_create_organization(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.post("/organization/create", json={"name": "api-test-org", "description": "created via API"})
         assert resp.status_code == 200
@@ -601,8 +617,9 @@ class TestOrganizationAPI:
         assert data["name"] == "api-test-org"
 
     def test_get_organization_health(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.post("/organization/create", json={"name": "health-org"})
         org_id = resp.json()["organization_id"]
@@ -612,8 +629,9 @@ class TestOrganizationAPI:
         assert "health_score" in data
 
     def test_get_organization_graph(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.post("/organization/create", json={"name": "graph-org"})
         org_id = resp.json()["organization_id"]
@@ -624,8 +642,9 @@ class TestOrganizationAPI:
         assert "edges" in data
 
     def test_get_organization_repositories_empty(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.post("/organization/create", json={"name": "repos-org"})
         org_id = resp.json()["organization_id"]
@@ -635,8 +654,9 @@ class TestOrganizationAPI:
         assert "repositories" in data
 
     def test_add_repository_via_api(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.post("/organization/create", json={"name": "add-repo-org"})
         org_id = resp.json()["organization_id"]
@@ -649,8 +669,9 @@ class TestOrganizationAPI:
         assert data["repository"]["name"] == "api-repo"
 
     def test_run_impact_analysis(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.post("/organization/create", json={"name": "impact-api-org"})
         org_id = resp.json()["organization_id"]
@@ -664,8 +685,9 @@ class TestOrganizationAPI:
         assert "risk_level" in data
 
     def test_organization_analyze(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.post("/organization/create", json={"name": "analyze-api-org"})
         org_id = resp.json()["organization_id"]
@@ -676,8 +698,9 @@ class TestOrganizationAPI:
         assert "orphan_repos" in data
 
     def test_add_dependency_via_api(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.post("/organization/create", json={"name": "dep-api-org"})
         org_id = resp.json()["organization_id"]
@@ -691,8 +714,9 @@ class TestOrganizationAPI:
         assert "dependency" in data
 
     def test_get_dependencies(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.post("/organization/create", json={"name": "deps-api-org"})
         org_id = resp.json()["organization_id"]
@@ -702,8 +726,9 @@ class TestOrganizationAPI:
         assert "dependencies" in data
 
     def test_run_validation(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.post("/organization/create", json={"name": "val-api-org"})
         org_id = resp.json()["organization_id"]
@@ -716,8 +741,9 @@ class TestOrganizationAPI:
         assert "results" in data
 
     def test_run_all_validations(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.post("/organization/create", json={"name": "all-val-org"})
         org_id = resp.json()["organization_id"]
@@ -727,8 +753,9 @@ class TestOrganizationAPI:
         assert len(data["results"]) == 5
 
     def test_get_impact_report(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.post("/organization/create", json={"name": "report-org"})
         org_id = resp.json()["organization_id"]
@@ -740,8 +767,9 @@ class TestOrganizationAPI:
         assert "impact_reports" in data
 
     def test_get_changes(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.post("/organization/create", json={"name": "changes-org"})
         org_id = resp.json()["organization_id"]
@@ -751,8 +779,9 @@ class TestOrganizationAPI:
         assert "changes" in data
 
     def test_delete_organization_via_api(self):
-        from backend.main import app
         from fastapi.testclient import TestClient
+
+        from backend.main import app
         client = TestClient(app)
         resp = client.post("/organization/create", json={"name": "del-api-org"})
         org_id = resp.json()["organization_id"]

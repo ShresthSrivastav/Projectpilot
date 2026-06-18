@@ -6,9 +6,9 @@ produces recommendations to improve future autonomous behavior.
 """
 import logging
 import uuid
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
+from typing import Any
 
 LEARNING_CATEGORIES = [
     "architecture", "code_quality", "testing", "deployment",
@@ -27,7 +27,7 @@ class LearningInsight:
     source: str = ""
     created_at: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -50,10 +50,10 @@ class LearningFeedbackService:
 
     # ── Ingestion ──────────────────────────────────────────────────────────────
 
-    def ingest_evaluation_result(self, run: Dict) -> Dict[str, Any]:
+    def ingest_evaluation_result(self, run: dict) -> dict[str, Any]:
         """Ingest a completed evaluation run result."""
         from database.memory_store import mem_save_learning_feedback
-        now = datetime.now(timezone.utc).timestamp()
+        now = datetime.now(UTC).timestamp()
         run_id = run.get("id", "")
         score = run.get("autonomy_score", 0.0)
         feedback = {
@@ -99,10 +99,10 @@ class LearningFeedbackService:
 
         return {"run_id": run_id, "score": score, "patterns_extracted": len(patterns)}
 
-    def ingest_benchmark_score(self, benchmark_data: Dict) -> Dict[str, Any]:
+    def ingest_benchmark_score(self, benchmark_data: dict) -> dict[str, Any]:
         """Ingest a benchmark score result."""
         from database.memory_store import mem_save_learning_feedback
-        now = datetime.now(timezone.utc).timestamp()
+        now = datetime.now(UTC).timestamp()
         fb_id = f"bench_{benchmark_data.get('id', str(uuid.uuid4()))}"
         feedback = {
             "id": fb_id,
@@ -120,10 +120,10 @@ class LearningFeedbackService:
         mem_save_learning_feedback(feedback)
         return {"id": fb_id, "score": feedback["score"]}
 
-    def ingest_regression_report(self, report: Dict) -> Dict[str, Any]:
+    def ingest_regression_report(self, report: dict) -> dict[str, Any]:
         """Ingest a regression detection report."""
         from database.memory_store import mem_save_learning_feedback
-        now = datetime.now(timezone.utc).timestamp()
+        now = datetime.now(UTC).timestamp()
         regressions = report.get("regressions", []) if isinstance(report, dict) else report.regressions if hasattr(report, "regressions") else []
         ingested = []
         for reg in regressions:
@@ -150,10 +150,10 @@ class LearningFeedbackService:
             ingested.append(fb_id)
         return {"ingested": len(ingested), "regression_ids": ingested}
 
-    def ingest_deployment_outcome(self, deployment: Dict) -> Dict[str, Any]:
+    def ingest_deployment_outcome(self, deployment: dict) -> dict[str, Any]:
         """Ingest a deployment outcome."""
         from database.memory_store import mem_save_learning_feedback
-        now = datetime.now(timezone.utc).timestamp()
+        now = datetime.now(UTC).timestamp()
         fb_id = f"deploy_{deployment.get('id', str(uuid.uuid4()))}"
         success = deployment.get("success", False)
         feedback = {
@@ -190,10 +190,10 @@ class LearningFeedbackService:
 
         return {"id": fb_id, "success": success}
 
-    def ingest_healing_statistics(self, healing: Dict) -> Dict[str, Any]:
+    def ingest_healing_statistics(self, healing: dict) -> dict[str, Any]:
         """Ingest healing statistics."""
         from database.memory_store import mem_save_learning_feedback
-        now = datetime.now(timezone.utc).timestamp()
+        now = datetime.now(UTC).timestamp()
         fb_id = f"heal_{healing.get('id', str(uuid.uuid4()))}"
         heal_rate = healing.get("healing_rate", 0.0)
         feedback = {
@@ -218,7 +218,7 @@ class LearningFeedbackService:
 
     # ── Pattern Extraction ─────────────────────────────────────────────────────
 
-    def _extract_patterns_from_run(self, run: Dict) -> List[Dict]:
+    def _extract_patterns_from_run(self, run: dict) -> list[dict]:
         """Extract learning patterns from an evaluation run."""
         patterns = []
         run_id = run.get("id", "")
@@ -333,12 +333,13 @@ class LearningFeedbackService:
 
     # ── Pattern Storage ────────────────────────────────────────────────────────
 
-    def store_pattern(self, pattern: Dict) -> Dict[str, Any]:
+    def store_pattern(self, pattern: dict) -> dict[str, Any]:
         """Store or update a learning pattern."""
         from database.memory_store import (
-            mem_save_learning_pattern, mem_list_learning_patterns,
+            mem_list_learning_patterns,
+            mem_save_learning_pattern,
         )
-        now = datetime.now(timezone.utc).timestamp()
+        now = datetime.now(UTC).timestamp()
         pattern_id = pattern.get("id", str(uuid.uuid4()))
 
         existing = mem_list_learning_patterns(
@@ -393,17 +394,18 @@ class LearningFeedbackService:
 
     # ── Recommendation Engine ──────────────────────────────────────────────────
 
-    def generate_recommendations(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
+    def generate_recommendations(self, category: str | None = None) -> list[dict[str, Any]]:
         """Generate recommendations from stored patterns and feedback."""
         from database.memory_store import (
-            mem_list_learning_patterns, mem_save_learning_recommendation,
+            mem_list_learning_patterns,
+            mem_save_learning_recommendation,
         )
         generated = []
 
         patterns = mem_list_learning_patterns(min_confidence=0.3, limit=200)
 
         # Group by category
-        by_category: Dict[str, List[Dict]] = {}
+        by_category: dict[str, list[dict]] = {}
         for p in patterns:
             cat = p.get("category", "general")
             if category and cat != category:
@@ -476,9 +478,9 @@ class LearningFeedbackService:
         rationale: str,
         expected_impact: str,
         implementation_suggestions: str,
-        source_pattern_ids: List[str],
-    ) -> Dict[str, Any]:
-        now = datetime.now(timezone.utc).timestamp()
+        source_pattern_ids: list[str],
+    ) -> dict[str, Any]:
+        now = datetime.now(UTC).timestamp()
         return {
             "id": f"rec_{recommendation_type}_{category}_{uuid.uuid4().hex[:8]}",
             "recommendation_type": recommendation_type,
@@ -497,7 +499,7 @@ class LearningFeedbackService:
 
     # ── Insights ───────────────────────────────────────────────────────────────
 
-    def generate_insights(self, category: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    def generate_insights(self, category: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
         """Generate learning insights from feedback, patterns, and recommendations."""
         from database.memory_store import mem_get_learning_insights
         return mem_get_learning_insights(category=category, limit=limit)
@@ -506,11 +508,11 @@ class LearningFeedbackService:
 
     def get_patterns(
         self,
-        pattern_type: Optional[str] = None,
-        category: Optional[str] = None,
+        pattern_type: str | None = None,
+        category: str | None = None,
         min_confidence: float = 0.0,
         limit: int = 100,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         from database.memory_store import mem_list_learning_patterns
         return mem_list_learning_patterns(
             pattern_type=pattern_type, category=category,
@@ -519,18 +521,18 @@ class LearningFeedbackService:
 
     def get_recommendations(
         self,
-        recommendation_type: Optional[str] = None,
-        category: Optional[str] = None,
-        status: Optional[str] = None,
+        recommendation_type: str | None = None,
+        category: str | None = None,
+        status: str | None = None,
         limit: int = 100,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         from database.memory_store import mem_list_learning_recommendations
         return mem_list_learning_recommendations(
             recommendation_type=recommendation_type,
             category=category, status=status, limit=limit,
         )
 
-    def get_insights(self, category: Optional[str] = None, limit: int = 20) -> List[Dict]:
+    def get_insights(self, category: str | None = None, limit: int = 20) -> list[dict]:
         from database.memory_store import mem_get_learning_insights
         return mem_get_learning_insights(category=category, limit=limit)
 

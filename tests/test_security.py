@@ -18,18 +18,19 @@ os.environ["OLLAMA_BASE_URL"] = "http://localhost:11434"
 os.environ["ZIP_RETENTION_HOURS"] = "1"
 
 # Force re-import modules to pick up test env vars (already imported by test_api.py)
-import services.auth_service as _as
-import services.token_crypto as _tc
-import services.rate_limiter as _rl
 import backend.main as _bm
+import services.auth_service as _as
+import services.rate_limiter as _rl
+import services.token_crypto as _tc
+
 _il.reload(_as)
 _il.reload(_rl)
 _il.reload(_tc)
 _il.reload(_bm)
 
 from backend.main import app
-from services.auth_service import lookup_role, Role
-from services.token_crypto import encrypt_token, decrypt_token, mask_token
+from services.auth_service import Role, lookup_role
+from services.token_crypto import decrypt_token, encrypt_token, mask_token
 
 
 @pytest.fixture
@@ -195,6 +196,7 @@ class TestSecrets:
 class TestGitCloneSecurity:
     def test_clone_error_masks_token(self):
         import unittest.mock as mock
+
         from services.github_service import clone_repo
         with (
             mock.patch("services.github_service._get_client") as mock_client,

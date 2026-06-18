@@ -5,16 +5,16 @@ import os
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from services.graph_engine import PlanBuilder, GraphExecutor
+from services.deployment_orchestrator import get_deployment_orchestrator
+from services.graph_engine import GraphExecutor, PlanBuilder
+from services.runtime_monitor import get_monitor
 from services.runtime_orchestrator import get_orchestrator
 from services.self_healing_service import get_healing_engine
-from services.deployment_orchestrator import get_deployment_orchestrator
-from services.runtime_monitor import get_monitor
 
 logger = logging.getLogger(__name__)
 
@@ -43,18 +43,18 @@ class SDLCPipeline:
     model: str = "local"
     stage: SDLCStage = SDLCStage.REQUIREMENTS
     status: str = "running"
-    checkpoints: List[Dict] = field(default_factory=list)
-    stages_completed: List[str] = field(default_factory=list)
-    errors: List[str] = field(default_factory=list)
-    graph_id: Optional[str] = None
-    runtime_id: Optional[str] = None
-    deployment_id: Optional[str] = None
-    healing_sessions: List[str] = field(default_factory=list)
+    checkpoints: list[dict] = field(default_factory=list)
+    stages_completed: list[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+    graph_id: str | None = None
+    runtime_id: str | None = None
+    deployment_id: str | None = None
+    healing_sessions: list[str] = field(default_factory=list)
     started_at: float = field(default_factory=time.time)
-    completed_at: Optional[float] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    completed_at: float | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         d = asdict(self)
         d["stage"] = self.stage.value
         d["progress_pct"] = self._progress_pct()
@@ -69,7 +69,7 @@ class SDLCPipeline:
 
 class SDLCEngine:
     def __init__(self):
-        self.pipelines: Dict[str, SDLCPipeline] = {}
+        self.pipelines: dict[str, SDLCPipeline] = {}
         self._lock = threading.Lock()
         SDLC_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -173,7 +173,7 @@ class SDLCEngine:
 
     def _run_stage_browser_validation(self, pipeline: SDLCPipeline) -> bool:
         try:
-            from services.browser_validation_service import get_validation_service, ValidationStep
+            from services.browser_validation_service import ValidationStep, get_validation_service
             vs = get_validation_service()
             journey = vs.create_journey(f"SDLC-{pipeline.id[:6]}", "http://localhost:8000")
             vs.add_step(journey.id, ValidationStep(action="navigate", url="http://localhost:8000", description="Root"))
@@ -227,10 +227,10 @@ class SDLCEngine:
         except Exception as exc:
             logger.warning("Checkpoint save failed: %s", exc)
 
-    def get_pipeline(self, pipeline_id: str) -> Optional[SDLCPipeline]:
+    def get_pipeline(self, pipeline_id: str) -> SDLCPipeline | None:
         return self.pipelines.get(pipeline_id)
 
-    def list_pipelines(self, job_id: Optional[str] = None, limit: int = 20) -> List[Dict]:
+    def list_pipelines(self, job_id: str | None = None, limit: int = 20) -> list[dict]:
         with self._lock:
             pipelines = list(self.pipelines.values())
         if job_id:
@@ -238,7 +238,7 @@ class SDLCEngine:
         pipelines.sort(key=lambda p: p.started_at, reverse=True)
         return [p.to_dict() for p in pipelines[:limit]]
 
-    def resume(self, pipeline_id: str) -> Optional[SDLCPipeline]:
+    def resume(self, pipeline_id: str) -> SDLCPipeline | None:
         pipeline = self.pipelines.get(pipeline_id)
         if not pipeline:
             path = SDLC_DIR / f"sdlc_{pipeline_id[:8]}.json"

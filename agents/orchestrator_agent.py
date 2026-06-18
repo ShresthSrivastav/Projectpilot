@@ -7,12 +7,12 @@ and test-result collection so backend/main.py stays thin.
 import json
 import logging
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from database.chroma_db import log_to_db, save_generated_project, update_job_status
 from services.file_service import BASE_DIR
-from services.zip_service import create_zip
 from services.healing_acceptance_gates import heal_gates
+from services.zip_service import create_zip
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,8 @@ class Orchestrator:
         prompt: str,
         project_name: str,
         model: str,
-        stack: Optional[Dict] = None,
-        cancel_flag: Optional[threading.Event] = None,
+        stack: dict | None = None,
+        cancel_flag: threading.Event | None = None,
     ):
         self.job_id = job_id
         self.prompt = prompt
@@ -47,9 +47,9 @@ class Orchestrator:
         self.model = model
         self.stack = stack
         self._cancel = cancel_flag or threading.Event()
-        self.generated_files: List[str] = []
-        self.test_results: Dict[str, Any] = {}
-        self.validation_summary: Dict[str, Any] = {}
+        self.generated_files: list[str] = []
+        self.test_results: dict[str, Any] = {}
+        self.validation_summary: dict[str, Any] = {}
 
     # ── Internal helpers ──────────────────────────────────────────────────────
 
@@ -65,12 +65,12 @@ class Orchestrator:
 
     # ── Test validation helpers ────────────────────────────────────────────────
 
-    def _collect_test_results(self) -> Dict[str, Any]:
+    def _collect_test_results(self) -> dict[str, Any]:
         """Run pytest on generated tests and return structured results."""
         job_dir = (BASE_DIR / self.job_id).resolve()
         test_dir = job_dir / "tests"
 
-        results: Dict[str, Any] = {
+        results: dict[str, Any] = {
             "test_files": [],
             "total": 0,
             "passed": 0,
@@ -125,7 +125,7 @@ class Orchestrator:
                     if any(kw in line for kw in ("ERROR collecting", "ModuleNotFoundError", "ImportError", "Error:")):
                         error_lines.append(line.strip())
                 results["errors"] = [{"test": "import", "error": err} for err in error_lines[:5]]
-                results["summary"] = f"Import errors — tests could not run"
+                results["summary"] = "Import errors — tests could not run"
                 results["total"] = len(error_lines)
                 results["failed"] = len(error_lines)
             elif collected > 0:
@@ -244,7 +244,7 @@ def test_health(client):
 
     # ── Pipeline run ───────────────────────────────────────────────────────────
 
-    def run(self) -> Dict[str, Any]:
+    def run(self) -> dict[str, Any]:
         """Execute the full agent pipeline. Returns a summary dict."""
         import time as _time
         _pipeline_start = _time.monotonic()
@@ -252,8 +252,13 @@ def test_health(client):
         reset_token_count()
         try:
             from agents import (
-                requirement_agent, planner_agent, code_agent,
-                debug_agent, docs_agent, test_gen_agent, validation_agent,
+                code_agent,
+                debug_agent,
+                docs_agent,
+                planner_agent,
+                requirement_agent,
+                test_gen_agent,
+                validation_agent,
             )
 
             # ── 1. Requirement ────────────────────────────────────────────────

@@ -119,7 +119,7 @@ class TestBenchmarkService:
             svc.run_benchmark(domain="nonexistent")
 
     def test_run_benchmark(self):
-        from services.benchmark_service import get_benchmark_service, BenchmarkStatus
+        from services.benchmark_service import BenchmarkStatus, get_benchmark_service
         svc = get_benchmark_service()
         result = svc.run_benchmark(domain="hotel_booking", model="local", iteration=1)
         assert result.domain == "hotel_booking"
@@ -166,7 +166,7 @@ class TestBenchmarkService:
         assert isinstance(lb, list)
 
     def test_leaderboard_sorted(self):
-        from services.benchmark_service import get_benchmark_service, BenchmarkResult, BenchmarkStatus
+        from services.benchmark_service import BenchmarkResult, BenchmarkStatus, get_benchmark_service
         svc = get_benchmark_service()
         r1 = BenchmarkResult(domain="hotel_booking", run_id="aaaa0001")
         r1.autonomy_score = 50.0
@@ -181,7 +181,7 @@ class TestBenchmarkService:
         assert lb[0]["autonomy_score"] >= lb[1]["autonomy_score"]
 
     def test_compare_runs(self):
-        from services.benchmark_service import get_benchmark_service, BenchmarkResult, BenchmarkStatus
+        from services.benchmark_service import BenchmarkResult, BenchmarkStatus, get_benchmark_service
         svc = get_benchmark_service()
         r1 = BenchmarkResult(domain="hotel_booking", run_id="cmp00001")
         r1.metrics.completion_rate = 50.0
@@ -207,7 +207,7 @@ class TestBenchmarkService:
             svc.compare_runs("nonexistent", "also_missing")
 
     def test_generate_report_json(self):
-        from services.benchmark_service import get_benchmark_service, BenchmarkResult, BenchmarkStatus
+        from services.benchmark_service import BenchmarkResult, BenchmarkStatus, get_benchmark_service
         svc = get_benchmark_service()
         r = BenchmarkResult(domain="blog_cms", run_id="rpt00001")
         r.autonomy_score = 75.5
@@ -220,7 +220,7 @@ class TestBenchmarkService:
         assert data["autonomy_score"] == 75.5
 
     def test_generate_report_markdown(self):
-        from services.benchmark_service import get_benchmark_service, BenchmarkResult, BenchmarkStatus
+        from services.benchmark_service import BenchmarkResult, BenchmarkStatus, get_benchmark_service
         svc = get_benchmark_service()
         r = BenchmarkResult(domain="task_manager", run_id="rpt00002")
         r.autonomy_score = 65.0
@@ -239,7 +239,7 @@ class TestBenchmarkService:
             svc.generate_report("nonexistent")
 
     def test_trend_data(self):
-        from services.benchmark_service import get_benchmark_service, BenchmarkResult, BenchmarkStatus
+        from services.benchmark_service import BenchmarkResult, BenchmarkStatus, get_benchmark_service
         svc = get_benchmark_service()
         now = time.time()
         for i in range(3):
@@ -266,7 +266,7 @@ class TestBenchmarkService:
         assert "total_tokens" in stats
 
     def test_statistics_with_data(self):
-        from services.benchmark_service import get_benchmark_service, BenchmarkResult, BenchmarkStatus
+        from services.benchmark_service import BenchmarkResult, BenchmarkStatus, get_benchmark_service
         svc = get_benchmark_service()
         for i, domain in enumerate(["hotel_booking", "ecommerce", "blog_cms"]):
             r = BenchmarkResult(domain=domain, run_id=f"st{i:04d}")
@@ -291,7 +291,7 @@ class TestBenchmarkService:
         assert rate == 0.0
 
     def test_improvement_rate_single(self):
-        from services.benchmark_service import BenchmarkService, BenchmarkResult
+        from services.benchmark_service import BenchmarkResult, BenchmarkService
         svc = BenchmarkService()
         rate = svc._calculate_improvement_rate([BenchmarkResult()])
         assert rate == 0.0
@@ -310,7 +310,7 @@ class TestBenchmarkService:
 
 class TestBenchmarkDB:
     def test_save_and_get_benchmark_result(self):
-        from database.memory_store import init_db, save_benchmark_result, get_benchmark_results, delete_benchmark_result
+        from database.memory_store import delete_benchmark_result, get_benchmark_results, init_db, save_benchmark_result
         init_db()
         data = {
             "id": "test-bm-001",
@@ -343,6 +343,7 @@ class TestBenchmarkAPI:
     @pytest.fixture
     def client(self):
         from fastapi.testclient import TestClient
+
         from backend.main import app
         return TestClient(app)
 

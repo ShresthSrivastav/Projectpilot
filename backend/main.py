@@ -21,68 +21,110 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import Body, FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field, field_validator
 
 from database.chroma_db import (
-    create_job, get_job, get_logs, init_db,
-    list_jobs, save_prompt, update_job_status, get_blueprint, delete_job,
+    create_job,
+    delete_job,
+    get_blueprint,
+    get_job,
+    get_logs,
+    init_db,
+    list_jobs,
+    save_prompt,
+    update_job_status,
+)
+from database.memory_store import (
+    create_chat_conversation,
+    delete_chat_conversation,
+    delete_cross_repo_changes_by_org,
+    delete_impact_reports_by_org,
+    delete_repositories_by_org,
+    delete_repository_relationships_by_org,
+    get_analytics_summary,
+    get_chat_messages,
+    get_project_analytics,
+    get_repository_relationships,
+    list_chat_conversations,
+    mem_delete_custom_agent,
+    mem_delete_custom_workflow,
+    mem_delete_plugin,
+    mem_get_leaderboard,
+    mem_get_leaderboard_categories,
+    mem_get_learning_insights,
+    mem_get_version_comparisons,
+    mem_list_custom_agents,
+    mem_list_custom_workflows,
+    mem_list_evaluation_reports,
+    mem_list_evaluation_runs,
+    mem_list_learning_patterns,
+    mem_list_learning_recommendations,
+    mem_list_regressions,
+    mem_save_custom_agent,
+    mem_save_custom_workflow,
+    mem_save_evaluation_report,
+    mem_save_evaluation_run,
+    mem_save_marketplace_package,
+    mem_save_plugin,
+    save_github_repo,
+    save_repository_relationship,
+)
+from database.memory_store import (
+    delete_organization as mem_del_organization,
+)
+from database.memory_store import (
+    delete_repository as mem_del_repository,
+)
+from database.memory_store import (
+    get_cross_repo_changes as mem_get_cross_repo_changes,
+)
+from database.memory_store import (
+    get_impact_report_by_id as mem_get_impact_report,
+)
+from database.memory_store import (
+    get_impact_reports as mem_get_impact_reports,
 )
 from database.memory_store import (
     init_db as init_memory_db,
-    get_project_analytics, get_analytics_summary,
-    save_github_repo,
-    create_chat_conversation, get_chat_messages,
-    list_chat_conversations, delete_chat_conversation,
-    save_organization as mem_save_organization,
-    delete_organization as mem_del_organization,
-    save_repository as mem_save_repository,
-    delete_repository as mem_del_repository,
-    save_repository_relationship,
-    get_repository_relationships,
+)
+from database.memory_store import (
     save_cross_repo_change as mem_save_cross_repo_change,
-    get_cross_repo_changes as mem_get_cross_repo_changes,
+)
+from database.memory_store import (
     save_impact_report as mem_save_impact_report,
-    get_impact_reports as mem_get_impact_reports,
-    get_impact_report_by_id as mem_get_impact_report,
-    delete_repository_relationships_by_org,
-    delete_impact_reports_by_org,
-    delete_cross_repo_changes_by_org,
-    delete_repositories_by_org,
-)
-from services.plugin_registry import get_plugin_registry
-from services.marketplace_service import get_marketplace_service
-from database.memory_store import (
-    mem_save_plugin, mem_delete_plugin,
-    mem_save_marketplace_package, mem_save_custom_agent, mem_list_custom_agents, mem_delete_custom_agent,
-    mem_save_custom_workflow, mem_list_custom_workflows, mem_delete_custom_workflow,
 )
 from database.memory_store import (
-    mem_list_evaluation_runs, mem_list_evaluation_reports,
-    mem_get_leaderboard, mem_get_leaderboard_categories,
-    mem_get_version_comparisons, mem_list_regressions,
-    mem_save_evaluation_run, mem_save_evaluation_report,
-    mem_list_learning_patterns,
-    mem_list_learning_recommendations, mem_get_learning_insights,
+    save_organization as mem_save_organization,
 )
-from services.chat_service import process_message as chat_process_message
+from database.memory_store import (
+    save_repository as mem_save_repository,
+)
+from services.auth_service import Role, lookup_role
 from services.chat_service import execute_confirmed_action as chat_execute_action
+from services.chat_service import process_message as chat_process_message
 from services.cleanup_service import start_cleanup_daemon
-from services.auth_service import lookup_role, Role
 from services.file_service import BASE_DIR, list_files
-from services.rate_limiter import RateLimitMiddleware
 from services.llm_service import (
-    get_available_models, get_available_providers, get_pull_status,
-    is_available, ensure_models, call_model, is_cloud_available, CLOUD_MODEL,
+    CLOUD_MODEL,
+    call_model,
+    ensure_models,
+    get_available_models,
+    get_available_providers,
+    get_pull_status,
+    is_available,
+    is_cloud_available,
 )
-from services.test_service import run_syntax_check, run_pytest
+from services.marketplace_service import get_marketplace_service
+from services.plugin_registry import get_plugin_registry
+from services.rate_limiter import RateLimitMiddleware
+from services.test_service import run_pytest, run_syntax_check
 from services.zip_service import get_zip_path, zip_exists
 
 logging.basicConfig(
@@ -94,7 +136,7 @@ logger = logging.getLogger(__name__)
 _executor = ThreadPoolExecutor(max_workers=4)
 
 # Cancellation flags: job_id → threading.Event
-_cancel_flags: Dict[str, threading.Event] = {}
+_cancel_flags: dict[str, threading.Event] = {}
 _flags_lock = threading.Lock()
 
 
@@ -127,15 +169,15 @@ async def lifespan(app: FastAPI):
 
 
 def _init_supervisor():
-    from services.supervisor_service import Supervisor, AgentPriority
-    import agents.requirement_agent
-    import agents.planner_agent
     import agents.code_agent
-    import agents.test_gen_agent
     import agents.debug_agent
     import agents.docs_agent
-    import agents.validation_agent
+    import agents.planner_agent
+    import agents.requirement_agent
     import agents.security_agent
+    import agents.test_gen_agent
+    import agents.validation_agent
+    from services.supervisor_service import AgentPriority, Supervisor
 
     s = Supervisor()
     # Wrap each agent to accept a single context dict (Supervisor convention)
@@ -353,9 +395,9 @@ class StackConfig(BaseModel):
 class GenerateRequest(BaseModel):
     prompt:        str = Field(..., min_length=10, max_length=500)
     project_name:  str = Field("My Project", min_length=1, max_length=100)
-    model:         Optional[str] = "local"
-    stack:         Optional[StackConfig] = None
-    clarification: Optional[str] = Field(None, max_length=300,
+    model:         str | None = "local"
+    stack:         StackConfig | None = None
+    clarification: str | None = Field(None, max_length=300,
                                           description="Answer to the clarifying question, appended to prompt")
 
     @field_validator("prompt")
@@ -373,15 +415,15 @@ class GenerateRequest(BaseModel):
 
 class ClarifyRequest(BaseModel):
     prompt: str = Field(..., min_length=10, max_length=500)
-    model:  Optional[str] = "local"
+    model:  str | None = "local"
 
 
 class RegenerateRequest(BaseModel):
     job_id:          str
     file_path:       str = Field(..., description="Relative path, e.g. backend/main.py")
-    correction_note: Optional[str] = Field(None, max_length=500,
+    correction_note: str | None = Field(None, max_length=500,
                                             description="What to fix / improve in this file")
-    model:           Optional[str] = "local"
+    model:           str | None = "local"
 
 
 def run_pipeline(
@@ -389,9 +431,9 @@ def run_pipeline(
     prompt: str,
     project_name: str,
     model: str = "local",
-    stack: Optional[Dict[str, Any]] = None,
-    cancel_flag: Optional[threading.Event] = None,
-) -> Dict[str, Any]:
+    stack: dict[str, Any] | None = None,
+    cancel_flag: threading.Event | None = None,
+) -> dict[str, Any]:
     """Run the generation pipeline through the orchestrator."""
     from agents.orchestrator_agent import Orchestrator
 
@@ -547,7 +589,7 @@ def _append_changelog(job_id: str, action: str, details: str) -> None:
 
 
 class FixTestsRequest(BaseModel):
-    model: Optional[str] = "local"
+    model: str | None = "local"
 
 
 @app.get("/test-files/{job_id}")
@@ -660,7 +702,7 @@ async def fix_tests(job_id: str, req: FixTestsRequest):
     pr2 = None
 
     # Extract original assertion lines per file for validation
-    _orig_assertions: Dict[str, set] = {}
+    _orig_assertions: dict[str, set] = {}
     for _rel, _content in test_files.items():
         _assertions = set()
         for _line in _content.splitlines():
@@ -767,7 +809,7 @@ async def fix_tests(job_id: str, req: FixTestsRequest):
         try:
             result = call_model(prompt, system_prompt=system,
                                 model=req.model or "local",
-                                job_id=job_id, agent=f"FixTestsEndpoint")
+                                job_id=job_id, agent="FixTestsEndpoint")
         except RuntimeError as exc:
             raise HTTPException(status_code=500, detail=f"LLM call failed: {exc}")
 
@@ -852,8 +894,8 @@ async def fix_tests(job_id: str, req: FixTestsRequest):
 class IterateRequest(BaseModel):
     prompt:  str = Field(..., min_length=3, max_length=1000,
                          description="What to add/change in the existing project")
-    model:   Optional[str] = "local"
-    job_id:  Optional[str] = None
+    model:   str | None = "local"
+    job_id:  str | None = None
 
 
 def _normalize_job_dir(job_dir: Path) -> None:
@@ -875,7 +917,7 @@ def _normalize_job_dir(job_dir: Path) -> None:
             pass
 
 
-async def _read_all_project_files(job_dir: Path) -> Dict[str, str]:
+async def _read_all_project_files(job_dir: Path) -> dict[str, str]:
     files = {}
     for fpath in job_dir.rglob("*"):
         if fpath.is_file() and "__pycache__" not in str(fpath):
@@ -1035,12 +1077,12 @@ async def iterate_project(job_id: str, req: IterateRequest):
             new_text = full.read_text(encoding="utf-8")
             diff_lines = list(difflib.unified_diff(
                 [], new_text.splitlines(keepends=True),
-                fromfile=f"/dev/null", tofile=f"b/{fpath}",
+                fromfile="/dev/null", tofile=f"b/{fpath}",
             ))
             diffs[fpath] = "".join(diff_lines)
 
     # Re-run syntax and tests
-    syntax_results: Dict[str, Any] = {}
+    syntax_results: dict[str, Any] = {}
     all_ok = True
     for py_file in job_dir.rglob("*.py"):
         if "__pycache__" in str(py_file):
@@ -1197,10 +1239,10 @@ async def validate_project(job_id: str):
 # ── AI Project Review ──────────────────────────────────────────────────────────
 
 class ReviewRequest(BaseModel):
-    model: Optional[str] = "local"
+    model: str | None = "local"
 
 
-def run_project_review(job_id: str, model: str = "local") -> Dict[str, Any]:
+def run_project_review(job_id: str, model: str = "local") -> dict[str, Any]:
     """AI-powered review of the entire project. Sync so it can run from pipeline threads."""
     import json as _json
     job_dir = BASE_DIR / job_id
@@ -1256,7 +1298,7 @@ def run_project_review(job_id: str, model: str = "local") -> Dict[str, Any]:
         f"## Source Code\n{code_section}\n\n"
         f"## Syntax Errors\n"
         + ("\n".join(syntax_errors) if syntax_errors else "None") + "\n\n"
-        f"## Test Results\n"
+        "## Test Results\n"
         + (test_output[:2000] if test_output else "No tests found.") + "\n\n"
         "Analyze this project and output a JSON object with these fields:\n"
         '  "verdict": "PASS" | "WARN" | "FAIL" — overall assessment\n'
@@ -1269,7 +1311,7 @@ def run_project_review(job_id: str, model: str = "local") -> Dict[str, Any]:
         "Output ONLY valid JSON, no markdown fences."
     )
 
-    def _parse_review(result: str) -> Optional[Dict]:
+    def _parse_review(result: str) -> dict | None:
         import re as _re
         stripped = _re.sub(r"```\w*\n?", "", result).strip()
         # Try full parse
@@ -1306,7 +1348,7 @@ def run_project_review(job_id: str, model: str = "local") -> Dict[str, Any]:
                 f"## File Tree\n{file_tree}\n\n"
                 f"## Syntax Errors\n"
                 + ("\n".join(syntax_errors) if syntax_errors else "None") + "\n\n"
-                f"## Test Results\n"
+                "## Test Results\n"
                 + (test_output[:1000] if test_output else "No tests found.") + "\n\n"
                 "Output JSON: {\"verdict\": \"PASS|WARN|FAIL\", \"issues\": [], \"recommendations\": []}"
             )
@@ -1433,8 +1475,9 @@ async def delete_project(job_id: str):
     job = get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found.")
-    from database.memory_store import delete_project_analytics
     import shutil
+
+    from database.memory_store import delete_project_analytics
     ok = True
     if not delete_job(job_id):
         ok = False
@@ -1477,11 +1520,11 @@ RAG_UPLOAD_DIR = BASE_DIR / "_rag_uploads"
 
 
 class RagUploadRequest(BaseModel):
-    tags: Optional[List[str]] = None
+    tags: list[str] | None = None
 
 
 @app.post("/rag/upload")
-async def rag_upload(file: UploadFile = File(...), tags: Optional[str] = Form(None)):
+async def rag_upload(file: UploadFile = File(...), tags: str | None = Form(None)):
     from services.rag_service import upload_document
     if file.filename:
         safe_name = Path(file.filename).name
@@ -1502,7 +1545,7 @@ async def rag_upload(file: UploadFile = File(...), tags: Optional[str] = Form(No
 
 @app.post("/rag/query")
 async def rag_query(text: str = Body(..., embed=True), top_k: int = Body(5, embed=True),
-                    tags: Optional[List[str]] = Body(None, embed=True)):
+                    tags: list[str] | None = Body(None, embed=True)):
     from services.rag_service import query
     results = query(text, top_k=top_k, tags=tags)
     return {"results": results}
@@ -1559,7 +1602,7 @@ async def plugin_reload():
 
 @app.post("/plugins/{name}/toggle")
 async def plugin_toggle(name: str, enable: bool = Body(..., embed=True)):
-    from services.plugin_loader import enable_plugin, disable_plugin
+    from services.plugin_loader import disable_plugin, enable_plugin
     ok = enable_plugin(name) if enable else disable_plugin(name)
     return {"name": name, "enabled": enable, "ok": ok}
 
@@ -1624,7 +1667,7 @@ async def run_code_review(job_id: str):
 # ═══════════════════════════════════════════════════════════════════════════
 
 @app.post("/supervisor/run-agent/{agent_name}")
-async def supervisor_run_agent(agent_name: str, context: Dict[str, Any] = Body(..., embed=True)):
+async def supervisor_run_agent(agent_name: str, context: dict[str, Any] = Body(..., embed=True)):
     from services.supervisor_service import Supervisor
     s = Supervisor()
     try:
@@ -1639,19 +1682,45 @@ async def supervisor_run_agent(agent_name: str, context: Dict[str, Any] = Body(.
 # ═══════════════════════════════════════════════════════════════════════════
 
 from services.github_service import (
-    connect_github, disconnect_github, get_connection, list_connections,
-    list_repos, get_repo_info, search_repos,
-    list_branches, create_branch, delete_branch,
-    get_file_content, create_file, update_file, delete_file,
-    list_files as _gh_list_files,
-    list_commits, get_commit_diff,
-    list_pull_requests, create_pull_request, merge_pull_request, get_pr_files,
-    list_issues, create_issue, update_issue, add_issue_comment, list_issue_comments,
-    clone_repo, pull_repo, get_local_repo_status,
-    local_file_list, local_read_file, local_write_file, local_commit_and_push,
-    list_webhooks, create_webhook, delete_webhook,
+    add_issue_comment,
+    clone_repo,
+    connect_github,
+    create_branch,
+    create_file,
+    create_issue,
+    create_pull_request,
+    create_webhook,
+    delete_branch,
+    delete_file,
+    delete_webhook,
+    disconnect_github,
+    get_commit_diff,
+    get_connection,
+    get_file_content,
+    get_local_repo_status,
+    get_pr_files,
+    get_repo_info,
+    list_branches,
+    list_commits,
+    list_connections,
+    list_issue_comments,
+    list_issues,
+    list_pull_requests,
+    list_repos,
+    list_webhooks,
+    local_commit_and_push,
+    local_file_list,
+    local_read_file,
+    local_write_file,
+    merge_pull_request,
+    pull_repo,
+    search_repos,
+    update_file,
+    update_issue,
 )
-
+from services.github_service import (
+    list_files as _gh_list_files,
+)
 
 # ── Connection ───────────────────────────────────────────────────────────
 
@@ -1873,8 +1942,8 @@ class IssueCreateRequest(BaseModel):
     username: str
     title: str
     body: str = ""
-    labels: List[str] = []
-    assignees: List[str] = []
+    labels: list[str] = []
+    assignees: list[str] = []
 
 
 class IssueUpdateRequest(BaseModel):
@@ -1996,7 +2065,7 @@ async def github_list_webhooks(full_name: str, username: str = ""):
 class WebhookCreateRequest(BaseModel):
     username: str
     url: str
-    events: List[str] = []
+    events: list[str] = []
 
 
 @app.post("/github/{full_name:path}/webhooks")
@@ -2059,17 +2128,17 @@ async def github_agent_suggest(full_name: str = Body(...), username: str = Body(
 
 class ChatRequest(BaseModel):
     message: str
-    conversation_id: Optional[str] = None
-    title: Optional[str] = None
+    conversation_id: str | None = None
+    title: str | None = None
 
 class ChatConfirmRequest(BaseModel):
     conversation_id: str
     tool_name: str
-    args: Dict[str, Any]
+    args: dict[str, Any]
 
 class NewChatRequest(BaseModel):
-    conversation_id: Optional[str] = None
-    title: Optional[str] = None
+    conversation_id: str | None = None
+    title: str | None = None
 
 
 @app.post("/chat/new")
@@ -2153,7 +2222,7 @@ async def github_webhook_receiver(full_name: str, request: Request):
 
 
 class AutoFixRequest(BaseModel):
-    model: Optional[str] = "local"
+    model: str | None = "local"
     max_attempts: int = 5
 
 
@@ -2169,7 +2238,7 @@ async def autofix_project(job_id: str, req: AutoFixRequest):
 
 class SandboxRunRequest(BaseModel):
     code: str
-    requirements: Optional[List[str]] = None
+    requirements: list[str] | None = None
     timeout: int = 60
 
 
@@ -2194,7 +2263,7 @@ async def memory_context(job_id: str):
 
 
 @app.get("/memory/insights")
-async def memory_insights(insight_type: Optional[str] = None, limit: int = 50):
+async def memory_insights(insight_type: str | None = None, limit: int = 50):
     from database.memory_store import get_project_insights
     insights = get_project_insights(insight_type=insight_type, limit=limit)
     return {"insights": insights}
@@ -2241,7 +2310,7 @@ async def workspace_delete_file(job_id: str, path: str):
 
 class DeployRequest(BaseModel):
     target: str = "docker"
-    model: Optional[str] = "local"
+    model: str | None = "local"
 
 
 @app.post("/deploy/{job_id}")
@@ -2256,9 +2325,10 @@ async def deploy_project(job_id: str, req: DeployRequest):
 
 @app.get("/metrics")
 async def metrics():
-    from services.llm_service import get_token_count
-    from database.memory_store import get_analytics_summary, get_cost_summary
     import time as _time
+
+    from database.memory_store import get_analytics_summary, get_cost_summary
+    from services.llm_service import get_token_count
     tokens = get_token_count()
     analytics = get_analytics_summary()
     cost = get_cost_summary()
@@ -2286,18 +2356,18 @@ async def list_providers():
 
 class BrowserOpenRequest(BaseModel):
     url: str
-    timeout: Optional[int] = None
+    timeout: int | None = None
 
 
 class BrowserActionRequest(BaseModel):
     session_id: str
     action: str = Field(..., description="navigate | click | fill | select | upload | screenshot | content | evaluate | wait")
-    selector: Optional[str] = None
-    value: Optional[str] = None
-    url: Optional[str] = None
-    script: Optional[str] = None
-    file_path: Optional[str] = None
-    timeout: Optional[int] = None
+    selector: str | None = None
+    value: str | None = None
+    url: str | None = None
+    script: str | None = None
+    file_path: str | None = None
+    timeout: int | None = None
     full_page: bool = True
     state: str = "visible"
 
@@ -2326,8 +2396,15 @@ async def browser_open(req: BrowserOpenRequest):
 @app.post("/browser/action")
 async def browser_action(req: BrowserActionRequest):
     from services.browser_service import (
-        navigate, click, fill, select_option, upload_file,
-        screenshot, get_content, evaluate, wait_for_selector,
+        click,
+        evaluate,
+        fill,
+        get_content,
+        navigate,
+        screenshot,
+        select_option,
+        upload_file,
+        wait_for_selector,
     )
     try:
         if req.action == "navigate":
@@ -2416,12 +2493,12 @@ async def browser_get_actions(session_id: str):
 
 class RepoAnalyzeRequest(BaseModel):
     repo_path: str
-    model: Optional[str] = "local"
+    model: str | None = "local"
 
 
 class RepoImproveRequest(BaseModel):
     repo_path: str
-    model: Optional[str] = "local"
+    model: str | None = "local"
     auto_fix: bool = True
     generate_tests: bool = True
 
@@ -2434,7 +2511,7 @@ class RepoCreatePRRequest(BaseModel):
     base_branch: str = "main"
     title: str = "Automated code quality improvements"
     body: str = "AI-driven improvements including fixes, tests, and documentation."
-    model: Optional[str] = "local"
+    model: str | None = "local"
 
 
 @app.post("/repo/analyze")
@@ -2513,7 +2590,7 @@ async def dashboard_agent(name: str):
 
 
 @app.get("/dashboard/graph")
-async def dashboard_graph(agent: Optional[str] = None):
+async def dashboard_graph(agent: str | None = None):
     from services.dashboard_service import get_execution_graph
     return get_execution_graph(agent_name=agent)
 
@@ -2526,7 +2603,7 @@ async def dashboard_memory():
 
 @app.websocket("/dashboard/stream")
 async def dashboard_websocket(websocket: WebSocket):
-    from services.dashboard_service import subscribe, unsubscribe, get_dashboard_status
+    from services.dashboard_service import get_dashboard_status, subscribe, unsubscribe
     await websocket.accept()
     def _on_event(event):
         try:
@@ -2560,7 +2637,7 @@ async def dashboard_websocket(websocket: WebSocket):
 
 
 class DocsGenerateRequest(BaseModel):
-    output_dir: Optional[str] = None
+    output_dir: str | None = None
 
 
 @app.post("/docs/generate")
@@ -2593,7 +2670,7 @@ class GraphBuildRequest(BaseModel):
     prompt: str
     job_id: str
     model: str = "local"
-    stack: Optional[Dict[str, Any]] = None
+    stack: dict[str, Any] | None = None
 
 
 class GraphExecuteRequest(BaseModel):
@@ -2606,8 +2683,9 @@ async def graph_build(req: GraphBuildRequest):
     from services.graph_engine import PlanBuilder
     builder = PlanBuilder()
     graph = builder.build_standard_plan(req.prompt, req.job_id, req.model, req.stack)
-    from database.memory_store import save_graph_session
     import json
+
+    from database.memory_store import save_graph_session
     save_graph_session(graph.id, req.job_id, json.dumps(graph.to_dict()), "built")
     return {"graph_id": graph.id, "tasks": [t.to_dict() for t in graph.tasks.values()],
             "topological_order": graph.get_topological_order(),
@@ -2617,9 +2695,10 @@ async def graph_build(req: GraphBuildRequest):
 
 @app.post("/graph/execute")
 async def graph_execute(req: GraphExecuteRequest):
-    from services.graph_engine import TaskGraph, GraphExecutor
-    from database.memory_store import get_graph_session
     import json
+
+    from database.memory_store import get_graph_session
+    from services.graph_engine import GraphExecutor, TaskGraph
     saved = get_graph_session(req.graph_id)
     if not saved:
         raise HTTPException(status_code=404, detail="Graph not found")
@@ -2652,9 +2731,10 @@ async def graph_status(graph_id: str):
 
 @app.get("/graph/{graph_id}/visualize")
 async def graph_visualize(graph_id: str):
-    from services.graph_engine import TaskGraph
-    from database.memory_store import get_graph_session
     import json
+
+    from database.memory_store import get_graph_session
+    from services.graph_engine import TaskGraph
     saved = get_graph_session(graph_id)
     if not saved:
         raise HTTPException(status_code=404, detail="Graph not found")
@@ -2676,7 +2756,7 @@ async def graph_checkpoints(graph_id: str):
 
 @app.post("/graph/{graph_id}/resume/{checkpoint_id}")
 async def graph_resume(graph_id: str, checkpoint_id: str, max_workers: int = 4):
-    from services.graph_engine import TaskGraph, GraphExecutor
+    from services.graph_engine import GraphExecutor, TaskGraph
     g = TaskGraph(graph_id=graph_id)
     loaded = g.load_checkpoint(checkpoint_id)
     if not loaded:
@@ -2701,12 +2781,12 @@ class KGRequest(BaseModel):
 
 class KGAnalyzeRequest(BaseModel):
     repo_path: str
-    file_pattern: Optional[str] = None
+    file_pattern: str | None = None
 
 
 class KGImpactRequest(BaseModel):
     repo_path: str
-    changed_files: List[str]
+    changed_files: list[str]
 
 
 @app.post("/kg/build")
@@ -2774,7 +2854,7 @@ class DebateRequest(BaseModel):
     topic: str = Field(..., description="Programming task or question to debate")
     context: str = ""
     job_id: str = ""
-    solvers: Optional[List[str]] = None
+    solvers: list[str] | None = None
     arbiter_model: str = "cloud"
     quality_threshold: float = 0.7
 
@@ -2785,7 +2865,7 @@ class DebateQueryRequest(BaseModel):
 
 @app.post("/debate/start")
 async def debate_start(req: DebateRequest):
-    from services.debate_system import get_debate_system, DebateConfig, ConsensusMethod
+    from services.debate_system import ConsensusMethod, DebateConfig, get_debate_system
     ds = get_debate_system()
     config = DebateConfig(
         solvers=req.solvers or ["local", "cloud", "local", "cloud"],
@@ -2827,19 +2907,19 @@ async def debate_quality(session_id: str):
 class CreateJourneyRequest(BaseModel):
     name: str
     base_url: str
-    tags: Optional[List[str]] = None
+    tags: list[str] | None = None
 
 
 class AddStepRequest(BaseModel):
     journey_id: str
     action: str
-    selector: Optional[str] = None
-    value: Optional[str] = None
-    url: Optional[str] = None
-    script: Optional[str] = None
-    screenshot_name: Optional[str] = None
-    expected_text: Optional[str] = None
-    expected_url: Optional[str] = None
+    selector: str | None = None
+    value: str | None = None
+    url: str | None = None
+    script: str | None = None
+    screenshot_name: str | None = None
+    expected_text: str | None = None
+    expected_url: str | None = None
     wait_time: float = 0.0
     timeout: int = 10000
     description: str = ""
@@ -2848,7 +2928,7 @@ class AddStepRequest(BaseModel):
 class ExecuteJourneyRequest(BaseModel):
     journey_id: str
     headless: bool = True
-    base_url: Optional[str] = None
+    base_url: str | None = None
 
 
 class AutoGenerateRequest(BaseModel):
@@ -2859,7 +2939,7 @@ class AutoGenerateRequest(BaseModel):
 
 class RegressionRequest(BaseModel):
     name: str
-    journey_ids: Optional[List[str]] = None
+    journey_ids: list[str] | None = None
 
 
 class RunRegressionRequest(BaseModel):
@@ -2877,7 +2957,7 @@ async def validation_create_journey(req: CreateJourneyRequest):
 
 @app.post("/validation/journey/step")
 async def validation_add_step(req: AddStepRequest):
-    from services.browser_validation_service import get_validation_service, ValidationStep
+    from services.browser_validation_service import ValidationStep, get_validation_service
     vs = get_validation_service()
     step = ValidationStep(
         action=req.action, selector=req.selector, value=req.value,
@@ -2957,7 +3037,7 @@ class AutonomousStartRequest(BaseModel):
 
 @app.post("/autonomous/start")
 async def autonomous_start(req: AutonomousStartRequest):
-    from services.autonomous_service import get_autonomous_engine, AutonomousConfig
+    from services.autonomous_service import AutonomousConfig, get_autonomous_engine
     engine = get_autonomous_engine()
     config = AutonomousConfig(
         max_iterations=req.max_iterations or 10,
@@ -3040,8 +3120,8 @@ async def visualizer_autonomous():
 
 @app.get("/visualizer/progress/{job_id}")
 async def visualizer_progress(job_id: str):
-    from database.memory_store import get_iteration_history, get_cost_summary
     from database.chroma_db import get_job
+    from database.memory_store import get_cost_summary, get_iteration_history
     job = get_job(job_id)
     history = get_iteration_history(job_id)
     cost = get_cost_summary(job_id)
@@ -3075,9 +3155,9 @@ class RuntimeCreateRequest(BaseModel):
     name: str = ""
     runtime_type: str = "subprocess"
     image: str = "python:3.11-slim"
-    command: Optional[List[str]] = None
-    env_vars: Optional[Dict[str, str]] = None
-    port_mappings: Optional[Dict[str, int]] = None
+    command: list[str] | None = None
+    env_vars: dict[str, str] | None = None
+    port_mappings: dict[str, int] | None = None
     memory_limit: str = "256m"
     cpu_limit: float = 0.5
     timeout: int = 300
@@ -3089,7 +3169,7 @@ class RuntimeActionRequest(BaseModel):
 
 @app.post("/runtime/create")
 async def runtime_create(req: RuntimeCreateRequest):
-    from services.runtime_orchestrator import get_orchestrator, ExecutionEnvironment, RuntimeType
+    from services.runtime_orchestrator import ExecutionEnvironment, RuntimeType, get_orchestrator
     env = ExecutionEnvironment(
         runtime_type=RuntimeType(req.runtime_type.lower()) if req.runtime_type in ("docker", "subprocess") else RuntimeType.SUBPROCESS,
         image=req.image, command=req.command or [],
@@ -3182,7 +3262,7 @@ async def runtime_metrics(session_id: str):
 
 
 @app.get("/runtimes")
-async def runtime_list(job_id: Optional[str] = None):
+async def runtime_list(job_id: str | None = None):
     from services.runtime_orchestrator import get_orchestrator
     orch = get_orchestrator()
     return {"runtimes": orch.list_runtimes(job_id=job_id)}
@@ -3203,13 +3283,13 @@ async def runtime_recover(session_id: str):
 
 class ContainerCreateRequest(BaseModel):
     image: str = "python:3.11-slim"
-    command: Optional[List[str]] = None
-    env_vars: Optional[Dict[str, str]] = None
-    port_mappings: Optional[Dict[str, int]] = None
+    command: list[str] | None = None
+    env_vars: dict[str, str] | None = None
+    port_mappings: dict[str, int] | None = None
     memory_limit: str = "256m"
     cpu_limit: float = 0.5
     network_enabled: bool = True
-    volumes: Optional[List[str]] = None
+    volumes: list[str] | None = None
     name: str = ""
 
 
@@ -3308,9 +3388,9 @@ async def container_health(container_id: str):
 
 
 class ProcessRunRequest(BaseModel):
-    command: Optional[List[str]] = None
+    command: list[str] | None = None
     working_dir: str = ""
-    env_vars: Optional[Dict[str, str]] = None
+    env_vars: dict[str, str] | None = None
     timeout: int = 300
     runtime_type: str = ""
     serve: bool = False
@@ -3384,7 +3464,7 @@ class HealRequest(BaseModel):
     job_id: str
     runtime_id: str = ""
     log_text: str
-    project_dir: Optional[str] = None
+    project_dir: str | None = None
     max_retries: int = 3
     confidence_threshold: float = 0.6
 
@@ -3420,7 +3500,7 @@ async def healing_rollback(session_id: str):
 
 
 @app.get("/healings")
-async def healing_list(job_id: Optional[str] = None):
+async def healing_list(job_id: str | None = None):
     from services.self_healing_service import get_healing_engine
     engine = get_healing_engine()
     return {"sessions": engine.list_sessions(job_id=job_id)}
@@ -3433,7 +3513,7 @@ class DeployOrchestrateRequest(BaseModel):
     job_id: str
     project_dir: str
     target: str = "docker"
-    health_check_url: Optional[str] = None
+    health_check_url: str | None = None
     run_browser_validation: bool = False
 
 
@@ -3464,7 +3544,7 @@ async def deployment_rollback(session_id: str):
 
 
 @app.get("/deployments")
-async def deployment_list(job_id: Optional[str] = None):
+async def deployment_list(job_id: str | None = None):
     from services.deployment_orchestrator import get_deployment_orchestrator
     orch = get_deployment_orchestrator()
     return {"sessions": orch.list_sessions(job_id=job_id)}
@@ -3495,7 +3575,7 @@ async def monitor_stop(runtime_id: str):
 
 
 @app.get("/monitor/{runtime_id}/metrics")
-async def monitor_metrics(runtime_id: str, since: Optional[float] = None, limit: int = 100):
+async def monitor_metrics(runtime_id: str, since: float | None = None, limit: int = 100):
     from services.runtime_monitor import get_monitor
     monitor = get_monitor()
     return {"runtime_id": runtime_id, "metrics": monitor.get_metrics(runtime_id, since=since, limit=limit)}
@@ -3567,7 +3647,7 @@ async def sdlc_resume(pipeline_id: str):
 
 
 @app.get("/sdlcs")
-async def sdlc_list(job_id: Optional[str] = None):
+async def sdlc_list(job_id: str | None = None):
     from services.sdlc_pipeline import get_sdlc_engine
     engine = get_sdlc_engine()
     return {"pipelines": engine.list_pipelines(job_id=job_id)}
@@ -3580,7 +3660,7 @@ class SessionCreateRequest(BaseModel):
     job_id: str
     name: str = ""
     session_type: str = "pipeline"
-    tasks: Optional[List[str]] = None
+    tasks: list[str] | None = None
 
 
 @app.post("/sessions/create")
@@ -3632,7 +3712,7 @@ async def session_complete(session_id: str):
 
 
 @app.get("/sessions")
-async def session_list(job_id: Optional[str] = None):
+async def session_list(job_id: str | None = None):
     from services.session_manager import get_session_manager
     sm = get_session_manager()
     return {"sessions": sm.list_sessions(job_id=job_id)}
@@ -3658,14 +3738,14 @@ async def learning_learn_fix(req: LearnFixRequest):
 
 
 @app.get("/learning/fixes")
-async def learning_fixes(error_type: Optional[str] = None, limit: int = 10):
+async def learning_fixes(error_type: str | None = None, limit: int = 10):
     from services.learning_engine import get_learning_engine
     engine = get_learning_engine()
     return {"fixes": engine.retrieve_fixes(error_type=error_type, limit=limit)}
 
 
 @app.get("/learning/recommendations")
-async def learning_recommend(tech_stack: Optional[str] = None):
+async def learning_recommend(tech_stack: str | None = None):
     tags = tech_stack.split(",") if tech_stack else None
     from services.learning_engine import get_learning_engine
     engine = get_learning_engine()
@@ -3793,14 +3873,14 @@ async def benchmark_result(run_id: str):
 
 
 @app.get("/benchmarks/results")
-async def benchmark_results(domain: Optional[str] = None, limit: int = 50):
+async def benchmark_results(domain: str | None = None, limit: int = 50):
     from services.benchmark_service import get_benchmark_service
     svc = get_benchmark_service()
     return {"results": svc.list_results(domain=domain, limit=limit)}
 
 
 @app.get("/benchmarks/leaderboard")
-async def benchmark_leaderboard(domain: Optional[str] = None, limit: int = 20):
+async def benchmark_leaderboard(domain: str | None = None, limit: int = 20):
     from services.benchmark_service import get_benchmark_service
     svc = get_benchmark_service()
     return {"leaderboard": svc.get_leaderboard(domain=domain, limit=limit)}
@@ -3830,7 +3910,7 @@ async def benchmark_report(run_id: str, format: str = "json"):
 
 
 @app.get("/benchmarks/trends")
-async def benchmark_trends(domain: Optional[str] = None):
+async def benchmark_trends(domain: str | None = None):
     from services.benchmark_service import get_benchmark_service
     svc = get_benchmark_service()
     return svc.get_trend_data(domain=domain)
@@ -3876,14 +3956,14 @@ class OrgImpactRequest(BaseModel):
 class OrgModifyRequest(BaseModel):
     org_id: str
     description: str = Field(..., min_length=3, max_length=500)
-    changes: Dict[str, Dict[str, str]]
+    changes: dict[str, dict[str, str]]
     github_token: str = ""
-    repo_full_names: Dict[str, str] = {}
+    repo_full_names: dict[str, str] = {}
 
 
 class OrgValidateRequest(BaseModel):
     org_id: str
-    validation_types: Optional[List[str]] = None
+    validation_types: list[str] | None = None
 
 
 @app.post("/organization/create")
@@ -3965,7 +4045,7 @@ async def organization_repositories(org_id: str):
 
 @app.post("/organization/analyze")
 async def organization_analyze(req: OrgAnalyzeRequest):
-    from services.org_graph_service import get_organization, OrgGraphAnalyzer
+    from services.org_graph_service import OrgGraphAnalyzer, get_organization
     graph = get_organization(req.org_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -3998,8 +4078,8 @@ async def organization_impact(req: OrgImpactRequest):
 
 @app.post("/organization/modify")
 async def organization_modify(req: OrgModifyRequest):
-    from services.org_graph_service import get_organization
     from services.multi_repo_editor import get_multi_repo_editor
+    from services.org_graph_service import get_organization
     graph = get_organization(req.org_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -4013,7 +4093,7 @@ async def organization_modify(req: OrgModifyRequest):
 
 
 @app.get("/organization/report")
-async def organization_report(org_id: str, report_id: Optional[str] = None):
+async def organization_report(org_id: str, report_id: str | None = None):
     if report_id:
         report = mem_get_impact_report(report_id)
         if not report:
@@ -4040,8 +4120,8 @@ async def organization_health(org_id: str):
 
 @app.post("/organization/validate")
 async def organization_validate(req: OrgValidateRequest):
-    from services.org_graph_service import get_organization
     from services.cross_repo_validation import get_cross_repo_validator
+    from services.org_graph_service import get_organization
     graph = get_organization(req.org_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -4121,12 +4201,12 @@ async def organization_delete(org_id: str):
 @app.post("/plugins/install")
 async def plugin_install(
     source: str = Body(...),
-    name: Optional[str] = Body(None),
-    version: Optional[str] = Body(None),
-    author: Optional[str] = Body(None),
-    description: Optional[str] = Body(None),
-    plugin_type: Optional[str] = Body(None),
-    permissions: Optional[List[str]] = Body(None),
+    name: str | None = Body(None),
+    version: str | None = Body(None),
+    author: str | None = Body(None),
+    description: str | None = Body(None),
+    plugin_type: str | None = Body(None),
+    permissions: list[str] | None = Body(None),
 ):
     registry = get_plugin_registry()
     manifest = None
@@ -4151,7 +4231,7 @@ async def plugin_install(
 
 
 @app.post("/plugins/uninstall")
-async def plugin_uninstall(data: Dict = Body(...)):
+async def plugin_uninstall(data: dict = Body(...)):
     plugin_id = data.get("plugin_id", "")
     registry = get_plugin_registry()
     ok = registry.uninstall_plugin(plugin_id)
@@ -4160,7 +4240,7 @@ async def plugin_uninstall(data: Dict = Body(...)):
 
 
 @app.post("/plugins/enable")
-async def plugin_enable(data: Dict = Body(...)):
+async def plugin_enable(data: dict = Body(...)):
     plugin_id = data.get("plugin_id", "")
     registry = get_plugin_registry()
     ok = registry.enable_plugin(plugin_id)
@@ -4171,7 +4251,7 @@ async def plugin_enable(data: Dict = Body(...)):
 
 
 @app.post("/plugins/disable")
-async def plugin_disable(data: Dict = Body(...)):
+async def plugin_disable(data: dict = Body(...)):
     plugin_id = data.get("plugin_id", "")
     registry = get_plugin_registry()
     ok = registry.disable_plugin(plugin_id)
@@ -4182,7 +4262,7 @@ async def plugin_disable(data: Dict = Body(...)):
 
 
 @app.get("/plugins")
-async def plugin_list(plugin_type: Optional[str] = None, enabled_only: bool = False):
+async def plugin_list(plugin_type: str | None = None, enabled_only: bool = False):
     registry = get_plugin_registry()
     entries = registry.list_plugins(plugin_type=plugin_type, enabled_only=enabled_only)
     return {"plugins": [e.to_dict() for e in entries]}
@@ -4200,9 +4280,9 @@ async def plugin_details(plugin_id: str):
 @app.get("/plugins/marketplace")
 async def plugin_marketplace_search(
     query: str = "",
-    package_type: Optional[str] = None,
-    tag: Optional[str] = None,
-    author: Optional[str] = None,
+    package_type: str | None = None,
+    tag: str | None = None,
+    author: str | None = None,
     sort_by: str = "downloads",
     limit: int = 50,
 ):
@@ -4222,7 +4302,7 @@ async def marketplace_publish(
     description: str = Body(...),
     source_path: str = Body(...),
     package_type: str = Body("plugin"),
-    tags: Optional[List[str]] = Body(None),
+    tags: list[str] | None = Body(None),
     readme: str = Body(""),
     compatibility: str = Body(">=11.0.0"),
 ):
@@ -4255,7 +4335,7 @@ async def marketplace_package_details(package_id: str):
 
 
 @app.post("/plugins/marketplace/rate")
-async def marketplace_rate(data: Dict = Body(...)):
+async def marketplace_rate(data: dict = Body(...)):
     mkt = get_marketplace_service()
     pkg = mkt.rate_package(data.get("package_id", ""), data.get("rating", 0.0))
     if not pkg:
@@ -4264,7 +4344,7 @@ async def marketplace_rate(data: Dict = Body(...)):
 
 
 @app.post("/plugins/marketplace/install")
-async def marketplace_install(data: Dict = Body(...)):
+async def marketplace_install(data: dict = Body(...)):
     mkt = get_marketplace_service()
     result = mkt.install_package(data.get("package_id", ""), data.get("target_dir", "plugins"))
     if not result:
@@ -4273,7 +4353,7 @@ async def marketplace_install(data: Dict = Body(...)):
 
 
 @app.get("/plugins/marketplace/list")
-async def marketplace_list(package_type: Optional[str] = None, verified_only: bool = False):
+async def marketplace_list(package_type: str | None = None, verified_only: bool = False):
     mkt = get_marketplace_service()
     results = mkt.list_packages(package_type=package_type, verified_only=verified_only)
     return {"packages": [p.to_dict() for p in results], "count": len(results)}
@@ -4287,12 +4367,12 @@ async def agent_register(
     source: str = Body(...),
     version: str = Body("1.0.0"),
     description: str = Body(""),
-    capabilities: Optional[List[Dict]] = Body(None),
-    hooks: Optional[Dict[str, str]] = Body(None),
-    config: Optional[Dict] = Body(None),
+    capabilities: list[dict] | None = Body(None),
+    hooks: dict[str, str] | None = Body(None),
+    config: dict | None = Body(None),
 ):
     agent_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     agent_data = {
         "id": agent_id,
         "name": name,
@@ -4317,7 +4397,7 @@ async def agent_list(enabled_only: bool = False):
 
 
 @app.post("/agents/delete")
-async def agent_delete(data: Dict = Body(...)):
+async def agent_delete(data: dict = Body(...)):
     agent_id = data.get("agent_id", "")
     ok = mem_delete_custom_agent(agent_id)
     return {"deleted": ok}
@@ -4331,11 +4411,11 @@ async def workflow_register(
     source: str = Body(...),
     version: str = Body("1.0.0"),
     description: str = Body(""),
-    steps: Optional[List[Dict]] = Body(None),
-    config: Optional[Dict] = Body(None),
+    steps: list[dict] | None = Body(None),
+    config: dict | None = Body(None),
 ):
     workflow_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     workflow_data = {
         "id": workflow_id,
         "name": name,
@@ -4360,7 +4440,7 @@ async def workflow_list(enabled_only: bool = False):
 
 
 @app.post("/workflows/delete")
-async def workflow_delete(data: Dict = Body(...)):
+async def workflow_delete(data: dict = Body(...)):
     workflow_id = data.get("workflow_id", "")
     ok = mem_delete_custom_workflow(workflow_id)
     return {"deleted": ok}
@@ -4390,7 +4470,7 @@ async def ecosystem_health():
 # ===================== v12 — Continuous Autonomous Evaluation =====================
 
 @app.post("/evaluation/run")
-def trigger_evaluation_run(data: Dict = Body(...)):
+def trigger_evaluation_run(data: dict = Body(...)):
     from services.evaluation_scheduler import get_evaluation_scheduler
     scheduler = get_evaluation_scheduler()
     trigger_type = data.get("trigger_type", "on_demand")
@@ -4401,8 +4481,8 @@ def trigger_evaluation_run(data: Dict = Body(...)):
 @app.get("/evaluation/history")
 def list_evaluation_runs(
     limit: int = 50,
-    trigger_type: Optional[str] = None,
-    status: Optional[str] = None,
+    trigger_type: str | None = None,
+    status: str | None = None,
 ):
     runs = mem_list_evaluation_runs(limit=limit, trigger_type=trigger_type, status=status)
     return {"runs": runs}
@@ -4410,7 +4490,7 @@ def list_evaluation_runs(
 
 @app.get("/evaluation/reports")
 def list_evaluation_reports(
-    report_type: Optional[str] = None,
+    report_type: str | None = None,
     limit: int = 20,
 ):
     reports = mem_list_evaluation_reports(report_type=report_type, limit=limit)
@@ -4419,7 +4499,7 @@ def list_evaluation_reports(
 
 @app.get("/evaluation/leaderboards")
 def get_leaderboard(
-    category: Optional[str] = None,
+    category: str | None = None,
     sort_by: str = "score",
     limit: int = 20,
 ):
@@ -4430,8 +4510,8 @@ def get_leaderboard(
 
 @app.get("/evaluation/comparison")
 def get_version_comparison(
-    from_version: Optional[str] = None,
-    to_version: Optional[str] = None,
+    from_version: str | None = None,
+    to_version: str | None = None,
     limit: int = 20,
 ):
     comparisons = mem_get_version_comparisons(
@@ -4441,9 +4521,9 @@ def get_version_comparison(
 
 @app.get("/evaluation/regressions")
 def list_regressions(
-    category: Optional[str] = None,
-    severity: Optional[str] = None,
-    dismissed: Optional[bool] = None,
+    category: str | None = None,
+    severity: str | None = None,
+    dismissed: bool | None = None,
     limit: int = 100,
 ):
     regressions = mem_list_regressions(
@@ -4455,7 +4535,7 @@ def list_regressions(
 
 
 @app.post("/learning/ingest")
-def ingest_learning_data(data: Dict = Body(...)):
+def ingest_learning_data(data: dict = Body(...)):
     from services.learning_feedback_service import get_learning_feedback_service
     service = get_learning_feedback_service()
     feedback_type = data.get("feedback_type", "evaluation")
@@ -4476,8 +4556,8 @@ def ingest_learning_data(data: Dict = Body(...)):
 
 @app.get("/learning/patterns")
 def get_learning_patterns(
-    pattern_type: Optional[str] = None,
-    category: Optional[str] = None,
+    pattern_type: str | None = None,
+    category: str | None = None,
     min_confidence: float = 0.0,
     limit: int = 100,
 ):
@@ -4490,9 +4570,9 @@ def get_learning_patterns(
 
 @app.get("/learning/feedback-recommendations")
 def get_learning_recommendations(
-    recommendation_type: Optional[str] = None,
-    category: Optional[str] = None,
-    status: Optional[str] = None,
+    recommendation_type: str | None = None,
+    category: str | None = None,
+    status: str | None = None,
     limit: int = 100,
 ):
     recs = mem_list_learning_recommendations(
@@ -4504,7 +4584,7 @@ def get_learning_recommendations(
 
 @app.get("/learning/insights")
 def get_learning_insights_api(
-    category: Optional[str] = None,
+    category: str | None = None,
     limit: int = 20,
 ):
     insights = mem_get_learning_insights(category=category, limit=limit)
@@ -4515,7 +4595,7 @@ def get_learning_insights_api(
 
 
 @app.post("/campaign/run")
-def campaign_run(data: Dict = Body(...)):
+def campaign_run(data: dict = Body(...)):
     """Create and execute a benchmark campaign."""
     from services.benchmark_campaign_service import get_benchmark_campaign_service
     service = get_benchmark_campaign_service()
@@ -4556,7 +4636,7 @@ def campaign_status(campaign_id: str):
 @app.get("/campaign/results")
 def campaign_results(
     campaign_id: str,
-    domain: Optional[str] = None,
+    domain: str | None = None,
 ):
     """Get campaign run results."""
     from services.benchmark_campaign_service import get_benchmark_campaign_service
@@ -4585,7 +4665,7 @@ def campaign_report(
 
 
 @app.post("/campaign/resume")
-def campaign_resume(data: Dict = Body(...)):
+def campaign_resume(data: dict = Body(...)):
     """Resume an interrupted campaign."""
     from services.benchmark_campaign_service import get_benchmark_campaign_service
     service = get_benchmark_campaign_service()
@@ -4621,8 +4701,8 @@ def campaign_detect_interrupted():
 
 def _init_evaluation():
     """Register evaluation completion handler, recover state, check missed runs."""
-    from services.evaluation_scheduler import get_evaluation_scheduler
     from services.evaluation_reporter import get_evaluation_reporter
+    from services.evaluation_scheduler import get_evaluation_scheduler
     scheduler = get_evaluation_scheduler()
 
     # Phase 4 — recover unfinished runs and check for missed scheduled runs

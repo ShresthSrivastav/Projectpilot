@@ -810,5 +810,33 @@
     "benchmark_delta": 24.666666666666657,
     "summary": "Comparison: v11.0 \u2192 v12.0. Autonomy improved 20.0%. Cost efficiency improved. Overall performance improved",
     "created_at": "2026-06-14T08:20:01.043169+00:00"
+  },
+  {
+    "id": "dfa7f34c-afd4-45c3-bfc9-2058e5cd5693",
+    "from_version": "v11.0",
+    "to_version": "v12.0",
+    "autonomy_delta": 19.86455981941311,
+    "execution_time_delta": -56.79611650485437,
+    "healing_delta": 20.5607476635514,
+    "deployment_delta": 13.38645418326693,
+    "cost_efficiency_delta": 15.44973544973544,
+    "success_rate_delta": 16.40706126687435,
+    "benchmark_delta": 24.492099322799106,
+    "summary": "Comparison: v11.0 \u2192 v12.0. Autonomy improved 19.9%. Cost efficiency improved. Overall performance improved",
+    "created_at": "2026-06-17T17:13:44.680954+00:00"
+  },
+  {
+    "id": "49aeabf9-9e8b-4e01-b849-ef90e748becd",
+    "from_version": "v11.0",
+    "to_version": "v12.0",
+    "autonomy_delta": 20.000000000000004,
+    "execution_time_delta": -57.14285714285714,
+    "healing_delta": 20.689655172413797,
+    "deployment_delta": 13.529411764705882,
+    "cost_efficiency_delta": 15.625,
+    "success_rate_delta": 16.564417177914113,
+    "benchmark_delta": 24.66666666666667,
+    "summary": "Comparison: v11.0 \u2192 v12.0. Autonomy improved 20.0%. Cost efficiency improved. Overall performance improved",
+    "created_at": "2026-06-17T17:13:44.690955+00:00"
   }
 ]

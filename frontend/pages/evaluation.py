@@ -1,7 +1,7 @@
 """Evaluation Center — history, trends, regressions, leaderboards, and version comparisons."""
 import os
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
 import streamlit as st
@@ -9,7 +9,7 @@ import streamlit as st
 BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 
 
-def _get(path: str, timeout: int = 10) -> Optional[Dict]:
+def _get(path: str, timeout: int = 10) -> dict | None:
     try:
         r = requests.get(f"{BACKEND}{path}", timeout=timeout)
         r.raise_for_status()
@@ -18,7 +18,7 @@ def _get(path: str, timeout: int = 10) -> Optional[Dict]:
         return None
 
 
-def _post(path: str, data: Any, timeout: int = 30) -> Optional[Dict]:
+def _post(path: str, data: Any, timeout: int = 30) -> dict | None:
     try:
         r = requests.post(f"{BACKEND}{path}", json=data, timeout=timeout)
         if not r.ok:
@@ -69,7 +69,7 @@ def _delta_icon(val: float, higher_is_better: bool = True) -> str:
     return "↓" if val > 0 else ("↑" if val < 0 else "→")
 
 
-def _format_dt(iso_str: Optional[str]) -> str:
+def _format_dt(iso_str: str | None) -> str:
     if not iso_str:
         return "—"
     try:
@@ -166,8 +166,8 @@ def _show_trends_tab():
                   delta=f"{success_rates[-1] - success_rates[-2]:+.1%}" if len(success_rates) >= 2 else None)
 
     try:
-        import pandas as pd
         import altair as alt
+        import pandas as pd
 
         df = pd.DataFrame({
             "Run": list(range(1, len(runs) + 1)),

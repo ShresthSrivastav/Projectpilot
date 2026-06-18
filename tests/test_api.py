@@ -29,10 +29,17 @@ os.environ["SKIP_AUTH"]              = "true"
 
 from backend.main import app
 from database.chroma_db import (
-    create_job, get_blueprint, get_job, get_logs, get_requirements,
-    init_db, log_to_db, save_blueprint, save_requirements, update_job_status,
+    create_job,
+    get_blueprint,
+    get_job,
+    get_logs,
+    get_requirements,
+    init_db,
+    log_to_db,
+    save_blueprint,
+    save_requirements,
+    update_job_status,
 )
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -453,6 +460,7 @@ def test_testgen_agent_writes_file(tmp_path):
     import os
     os.environ["GENERATED_PROJECTS_DIR"] = str(tmp_path)
     import importlib
+
     import services.file_service as fs
     importlib.reload(fs)
 
@@ -494,6 +502,7 @@ def test_testgen_agent_fallback_on_empty(tmp_path):
     import os
     os.environ["GENERATED_PROJECTS_DIR"] = str(tmp_path)
     import importlib
+
     import services.file_service as fs
     importlib.reload(fs)
 
@@ -517,6 +526,7 @@ def test_cleanup_deletes_old_zips(tmp_path):
     import os
     os.environ["GENERATED_PROJECTS_DIR"] = str(tmp_path)
     import importlib
+
     import services.cleanup_service as cs
     importlib.reload(cs)
 
@@ -542,6 +552,7 @@ def test_cleanup_skips_fresh_zips(tmp_path):
     import os
     os.environ["GENERATED_PROJECTS_DIR"] = str(tmp_path)
     import importlib
+
     import services.cleanup_service as cs
     importlib.reload(cs)
 
@@ -558,8 +569,8 @@ def test_cleanup_skips_fresh_zips(tmp_path):
 # ── ZIP Service ───────────────────────────────────────────────────────────────
 
 def test_zip_creates_valid(tmp_path):
-    import zipfile
     import importlib
+    import zipfile
     os.environ["GENERATED_PROJECTS_DIR"] = str(tmp_path)
     import services.zip_service as zm
     importlib.reload(zm)
@@ -609,6 +620,7 @@ def test_clean_code_response_no_fences():
 def test_llm_retry_on_timeout():
     """LLM call retries up to MAX_RETRIES times on APITimeoutError."""
     from openai import APITimeoutError
+
     from services import llm_service
 
     call_count = 0
@@ -702,7 +714,9 @@ def test_workspace_delete_file(client, tmp_path):
 
 
 def test_workspace_path_traversal_denied(client):
-    import os, urllib.parse
+    import os
+    import urllib.parse
+
     from services.file_service import BASE_DIR as BD
     base_path = os.environ["GENERATED_PROJECTS_DIR"]
     jid = "wksp-test-004"
@@ -719,14 +733,14 @@ def test_workspace_path_traversal_denied(client):
 # ── Memory / Insights ───────────────────────────────────────────────────────
 
 def test_coding_preferences():
-    from database.memory_store import set_coding_preference, get_coding_preferences
+    from database.memory_store import get_coding_preferences, set_coding_preference
     set_coding_preference("framework:fastapi", "True", source="test", confidence=0.9)
     prefs = get_coding_preferences()
     assert any(p["pref_key"] == "framework:fastapi" for p in prefs)
 
 
 def test_project_insights():
-    from database.memory_store import save_project_insight, get_project_insights
+    from database.memory_store import get_project_insights, save_project_insight
     save_project_insight("test-job", "successful_generation", "All tests passed")
     insights = get_project_insights(insight_type="successful_generation")
     assert len(insights) >= 1
@@ -775,8 +789,9 @@ def test_deploy_unregistered_job(client):
 
 
 def test_deploy_generates_docker(tmp_path):
-    from services.deployment_service import deploy_project
     from unittest.mock import patch
+
+    from services.deployment_service import deploy_project
 
     jid = "deploy-test-001"
     job_dir = tmp_path / jid
@@ -803,7 +818,7 @@ def test_metrics_endpoint(client):
 # ── Fix patterns ────────────────────────────────────────────────────────────
 
 def test_fix_patterns():
-    from database.memory_store import record_fix_pattern, get_fix_patterns
+    from database.memory_store import get_fix_patterns, record_fix_pattern
     record_fix_pattern("import_error", "ModuleNotFoundError", "tests/*.py", "Add missing import")
     patterns = get_fix_patterns()
     assert len(patterns) >= 1
@@ -813,7 +828,7 @@ def test_fix_patterns():
 # ── Reusable components ─────────────────────────────────────────────────────
 
 def test_reusable_components():
-    from database.memory_store import save_reusable_component, get_reusable_components
+    from database.memory_store import get_reusable_components, save_reusable_component
     save_reusable_component("FastAPICRUD", "route", "def create(): pass", "CRUD route template", "fastapi,crud")
     comps = get_reusable_components(component_type="route")
     assert len(comps) >= 1

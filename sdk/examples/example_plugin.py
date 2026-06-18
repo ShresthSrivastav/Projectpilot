@@ -8,13 +8,13 @@ Shows how any developer can create a plugin without modifying platform source co
 # type: validator
 
 import ast
-from typing import Any, Dict, Optional
+from typing import Any
 
 from sdk.plugin_sdk.base_plugin import BasePlugin, PluginManifest, PluginType
 
 
 class CodeQualityValidator(BasePlugin):
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         self.manifest = PluginManifest(
             name="code-quality-validator",
@@ -33,14 +33,14 @@ class CodeQualityValidator(BasePlugin):
     def uninstall(self) -> bool:
         return True
 
-    def configure(self, config: Dict[str, Any]) -> bool:
+    def configure(self, config: dict[str, Any]) -> bool:
         self.config.update(config)
         return True
 
     def validate(self) -> bool:
         return True
 
-    def validate_code(self, source_code: str) -> Dict[str, Any]:
+    def validate_code(self, source_code: str) -> dict[str, Any]:
         issues = []
         # Check for missing docstrings
         try:

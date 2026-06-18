@@ -1506,5 +1506,57 @@
     "benchmark_score": 0.95,
     "recorded_at": "2026-06-14T08:20:01.042191+00:00",
     "run_id": ""
+  },
+  {
+    "id": "01f315dc-02a4-4b11-8402-3ebde77e0929",
+    "version": "v11.0",
+    "autonomy_score": 0.8,
+    "execution_time_ms": 15000,
+    "healing_effectiveness": 0.75,
+    "deployment_success_rate": 0.9,
+    "cost_efficiency": 0.85,
+    "success_rate": 0.88,
+    "benchmark_score": 0.8,
+    "recorded_at": "2026-06-17T17:13:44.675951+00:00",
+    "run_id": ""
+  },
+  {
+    "id": "c1bd529f-e445-4c81-b94c-4e46f4534671",
+    "version": "v12.0",
+    "autonomy_score": 0.9,
+    "execution_time_ms": 10000,
+    "healing_effectiveness": 0.85,
+    "deployment_success_rate": 0.95,
+    "cost_efficiency": 0.9,
+    "success_rate": 0.95,
+    "benchmark_score": 0.92,
+    "recorded_at": "2026-06-17T17:13:44.677954+00:00",
+    "run_id": ""
+  },
+  {
+    "id": "ae5dcd1e-e129-477b-be7d-ca90c7d09b3e",
+    "version": "v11.0",
+    "autonomy_score": 0.7,
+    "execution_time_ms": 20000,
+    "healing_effectiveness": 0.7,
+    "deployment_success_rate": 0.8,
+    "cost_efficiency": 0.75,
+    "success_rate": 0.75,
+    "benchmark_score": 0.7,
+    "recorded_at": "2026-06-17T17:13:44.686953+00:00",
+    "run_id": ""
+  },
+  {
+    "id": "5c52d2f1-1e24-43c4-a04f-def09f29a47e",
+    "version": "v12.0",
+    "autonomy_score": 0.9,
+    "execution_time_ms": 5000,
+    "healing_effectiveness": 0.9,
+    "deployment_success_rate": 0.98,
+    "cost_efficiency": 0.95,
+    "success_rate": 0.95,
+    "benchmark_score": 0.95,
+    "recorded_at": "2026-06-17T17:13:44.688951+00:00",
+    "run_id": ""
   }
 ]

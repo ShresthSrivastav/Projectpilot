@@ -4,7 +4,7 @@ import os
 import re
 import threading
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 from dotenv import load_dotenv
@@ -55,28 +55,28 @@ ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_BASE_URL: str = os.getenv("ANTHROPIC_BASE_URL", "https://openrouter.ai/api/v1")
 ANTHROPIC_MODEL: str = os.getenv("ANTHROPIC_MODEL", "anthropic/claude-3.5-sonnet")
 
-MODEL_PRESETS: Dict[str, str] = {
+MODEL_PRESETS: dict[str, str] = {
     "local":      os.getenv("MODEL_LOCAL",      "gemma4:12b"),
     "cloud":      CLOUD_MODEL,
     "anthropic":  ANTHROPIC_MODEL,
 }
 
-CONTEXT_SETUP: Dict[str, str] = {
+CONTEXT_SETUP: dict[str, str] = {
     "local":      os.getenv("CONTEXT_LOCAL",     "You are an expert software architect powered by Gemma 4 12B. Produce comprehensive, well-documented code."),
     "cloud":      "You are an expert software architect powered by Gemma 4 31B. Produce comprehensive, well-documented, production-ready Python code.",
     "anthropic":  "You are an expert software architect powered by Claude 3.5 Sonnet. Produce comprehensive, well-documented, production-ready Python code.",
 }
 
-_pull_status: Dict[str, str] = {}
+_pull_status: dict[str, str] = {}
 _pull_lock = threading.Lock()
 
-_openai_client: Optional[OpenAI] = None
+_openai_client: OpenAI | None = None
 _client_lock = threading.Lock()
 
-_cloud_client: Optional[OpenAI] = None
+_cloud_client: OpenAI | None = None
 _cloud_lock = threading.Lock()
 
-_anthropic_client: Optional[OpenAI] = None
+_anthropic_client: OpenAI | None = None
 _anthropic_lock = threading.Lock()
 
 
@@ -138,7 +138,7 @@ def is_available() -> bool:
         return False
 
 
-def get_available_models() -> List[str]:
+def get_available_models() -> list[str]:
     try:
         data = httpx.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5).json()
         return [m["name"] for m in data.get("models", [])]
@@ -146,7 +146,7 @@ def get_available_models() -> List[str]:
         return []
 
 
-def get_pull_status() -> Dict[str, str]:
+def get_pull_status() -> dict[str, str]:
     with _pull_lock:
         return dict(_pull_status)
 
@@ -218,10 +218,10 @@ def get_context(preset_or_name: str) -> str:
 def call_model(
     prompt: str,
     system_prompt: str = "You are an expert software engineer.",
-    model: Optional[str] = None,
-    context_setup: Optional[str] = None,
-    job_id: Optional[str] = None,
-    agent: Optional[str] = None,
+    model: str | None = None,
+    context_setup: str | None = None,
+    job_id: str | None = None,
+    agent: str | None = None,
     **kwargs: Any,
 ) -> str:
     preset = (model or "local").lower()
@@ -241,8 +241,8 @@ def _call_local(
     prompt: str,
     model_name: str,
     system_prompt: str,
-    job_id: Optional[str] = None,
-    agent: Optional[str] = None,
+    job_id: str | None = None,
+    agent: str | None = None,
 ) -> str:
     messages = [
         {"role": "system", "content": system_prompt},
@@ -289,8 +289,8 @@ def _call_cloud(
     prompt: str,
     model_name: str,
     system_prompt: str,
-    job_id: Optional[str] = None,
-    agent: Optional[str] = None,
+    job_id: str | None = None,
+    agent: str | None = None,
 ) -> str:
     messages = [
         {"role": "system", "content": system_prompt},
@@ -337,8 +337,8 @@ def _call_anthropic(
     prompt: str,
     model_name: str,
     system_prompt: str,
-    job_id: Optional[str] = None,
-    agent: Optional[str] = None,
+    job_id: str | None = None,
+    agent: str | None = None,
 ) -> str:
     messages = [
         {"role": "system", "content": system_prompt},
@@ -381,7 +381,7 @@ def _call_anthropic(
     raise RuntimeError(f"Anthropic (Claude 3.5 Sonnet via OpenRouter) failed after {MAX_RETRIES} attempts: {last_exc}")
 
 
-def get_available_providers() -> List[Dict[str, bool]]:
+def get_available_providers() -> list[dict[str, bool]]:
     return [
         {"name": "local",      "available": is_available()},
         {"name": "cloud",      "available": bool(GOOGLE_API_KEY.strip())},

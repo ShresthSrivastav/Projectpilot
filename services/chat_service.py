@@ -3,10 +3,8 @@
 import json
 import logging
 import re
-from typing import Dict, List
 
-from database import chroma_db
-from database import memory_store
+from database import chroma_db, memory_store
 from services.llm_service import call_model
 
 logger = logging.getLogger(__name__)
@@ -14,8 +12,8 @@ logger = logging.getLogger(__name__)
 CHAT_MODEL = "local"
 
 # In-memory store for pending confirmations per conversation
-_pending_actions: Dict[str, Dict] = {}
-_last_project_id: Dict[str, str] = {}
+_pending_actions: dict[str, dict] = {}
+_last_project_id: dict[str, str] = {}
 
 CONFIRM_WORDS = {"yes", "proceed", "sure", "yeah", "yep", "ok", "okay", "confirm", "yea"}
 CANCEL_WORDS = {"no", "cancel", "stop", "don't", "nah", "nope", "never mind"}
@@ -27,7 +25,7 @@ PROJECT_KEYWORDS = [
 ]
 
 
-def _find_project(query: str) -> List[Dict]:
+def _find_project(query: str) -> list[dict]:
     """Search projects by name or prompt text matching."""
     q = query.lower().strip()
     words = [w for w in re.sub(r'[^a-z0-9\s]', ' ', q).split() if len(w) > 2]
@@ -117,7 +115,7 @@ GUIDELINES:
 """
 
 
-def process_message(message: str, conversation_id: str, context: Dict = None) -> Dict:
+def process_message(message: str, conversation_id: str, context: dict = None) -> dict:
     """Process a user message by pre-fetching project data and calling the LLM."""
 
     memory_store.add_chat_message(conversation_id, "user", message)
@@ -184,7 +182,7 @@ Answer the user's question based on the project data above. Be concise and helpf
     return {"reply": reply, "conversation_id": conversation_id}
 
 
-def execute_confirmed_action(conversation_id: str, tool_name: str, args: Dict) -> Dict:
+def execute_confirmed_action(conversation_id: str, tool_name: str, args: dict) -> dict:
     """Execute a confirmed action."""
     memory_store.add_chat_message(conversation_id, "assistant", f"Executing {tool_name}...")
     try:
@@ -199,7 +197,7 @@ def execute_confirmed_action(conversation_id: str, tool_name: str, args: Dict) -
         return {"reply": err, "conversation_id": conversation_id}
 
 
-def _detect_action(message: str, conversation_id: str = "") -> Dict:
+def _detect_action(message: str, conversation_id: str = "") -> dict:
     """Detect if user wants to perform an action."""
     m = message.lower()
     jid = _extract_job_id(message, conversation_id)
@@ -274,7 +272,7 @@ def _extract_job_id(message: str, conversation_id: str = "") -> str:
     return best[0]
 
 
-def _extract_instructions(msg: str, keywords: List[str]) -> str:
+def _extract_instructions(msg: str, keywords: list[str]) -> str:
     """Extract instructions after a keyword."""
     for kw in keywords:
         idx = msg.find(kw)
@@ -295,7 +293,7 @@ def _extract_correction_note(msg: str) -> str:
     return m.group(1) if m else ""
 
 
-def _handle_action(conversation_id: str, action: Dict, message: str) -> Dict:
+def _handle_action(conversation_id: str, action: dict, message: str) -> dict:
     """Handle an action request - first ask for confirmation."""
     tool_name = action["tool"]
     args = action["args"]
@@ -317,7 +315,7 @@ def _handle_action(conversation_id: str, action: Dict, message: str) -> Dict:
     }
 
 
-def _run_action(tool_name: str, args: Dict) -> Dict:
+def _run_action(tool_name: str, args: dict) -> dict:
     """Execute an action tool."""
     import httpx
 

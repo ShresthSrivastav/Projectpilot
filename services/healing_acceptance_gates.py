@@ -16,8 +16,9 @@ import logging
 import os
 import re
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 from database.chroma_db import log_to_db
 from services.acceptance_gates import run_gates
@@ -54,9 +55,9 @@ MAX_FIX_FILES = 5
 def heal_gates(
     job_id: str,
     model: str = "local",
-    review_fn: Optional[Callable] = None,
+    review_fn: Callable | None = None,
     max_attempts: int = MAX_HEALING_ATTEMPTS,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Run acceptance gates with self-healing repair loop.
 
     Returns:
@@ -70,8 +71,8 @@ def heal_gates(
     """
     log_to_db(job_id, "HealingGates", f"Starting self-healing acceptance gates (max {max_attempts} attempts)...")
     t_start = time.monotonic()
-    repair_history: List[Dict] = []
-    gate_results: Dict[str, Dict] = {}
+    repair_history: list[dict] = []
+    gate_results: dict[str, dict] = {}
     passed = False
 
     for attempt in range(1, max_attempts + 1):
@@ -164,7 +165,7 @@ def heal_gates(
     }
 
 
-def _collect_failure_context(job_id: str, gate_results: Dict, failed_gates: List[str]) -> List[Dict]:
+def _collect_failure_context(job_id: str, gate_results: dict, failed_gates: list[str]) -> list[dict]:
     """Extract structured failure details for each failed gate."""
     context = []
     for name in failed_gates:
@@ -190,7 +191,7 @@ def _collect_failure_context(job_id: str, gate_results: Dict, failed_gates: List
     return context
 
 
-def _read_project_files(job_dir: Path) -> Dict[str, str]:
+def _read_project_files(job_dir: Path) -> dict[str, str]:
     """Read all source files (excluding __pycache__)."""
     files = {}
     for path in sorted(job_dir.rglob("*")):
@@ -206,7 +207,7 @@ def _read_project_files(job_dir: Path) -> Dict[str, str]:
     return files
 
 
-def _request_fixes(model: str, failure_context: List[Dict], project_files: Dict[str, str]) -> List[Dict]:
+def _request_fixes(model: str, failure_context: list[dict], project_files: dict[str, str]) -> list[dict]:
     """Send failures + project to LLM, parse suggested fixes."""
     context_json = json.dumps(failure_context, indent=2)
     # Build file listing (truncated if too large)
@@ -272,7 +273,7 @@ Rules:
     return _parse_fixes(text)
 
 
-def _parse_fixes(text: str) -> List[Dict]:
+def _parse_fixes(text: str) -> list[dict]:
     """Parse LLM response into structured fix list."""
     if "--- NO CHANGES ---" in text:
         return []
@@ -311,7 +312,7 @@ def _parse_fixes(text: str) -> List[Dict]:
     return fixes[:MAX_FIX_FILES]
 
 
-def _apply_fixes(job_dir: Path, fixes: List[Dict]) -> List[Dict]:
+def _apply_fixes(job_dir: Path, fixes: list[dict]) -> list[dict]:
     """Apply parsed fixes to disk. Returns list of applied changes."""
     applied = []
     for fix in fixes:
@@ -346,7 +347,7 @@ def _apply_fixes(job_dir: Path, fixes: List[Dict]) -> List[Dict]:
     return applied
 
 
-def _syntax_check_applied(job_dir: Path, applied: List[Dict]):
+def _syntax_check_applied(job_dir: Path, applied: list[dict]):
     """Run syntax check on modified files, log warnings."""
     for change in applied:
         if change["status"] not in ("modified", "created"):
@@ -360,14 +361,14 @@ def _syntax_check_applied(job_dir: Path, applied: List[Dict]):
             change["syntax_error"] = result.get("error")
 
 
-def _write_report(job_id: str, data: Dict) -> Optional[str]:
+def _write_report(job_id: str, data: dict) -> str | None:
     """Write AUTOFIX_ACCEPTANCE_REPORT.md to project directory."""
     report = _build_report_md(job_id, data)
     path = write_file(job_id, "AUTOFIX_ACCEPTANCE_REPORT.md", report)
     return str(path) if path else None
 
 
-def _build_report_md(job_id: str, data: Dict) -> str:
+def _build_report_md(job_id: str, data: dict) -> str:
     now = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
     passed = data["passed"]
     gates = data.get("gates", {})
@@ -385,8 +386,8 @@ def _build_report_md(job_id: str, data: Dict) -> str:
         "",
         f"## Overall: {overall_icon}",
         "",
-        f"| Gate | Status | Details |",
-        f"|------|--------|---------|",
+        "| Gate | Status | Details |",
+        "|------|--------|---------|",
     ]
 
     for gate_name, gate in gates.items():
@@ -451,7 +452,7 @@ def _build_report_md(job_id: str, data: Dict) -> str:
     return "\n".join(lines)
 
 
-def _summary(gate: Dict) -> str:
+def _summary(gate: dict) -> str:
     details = gate.get("details", {})
     parts = []
     if "errors" in details and details["errors"]:

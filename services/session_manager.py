@@ -5,10 +5,11 @@ import os
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from collections.abc import Callable
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -31,19 +32,19 @@ class Session:
     session_type: str = "pipeline"
     status: SessionStatus = SessionStatus.ACTIVE
     current_stage: str = ""
-    completed_tasks: List[str] = field(default_factory=list)
-    pending_tasks: List[str] = field(default_factory=list)
-    failed_tasks: List[str] = field(default_factory=list)
-    metrics: Dict[str, Any] = field(default_factory=dict)
-    checkpoints: List[Dict] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    completed_tasks: list[str] = field(default_factory=list)
+    pending_tasks: list[str] = field(default_factory=list)
+    failed_tasks: list[str] = field(default_factory=list)
+    metrics: dict[str, Any] = field(default_factory=dict)
+    checkpoints: list[dict] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
-    completed_at: Optional[float] = None
-    error: Optional[str] = None
-    context: Dict[str, Any] = field(default_factory=dict)
+    completed_at: float | None = None
+    error: str | None = None
+    context: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         d = asdict(self)
         d["status"] = self.status.value
         return d
@@ -73,9 +74,9 @@ class Session:
 
 class SessionManager:
     def __init__(self):
-        self.sessions: Dict[str, Session] = {}
+        self.sessions: dict[str, Session] = {}
         self._lock = threading.Lock()
-        self._handlers: Dict[str, Callable] = {}
+        self._handlers: dict[str, Callable] = {}
         SESSION_DIR.mkdir(parents=True, exist_ok=True)
         self._restore_sessions()
 
@@ -84,8 +85,8 @@ class SessionManager:
         job_id: str,
         name: str = "",
         session_type: str = "pipeline",
-        tasks: Optional[List[str]] = None,
-        context: Optional[Dict] = None,
+        tasks: list[str] | None = None,
+        context: dict | None = None,
     ) -> Session:
         session = Session(
             job_id=job_id,
@@ -100,10 +101,10 @@ class SessionManager:
         logger.info("Session %s created for job %s (type=%s, tasks=%d)", session.id[:8], job_id, session_type, len(session.pending_tasks))
         return session
 
-    def get_session(self, session_id: str) -> Optional[Session]:
+    def get_session(self, session_id: str) -> Session | None:
         return self.sessions.get(session_id)
 
-    def list_sessions(self, job_id: Optional[str] = None, limit: int = 20) -> List[Dict]:
+    def list_sessions(self, job_id: str | None = None, limit: int = 20) -> list[dict]:
         with self._lock:
             sessions = list(self.sessions.values())
         if job_id:
@@ -111,7 +112,7 @@ class SessionManager:
         sessions.sort(key=lambda s: s.updated_at, reverse=True)
         return [s.to_dict() for s in sessions[:limit]]
 
-    def update_session(self, session_id: str, **kwargs) -> Optional[Session]:
+    def update_session(self, session_id: str, **kwargs) -> Session | None:
         session = self.sessions.get(session_id)
         if not session:
             return None
@@ -122,7 +123,7 @@ class SessionManager:
         self._save_session(session)
         return session
 
-    def complete_session(self, session_id: str) -> Optional[Session]:
+    def complete_session(self, session_id: str) -> Session | None:
         session = self.sessions.get(session_id)
         if session:
             session.status = SessionStatus.COMPLETED
@@ -130,7 +131,7 @@ class SessionManager:
             self._save_session(session)
         return session
 
-    def fail_session(self, session_id: str, error: str) -> Optional[Session]:
+    def fail_session(self, session_id: str, error: str) -> Session | None:
         session = self.sessions.get(session_id)
         if session:
             session.status = SessionStatus.FAILED
@@ -139,21 +140,21 @@ class SessionManager:
             self._save_session(session)
         return session
 
-    def pause_session(self, session_id: str) -> Optional[Session]:
+    def pause_session(self, session_id: str) -> Session | None:
         session = self.sessions.get(session_id)
         if session:
             session.status = SessionStatus.PAUSED
             self._save_session(session)
         return session
 
-    def resume_session(self, session_id: str) -> Optional[Session]:
+    def resume_session(self, session_id: str) -> Session | None:
         session = self.sessions.get(session_id)
         if session and session.status == SessionStatus.PAUSED:
             session.status = SessionStatus.ACTIVE
             self._save_session(session)
         return session
 
-    def add_checkpoint(self, session_id: str, data: Dict) -> Optional[Session]:
+    def add_checkpoint(self, session_id: str, data: dict) -> Session | None:
         session = self.sessions.get(session_id)
         if session:
             cp = {"timestamp": time.time(), "data": data}
@@ -164,7 +165,7 @@ class SessionManager:
     def register_handler(self, task_type: str, handler: Callable) -> None:
         self._handlers[task_type] = handler
 
-    def execute_next_task(self, session_id: str) -> Optional[Any]:
+    def execute_next_task(self, session_id: str) -> Any | None:
         session = self.sessions.get(session_id)
         if not session or not session.pending_tasks:
             return None
@@ -183,7 +184,7 @@ class SessionManager:
             self._save_session(session)
             return None
 
-    def execute_all(self, session_id: str) -> Dict[str, Any]:
+    def execute_all(self, session_id: str) -> dict[str, Any]:
         results = {}
         while True:
             result = self.execute_next_task(session_id)

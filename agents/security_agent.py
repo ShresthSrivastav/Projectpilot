@@ -1,6 +1,6 @@
 from database.chroma_db import log_to_db
-from services.llm_service import call_model
 from services.file_service import BASE_DIR
+from services.llm_service import call_model
 
 SECURITY_CHECKS = [
     {
@@ -77,7 +77,7 @@ File: {filepath}
 def _scan_file(filepath, model="local"):
     findings = []
     try:
-        with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+        with open(filepath, encoding="utf-8", errors="ignore") as f:
             content = f.read()
     except Exception as e:
         findings.append({

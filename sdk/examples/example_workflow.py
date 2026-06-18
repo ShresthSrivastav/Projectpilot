@@ -1,9 +1,9 @@
 """Example Custom Workflow — CI/CD Pipeline Workflow.
 Shows how any developer can create a custom DAG workflow without modifying platform source code.
 """
-from typing import Any, Dict
+from typing import Any
 
-from sdk.workflow_sdk.base_workflow import BaseWorkflow, WorkflowStep, WorkflowStatus
+from sdk.workflow_sdk.base_workflow import BaseWorkflow, WorkflowStatus, WorkflowStep
 
 
 class CICDPipelineWorkflow(BaseWorkflow):
@@ -11,7 +11,7 @@ class CICDPipelineWorkflow(BaseWorkflow):
         super().__init__(workflow_id)
         self.build_graph()
 
-    def build_graph(self) -> Dict[str, WorkflowStep]:
+    def build_graph(self) -> dict[str, WorkflowStep]:
         steps = {
             "lint": WorkflowStep(name="lint", deps=[], retries=1, timeout=120),
             "test": WorkflowStep(name="test", deps=["lint"], retries=2, timeout=300),
@@ -22,7 +22,7 @@ class CICDPipelineWorkflow(BaseWorkflow):
             self.add_step(step)
         return steps
 
-    def execute(self) -> Dict[str, Any]:
+    def execute(self) -> dict[str, Any]:
         graph = self.build_graph()
         results = {}
         for step_id, step in graph.items():
@@ -36,7 +36,7 @@ class CICDPipelineWorkflow(BaseWorkflow):
         self.status = WorkflowStatus.COMPLETED
         return {"status": self.status.value, "results": results}
 
-    def monitor(self) -> Dict[str, Any]:
+    def monitor(self) -> dict[str, Any]:
         return {
             "workflow_id": self.id,
             "status": self.status.value,

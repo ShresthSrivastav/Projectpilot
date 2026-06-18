@@ -580,7 +580,7 @@ class TestSchedulerMetadataCRUD:
     """Test scheduler_metadata table persistence."""
 
     def test_save_and_get_metadata(self):
-        from database.memory_store import mem_save_scheduler_metadata, mem_get_scheduler_metadata
+        from database.memory_store import mem_get_scheduler_metadata, mem_save_scheduler_metadata
         meta = {
             "id": "test-nightly-1",
             "schedule_type": "nightly",
@@ -604,7 +604,7 @@ class TestSchedulerMetadataCRUD:
         assert loaded["enabled"] == 1
 
     def test_list_metadata(self):
-        from database.memory_store import mem_save_scheduler_metadata, mem_list_scheduler_metadata
+        from database.memory_store import mem_list_scheduler_metadata, mem_save_scheduler_metadata
         for stype in ("nightly", "weekly", "release"):
             mem_save_scheduler_metadata({
                 "id": f"test-{stype}-1",
@@ -629,7 +629,7 @@ class TestSchedulerMetadataCRUD:
         assert "release" in types
 
     def test_list_enabled_only(self):
-        from database.memory_store import mem_save_scheduler_metadata, mem_list_scheduler_metadata
+        from database.memory_store import mem_list_scheduler_metadata, mem_save_scheduler_metadata
         mem_save_scheduler_metadata({
             "id": "enabled-test",
             "schedule_type": "nightly",
@@ -667,7 +667,11 @@ class TestSchedulerMetadataCRUD:
             assert m["enabled"] == 1
 
     def test_delete_metadata(self):
-        from database.memory_store import mem_save_scheduler_metadata, mem_get_scheduler_metadata, mem_delete_scheduler_metadata
+        from database.memory_store import (
+            mem_delete_scheduler_metadata,
+            mem_get_scheduler_metadata,
+            mem_save_scheduler_metadata,
+        )
         mem_save_scheduler_metadata({
             "id": "delete-test",
             "schedule_type": "to_delete",
@@ -711,8 +715,8 @@ class TestSQLitePersistence:
         assert run.autonomy_score > 0
 
     def test_load_runs_from_db_on_init(self):
-        from services.evaluation_scheduler import EvaluationScheduler
         from database.memory_store import mem_save_evaluation_run
+        from services.evaluation_scheduler import EvaluationScheduler
         # Save a run directly to DB
         mem_save_evaluation_run({
             "id": "pre-existing-run",
@@ -748,7 +752,7 @@ class TestRestartRecovery:
     """Test recovery of unfinished runs on startup."""
 
     def test_recover_pending_runs_marked_stale(self):
-        from database.memory_store import mem_save_evaluation_run, mem_list_evaluation_runs
+        from database.memory_store import mem_list_evaluation_runs, mem_save_evaluation_run
         from services.evaluation_scheduler import get_evaluation_scheduler
         mem_save_evaluation_run({
             "id": "pending-stale-1",
@@ -778,9 +782,10 @@ class TestRestartRecovery:
         assert "pending-stale-1" in stale_ids
 
     def test_recover_running_runs_marked_stale(self):
-        from database.memory_store import mem_save_evaluation_run, mem_list_evaluation_runs
-        from services.evaluation_scheduler import get_evaluation_scheduler, STALE_TIMEOUT_SECONDS
         import time
+
+        from database.memory_store import mem_list_evaluation_runs, mem_save_evaluation_run
+        from services.evaluation_scheduler import STALE_TIMEOUT_SECONDS, get_evaluation_scheduler
         old_ts = time.time() - STALE_TIMEOUT_SECONDS - 100
         mem_save_evaluation_run({
             "id": "running-stale-1",
@@ -821,8 +826,9 @@ class TestMissedRunRecovery:
     @patch("services.benchmark_service.BenchmarkService")
     def test_missed_nightly_triggers_recovery(self, mock_bsvc):
         from database.memory_store import (
-            mem_save_scheduler_metadata, mem_delete_scheduler_metadata,
+            mem_delete_scheduler_metadata,
             mem_list_evaluation_runs,
+            mem_save_scheduler_metadata,
         )
         from services.evaluation_scheduler import get_evaluation_scheduler
         mock_bsvc.return_value = MockBenchmarkService()
@@ -862,7 +868,7 @@ class TestMissedRunRecovery:
 
     @patch("services.benchmark_service.BenchmarkService")
     def test_no_missed_when_recent_run_exists(self, mock_bsvc):
-        from database.memory_store import mem_save_scheduler_metadata, mem_save_evaluation_run
+        from database.memory_store import mem_save_evaluation_run, mem_save_scheduler_metadata
         from services.evaluation_scheduler import get_evaluation_scheduler
         mock_bsvc.return_value = MockBenchmarkService()
         import time
@@ -908,9 +914,10 @@ class TestMissedRunRecovery:
         assert isinstance(result, list)
 
     def test_disabled_schedule_not_checked(self):
+        import time
+
         from database.memory_store import mem_save_scheduler_metadata
         from services.evaluation_scheduler import get_evaluation_scheduler
-        import time
         old_ts = time.time() - 48 * 3600
         mem_save_scheduler_metadata({
             "id": "disabled-nightly",
@@ -978,7 +985,7 @@ class TestWeeklyScheduleConfig:
         assert result is True
 
     def test_nightly_config_persisted(self):
-        from database.memory_store import mem_get_scheduler_metadata, mem_delete_scheduler_metadata
+        from database.memory_store import mem_delete_scheduler_metadata, mem_get_scheduler_metadata
         from services.evaluation_scheduler import get_evaluation_scheduler
         mem_delete_scheduler_metadata("nightly")
         scheduler = get_evaluation_scheduler()
@@ -995,8 +1002,8 @@ class TestWeeklyScheduleConfig:
         assert meta["domain_timeout_seconds"] == 300.0
 
     def test_config_update_overwrites(self):
-        from services.evaluation_scheduler import get_evaluation_scheduler
         from database.memory_store import mem_get_scheduler_metadata
+        from services.evaluation_scheduler import get_evaluation_scheduler
         scheduler = get_evaluation_scheduler()
         scheduler.set_schedule_config(
             schedule_type="release",
@@ -1058,7 +1065,7 @@ class TestDomainTimeout:
 
     @patch("services.benchmark_service.BenchmarkService")
     def test_timeout_parameter_accepted(self, mock_bsvc):
-        from services.evaluation_scheduler import get_evaluation_scheduler, EvaluationRun
+        from services.evaluation_scheduler import EvaluationRun, get_evaluation_scheduler
         mock_bsvc.return_value = MockBenchmarkService()
         scheduler = get_evaluation_scheduler()
 
@@ -1081,7 +1088,8 @@ class TestPersistenceIntegrity:
 
     def test_evaluation_run_crud_roundtrip(self):
         from database.memory_store import (
-            mem_save_evaluation_run, mem_get_evaluation_run,
+            mem_get_evaluation_run,
+            mem_save_evaluation_run,
         )
         run_data = {
             "id": "integrity-test-1",
@@ -1113,7 +1121,9 @@ class TestPersistenceIntegrity:
 
     def test_update_evaluation_run(self):
         from database.memory_store import (
-            mem_save_evaluation_run, mem_get_evaluation_run, mem_update_evaluation_run,
+            mem_get_evaluation_run,
+            mem_save_evaluation_run,
+            mem_update_evaluation_run,
         )
         mem_save_evaluation_run({
             "id": "update-test-1",
@@ -1139,8 +1149,9 @@ class TestPersistenceIntegrity:
         assert abs(loaded["autonomy_score"] - 0.95) < 0.01
 
     def test_count_missed_runs(self):
-        from database.memory_store import mem_save_evaluation_run, mem_count_missed_runs
         import time
+
+        from database.memory_store import mem_count_missed_runs, mem_save_evaluation_run
         now = time.time()
         mem_save_evaluation_run({
             "id": "missed-count-1",
@@ -1164,7 +1175,7 @@ class TestPersistenceIntegrity:
         assert count >= 1
 
     def test_list_with_filters_preserved(self):
-        from database.memory_store import mem_save_evaluation_run, mem_list_evaluation_runs
+        from database.memory_store import mem_list_evaluation_runs, mem_save_evaluation_run
         mem_save_evaluation_run({
             "id": "filter-test-1",
             "trigger_type": "weekly",

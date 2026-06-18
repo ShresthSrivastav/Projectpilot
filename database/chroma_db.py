@@ -10,8 +10,8 @@ import json
 import logging
 import os
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 import chromadb
 from chromadb.config import Settings
@@ -19,7 +19,7 @@ from chromadb.config import Settings
 logger = logging.getLogger(__name__)
 
 CHROMA_PATH = os.getenv("CHROMA_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "chroma_data"))
-_client: Optional[chromadb.PersistentClient] = None
+_client: chromadb.PersistentClient | None = None
 
 _DUMMY_EMBED = [[0.0]]   # single-dim dummy — skips ONNX download entirely
 
@@ -42,7 +42,7 @@ def _col(name: str):
     )
 
 
-def _embed(n: int = 1) -> List[List[float]]:
+def _embed(n: int = 1) -> list[list[float]]:
     """Return n dummy embeddings — one per document."""
     return [[0.0]] * n
 
@@ -56,7 +56,7 @@ def init_db() -> None:
 # ── Jobs ──────────────────────────────────────────────────────────────────────
 
 def create_job(job_id: str) -> None:
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     for collection_name in ("generation_logs", "requirements", "blueprints"):
         try:
             _col(collection_name).delete(where={"job_id": job_id})
@@ -82,7 +82,7 @@ def create_job(job_id: str) -> None:
 
 def save_prompt(job_id: str, prompt: str, project_name: str) -> None:
     existing = _get_job_meta(job_id) or {}
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     _col("jobs").upsert(
         ids=[job_id],
         embeddings=_embed(1),
@@ -101,7 +101,7 @@ def save_prompt(job_id: str, prompt: str, project_name: str) -> None:
     )
 
 
-def _get_job_meta(job_id: str) -> Optional[Dict]:
+def _get_job_meta(job_id: str) -> dict | None:
     try:
         r = _col("jobs").get(ids=[job_id], include=["metadatas", "documents"])
         if r["ids"]:
@@ -113,14 +113,14 @@ def _get_job_meta(job_id: str) -> Optional[Dict]:
     return None
 
 
-def get_job(job_id: str) -> Optional[Dict[str, Any]]:
+def get_job(job_id: str) -> dict[str, Any] | None:
     meta = _get_job_meta(job_id)
     if meta:
         meta["job_id"] = job_id
     return meta
 
 
-def list_jobs(limit: int = 20) -> List[Dict[str, Any]]:
+def list_jobs(limit: int = 20) -> list[dict[str, Any]]:
     try:
         r = _col("jobs").get(include=["metadatas", "documents"])
         jobs = []
@@ -171,8 +171,8 @@ def update_job_status(
         "test_skipped":  existing.get("test_skipped", 0),
         "test_summary":  existing.get("test_summary", ""),
         "test_details":  existing.get("test_details", ""),
-        "created_at":    existing.get("created_at", datetime.now(timezone.utc).isoformat()),
-        "updated_at":    datetime.now(timezone.utc).isoformat(),
+        "created_at":    existing.get("created_at", datetime.now(UTC).isoformat()),
+        "updated_at":    datetime.now(UTC).isoformat(),
     }
     meta.update(extra)
     _col("jobs").upsert(
@@ -197,7 +197,7 @@ def save_generated_project(job_id: str, file_count: int, zip_path: str) -> None:
             "progress_pct": existing.get("progress_pct", 100),
             "file_count":   file_count,
             "zip_path":     zip_path,
-            "updated_at":   datetime.now(timezone.utc).isoformat(),
+            "updated_at":   datetime.now(UTC).isoformat(),
         }],
     )
 
@@ -221,14 +221,14 @@ def log_to_db(
                 "job_id":     job_id,
                 "agent_name": agent_name,
                 "log_level":  log_level,
-                "timestamp":  datetime.now(timezone.utc).isoformat(),
+                "timestamp":  datetime.now(UTC).isoformat(),
             }],
         )
     except Exception as exc:
         logger.warning("ChromaDB log write failed: %s", exc)
 
 
-def get_logs(job_id: str, limit: int = 200) -> List[Dict[str, Any]]:
+def get_logs(job_id: str, limit: int = 200) -> list[dict[str, Any]]:
     try:
         r = _col("generation_logs").get(
             where={"job_id": job_id},
@@ -251,16 +251,16 @@ def get_logs(job_id: str, limit: int = 200) -> List[Dict[str, Any]]:
 
 # ── Requirements & Blueprints ─────────────────────────────────────────────────
 
-def _upsert_json(collection: str, rec_id: str, job_id: str, data: Dict) -> None:
+def _upsert_json(collection: str, rec_id: str, job_id: str, data: dict) -> None:
     _col(collection).upsert(
         ids=[rec_id],
         embeddings=_embed(1),
         documents=[json.dumps(data)],
-        metadatas=[{"job_id": job_id, "updated_at": datetime.now(timezone.utc).isoformat()}],
+        metadatas=[{"job_id": job_id, "updated_at": datetime.now(UTC).isoformat()}],
     )
 
 
-def _fetch_json(collection: str, rec_id: str) -> Optional[Dict]:
+def _fetch_json(collection: str, rec_id: str) -> dict | None:
     try:
         r = _col(collection).get(ids=[rec_id], include=["documents"])
         if r["documents"]:
@@ -270,19 +270,19 @@ def _fetch_json(collection: str, rec_id: str) -> Optional[Dict]:
     return None
 
 
-def save_requirements(job_id: str, data: Dict) -> None:
+def save_requirements(job_id: str, data: dict) -> None:
     _upsert_json("requirements", f"req_{job_id}", job_id, data)
 
 
-def get_requirements(job_id: str) -> Optional[Dict]:
+def get_requirements(job_id: str) -> dict | None:
     return _fetch_json("requirements", f"req_{job_id}")
 
 
-def save_blueprint(job_id: str, data: Dict) -> None:
+def save_blueprint(job_id: str, data: dict) -> None:
     _upsert_json("blueprints", f"bp_{job_id}", job_id, data)
 
 
-def get_blueprint(job_id: str) -> Optional[Dict]:
+def get_blueprint(job_id: str) -> dict | None:
     return _fetch_json("blueprints", f"bp_{job_id}")
 
 

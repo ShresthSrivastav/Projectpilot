@@ -1,5 +1,7 @@
 """ZIP service — packages generated project into downloadable ZIP."""
-import logging, os, shutil
+import logging
+import os
+import shutil
 from pathlib import Path
 
 logger = logging.getLogger(__name__)

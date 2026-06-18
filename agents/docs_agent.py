@@ -1,7 +1,7 @@
 """Documentation Agent — generates README.md for the target project."""
 import json
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from database.chroma_db import log_to_db
 from services.file_service import write_file
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 _SYS = "You are a technical writer. Generate a clear, professional README.md in Markdown. Be concise but complete."
 
 
-def _ascii_diagram(bp: Dict) -> str:
+def _ascii_diagram(bp: dict) -> str:
     routes = bp.get("routes", [])
     tables = [t.get("name", "tbl") for t in bp.get("db_tables", [])]
     route_lines = "\n".join(
@@ -39,7 +39,7 @@ def _ascii_diagram(bp: Dict) -> str:
     )
 
 
-def _fallback(req: Dict, bp: Dict, files: List[str]) -> str:
+def _fallback(req: dict, bp: dict, files: list[str]) -> str:
     pn      = req.get("project_name", "Generated Project")
     feature_md = "\n".join(f"- {f}" for f in req.get("features", []))
     route_md   = "\n".join(
@@ -73,9 +73,9 @@ def _fallback(req: Dict, bp: Dict, files: List[str]) -> str:
 
 
 def run(
-    requirements: Dict[str, Any],
-    blueprint: Dict[str, Any],
-    generated_files: List[str],
+    requirements: dict[str, Any],
+    blueprint: dict[str, Any],
+    generated_files: list[str],
     job_id: str,
     model: str = None,
 ) -> str:

@@ -2,10 +2,10 @@
 import json
 import logging
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -20,9 +20,9 @@ class LeaderboardEntry:
     overall_score: float = 0.0
     run_count: int = 0
     last_run: str = ""
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -38,7 +38,7 @@ class LeaderboardService:
         if hasattr(self, "_initialized"):
             return
         self._initialized = True
-        self._entries: Dict[str, LeaderboardEntry] = {}
+        self._entries: dict[str, LeaderboardEntry] = {}
         self._logger = logging.getLogger("LeaderboardService")
         self._storage_dir = Path("evaluation_data")
         self._storage_dir.mkdir(parents=True, exist_ok=True)
@@ -70,7 +70,7 @@ class LeaderboardService:
         autonomy_score: float = 0.0,
         reliability_score: float = 0.0,
         cost_efficiency_score: float = 0.0,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> LeaderboardEntry:
         overall = (autonomy_score * 0.4 + reliability_score * 0.35 + cost_efficiency_score * 0.25)
 
@@ -103,7 +103,7 @@ class LeaderboardService:
         self._save_entries()
         return entry
 
-    def _find_entry(self, category: str, name: str) -> Optional[LeaderboardEntry]:
+    def _find_entry(self, category: str, name: str) -> LeaderboardEntry | None:
         for entry in self._entries.values():
             if entry.category == category and entry.name == name:
                 return entry
@@ -111,10 +111,10 @@ class LeaderboardService:
 
     def get_leaderboard(
         self,
-        category: Optional[str] = None,
+        category: str | None = None,
         sort_by: str = "overall_score",
         limit: int = 20,
-    ) -> List[LeaderboardEntry]:
+    ) -> list[LeaderboardEntry]:
         results = list(self._entries.values())
         if category:
             results = [e for e in results if e.category == category]
@@ -130,10 +130,10 @@ class LeaderboardService:
         results.sort(key=sort_fn, reverse=True)
         return results[:limit]
 
-    def get_entry(self, entry_id: str) -> Optional[LeaderboardEntry]:
+    def get_entry(self, entry_id: str) -> LeaderboardEntry | None:
         return self._entries.get(entry_id)
 
-    def get_categories(self) -> List[str]:
+    def get_categories(self) -> list[str]:
         return list(set(e.category for e in self._entries.values()))
 
     def delete_entry(self, entry_id: str) -> bool:

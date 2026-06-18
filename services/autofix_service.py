@@ -15,7 +15,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from database.chroma_db import update_job_status
 from services.file_service import BASE_DIR
@@ -33,7 +33,7 @@ def run_autofix(
     model: str = "local",
     max_attempts: int = MAX_AUTOFIX_ATTEMPTS,
     on_progress=None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     job_dir = BASE_DIR / job_id
     if not job_dir.exists():
         return {"job_id": job_id, "status": "error", "error": "Project directory not found."}
@@ -110,7 +110,7 @@ def _fix_failing_tests(
     test_output: str,
     attempt: int,
     model: str,
-) -> List[str]:
+) -> list[str]:
     source_file_map = {}
     for fp in sorted(job_dir.rglob("*.py")):
         if "__pycache__" in str(fp) or fp.parent == test_dir:

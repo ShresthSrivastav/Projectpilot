@@ -12,8 +12,8 @@ import logging
 import os
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
-from typing import Any, Dict, List
+from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
+from typing import Any
 
 from database.chroma_db import log_to_db
 from services.file_service import create_job_directory, write_file
@@ -159,7 +159,7 @@ def _gen(prompt: str, model: str, job_id: str, agent: str = "CodeAgent") -> str:
     return result
 
 
-def _stack_note(req: Dict) -> str:
+def _stack_note(req: dict) -> str:
     s = req.get("stack", {})
     return (
         f"Backend: {s.get('backend', 'fastapi')}, "
@@ -168,7 +168,7 @@ def _stack_note(req: Dict) -> str:
     )
 
 
-def _gen_backend(req: Dict, bp: Dict, model: str, job_id: str) -> str:
+def _gen_backend(req: dict, bp: dict, model: str, job_id: str) -> str:
     backend = req.get("stack", {}).get("backend", "fastapi")
     features = req.get("features", [])
 
@@ -203,7 +203,7 @@ Stack: {_stack_note(req)}""",
     )
 
 
-def _gen_frontend(req: Dict, bp: Dict, model: str, job_id: str) -> str:
+def _gen_frontend(req: dict, bp: dict, model: str, job_id: str) -> str:
     frontend = req.get("stack", {}).get("frontend", "streamlit")
 
     if frontend == "react":
@@ -249,7 +249,7 @@ Rules:
     )
 
 
-def _gen_models(req: Dict, bp: Dict, model: str, job_id: str) -> str:
+def _gen_models(req: dict, bp: dict, model: str, job_id: str) -> str:
     return _gen(
         f"""Generate SQLAlchemy ORM models (database/models.py):
 Tables: {json.dumps(bp.get('db_tables', []), indent=2)}
@@ -270,7 +270,7 @@ RULES - YOU MUST FOLLOW ALL:
     )
 
 
-def _gen_crud(req: Dict, bp: Dict, model: str, job_id: str) -> str:
+def _gen_crud(req: dict, bp: dict, model: str, job_id: str) -> str:
     return _gen(
         f"""Generate CRUD module (backend/crud.py):
 Tables: {json.dumps(bp.get('db_tables', []), indent=2)}
@@ -286,7 +286,7 @@ Rules:
     )
 
 
-def _build_reqs(req: Dict) -> List[str]:
+def _build_reqs(req: dict) -> list[str]:
     """Build requirements list from stack config."""
     backend = req.get("stack", {}).get("backend", "fastapi")
     frontend = req.get("stack", {}).get("frontend", "streamlit")
@@ -302,7 +302,7 @@ def _build_reqs(req: Dict) -> List[str]:
     return pkgs
 
 
-def _gen_requirements(req: Dict, bp: Dict, model: str, job_id: str) -> str:
+def _gen_requirements(req: dict, bp: dict, model: str, job_id: str) -> str:
     must_have = _build_reqs(req)
 
     raw = call_model(
@@ -332,26 +332,26 @@ _PARALLEL_WORKERS_CLOUD = int(os.getenv("PARALLEL_WORKERS_CLOUD", "5"))
 _SERIAL_FALLBACK = os.getenv("SERIAL_FALLBACK", "true").lower() in ("true", "1", "yes")
 
 
-def _pick_model(preset: str, requirements: Dict, blueprint: Dict) -> str:
+def _pick_model(preset: str, requirements: dict, blueprint: dict) -> str:
     if preset == "cloud" and is_cloud_available():
         return "cloud"
     return preset or "local"
 
 
 def run(
-    requirements: Dict[str, Any],
-    blueprint: Dict[str, Any],
+    requirements: dict[str, Any],
+    blueprint: dict[str, Any],
     job_id: str,
     model: str = None,
-) -> List[str]:
+) -> list[str]:
     effective_model = _pick_model(model or "local", requirements, blueprint)
     log_to_db(job_id, "CodeAgent",
               f"Starting code generation (model={effective_model}, original={model or 'local'}).")
     create_job_directory(job_id)
 
-    generated: List[str] = []
+    generated: list[str] = []
     _lock = threading.Lock()
-    _failed: List[str] = []
+    _failed: list[str] = []
 
     def _write(path: str, content: str) -> None:
         content = content or ""
@@ -402,7 +402,7 @@ def run(
                     _failed.append(path)
 
     # ── Helper: retry a single file with a given model ───────────────────────
-    def _retry_fn(path: str, req: Dict, bp: Dict, mdl: str, jid: str):
+    def _retry_fn(path: str, req: dict, bp: dict, mdl: str, jid: str):
         mapping = {
             "backend/main.py":    lambda: _gen_backend(req, bp, mdl, jid),
             "database/models.py": lambda: _gen_models(req, bp, mdl, jid),
@@ -417,7 +417,7 @@ def run(
 
     # ── Emergency fallback templates ─────────────────────────────────────────
     _fallback_reqs = "\n".join(f"{p}==0.0.0" for p in _build_reqs(requirements)) + "\n"
-    _FALLBACK_TEMPLATES: Dict[str, str] = {
+    _FALLBACK_TEMPLATES: dict[str, str] = {
         "backend/main.py":    _FALLBACK_BACKEND,
         "database/models.py": _FALLBACK_MODELS,
         "backend/crud.py":    _FALLBACK_CRUD,

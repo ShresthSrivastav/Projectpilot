@@ -2,9 +2,9 @@
 import json
 import logging
 import re
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from services.llm_service import call_model
 
@@ -34,16 +34,16 @@ class AnalysisResult:
     root_cause: str = ""
     suggested_fix: str = ""
     category: str = ""
-    line_number: Optional[int] = None
-    file_path: Optional[str] = None
+    line_number: int | None = None
+    file_path: str | None = None
     raw_match: str = ""
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return asdict(self)
 
 
 # Regex patterns for error classification
-ERROR_PATTERNS: Dict[ErrorCategory, List[Dict]] = {
+ERROR_PATTERNS: dict[ErrorCategory, list[dict]] = {
     ErrorCategory.SYNTAX_ERROR: [
         {"pattern": r"SyntaxError:.*", "confidence": 0.95},
         {"pattern": r"IndentationError:.*", "confidence": 0.95},
@@ -124,7 +124,7 @@ ERROR_PATTERNS: Dict[ErrorCategory, List[Dict]] = {
 
 class LogAnalyzer:
     def __init__(self):
-        self.analysis_history: List[AnalysisResult] = []
+        self.analysis_history: list[AnalysisResult] = []
         self._lock = logging.getLogger(__name__)
 
     def analyze(self, log_text: str, use_llm: bool = False) -> AnalysisResult:
@@ -174,10 +174,10 @@ class LogAnalyzer:
             ErrorCategory.TEST_FAILURE: f"Test assertion or runtime failure: {match.group(0)}",
             ErrorCategory.DEPLOYMENT_FAILURE: f"Deployment pipeline failure: {match.group(0)}",
             ErrorCategory.RUNTIME_CRASH: f"Application runtime crash: {match.group(0)}",
-            ErrorCategory.PORT_CONFLICT: f"Port already in use by another process",
-            ErrorCategory.TIMEOUT: f"Operation exceeded timeout threshold",
-            ErrorCategory.MEMORY_ERROR: f"Application exhausted available memory",
-            ErrorCategory.PERMISSION_ERROR: f"Insufficient permissions for operation",
+            ErrorCategory.PORT_CONFLICT: "Port already in use by another process",
+            ErrorCategory.TIMEOUT: "Operation exceeded timeout threshold",
+            ErrorCategory.MEMORY_ERROR: "Application exhausted available memory",
+            ErrorCategory.PERMISSION_ERROR: "Insufficient permissions for operation",
             ErrorCategory.UNKNOWN: f"Unclassified error: {match.group(0)}",
         }
         return causes.get(category, f"Error detected: {match.group(0)}")
@@ -200,7 +200,7 @@ class LogAnalyzer:
         }
         return fixes.get(category, "Review logs for more details.")
 
-    def _find_line_number(self, log_text: str, char_pos: int) -> Optional[int]:
+    def _find_line_number(self, log_text: str, char_pos: int) -> int | None:
         lines = log_text.splitlines()
         cumulative = 0
         for i, line in enumerate(lines):
@@ -209,7 +209,7 @@ class LogAnalyzer:
                 return i + 1
         return None
 
-    def _find_file_path(self, log_text: str, char_pos: int) -> Optional[str]:
+    def _find_file_path(self, log_text: str, char_pos: int) -> str | None:
         file_patterns = [
             r'File "([^"]+)"',
             r'in ([a-zA-Z_][\w./]*)\.py',
@@ -249,7 +249,7 @@ Output JSON:
             logger.warning("LLM analysis failed: %s", exc)
             return AnalysisResult(error_type="unknown", confidence=0.0, root_cause="LLM analysis unavailable")
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         if not self.analysis_history:
             return {"total": 0, "categories": {}}
         categories = {}

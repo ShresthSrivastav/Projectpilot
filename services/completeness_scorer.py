@@ -13,7 +13,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from services.file_service import BASE_DIR, write_file
 from services.import_validator import validate as validate_imports
@@ -32,7 +32,7 @@ WEIGHTS = {
 }
 
 
-def score_project(job_id: str, gate_results: Optional[Dict] = None) -> Dict[str, Any]:
+def score_project(job_id: str, gate_results: dict | None = None) -> dict[str, Any]:
     """Score a generated project on all 6 completeness dimensions."""
     job_dir = (BASE_DIR / job_id).resolve()
     if not job_dir.exists():
@@ -53,7 +53,7 @@ def score_project(job_id: str, gate_results: Optional[Dict] = None) -> Dict[str,
     return {"overall": round(overall, 1), "dimensions": dims}
 
 
-def _score_architecture(job_dir: Path) -> Dict:
+def _score_architecture(job_dir: Path) -> dict:
     """Architecture: proper package structure, separation of concerns, imports resolve."""
     score = 0
     details = []
@@ -87,7 +87,7 @@ def _score_architecture(job_dir: Path) -> Dict:
     return {"score": score, "details": details}
 
 
-def _score_features(job_dir: Path, gate_results: Optional[Dict]) -> Dict:
+def _score_features(job_dir: Path, gate_results: dict | None) -> dict:
     """Features: import validation, security gate, packaging gate results."""
     score = 0
     details = []
@@ -110,7 +110,7 @@ def _score_features(job_dir: Path, gate_results: Optional[Dict]) -> Dict:
     return {"score": score, "details": details}
 
 
-def _score_tests(job_dir: Path, gate_results: Optional[Dict]) -> Dict:
+def _score_tests(job_dir: Path, gate_results: dict | None) -> dict:
     """Test coverage: tests exist, pass, cover real project."""
     score = 0
     details = []
@@ -146,7 +146,7 @@ def _score_tests(job_dir: Path, gate_results: Optional[Dict]) -> Dict:
     return {"score": min(100, score), "details": details}
 
 
-def _score_runtime(job_dir: Path, gate_results: Optional[Dict]) -> Dict:
+def _score_runtime(job_dir: Path, gate_results: dict | None) -> dict:
     """Runtime: app starts, health endpoint responds."""
     runtime_gate = (gate_results or {}).get("runtime_validation", {})
     if runtime_gate.get("passed"):
@@ -160,7 +160,7 @@ def _score_runtime(job_dir: Path, gate_results: Optional[Dict]) -> Dict:
     return {"score": 0, "details": ["No entry point found"]}
 
 
-def _score_docs(job_dir: Path) -> Dict:
+def _score_docs(job_dir: Path) -> dict:
     """Documentation: README, API docs, inline docstrings, project-level docs."""
     score = 0
     details = []
@@ -184,7 +184,7 @@ def _score_docs(job_dir: Path) -> Dict:
     return {"score": min(100, score), "details": details}
 
 
-def _score_deployment(job_dir: Path) -> Dict:
+def _score_deployment(job_dir: Path) -> dict:
     """Deployment: Dockerfile, start.sh, requirements.txt."""
     score = 0
     details = []
@@ -206,7 +206,7 @@ def _score_deployment(job_dir: Path) -> Dict:
     return {"score": score, "details": details}
 
 
-def _build_report(job_id: str, overall: float, dims: Dict[str, Dict]) -> str:
+def _build_report(job_id: str, overall: float, dims: dict[str, dict]) -> str:
     now = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
     lines = [
         "# Project Completeness Report",

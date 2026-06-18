@@ -7,6 +7,7 @@
 
 from sdk.plugin_sdk.base_plugin import BasePlugin, PluginManifest
 
+
 class TestPlugin(BasePlugin):
     def __init__(self, config=None):
         super().__init__(config)

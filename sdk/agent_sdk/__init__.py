@@ -1,3 +1,3 @@
-from sdk.agent_sdk.base_agent import BaseAgent, AgentCapability, AgentLifecycleHook
+from sdk.agent_sdk.base_agent import AgentCapability, AgentLifecycleHook, BaseAgent
 
 __all__ = ["BaseAgent", "AgentCapability", "AgentLifecycleHook"]

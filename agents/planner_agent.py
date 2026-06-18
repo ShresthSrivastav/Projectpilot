@@ -3,7 +3,7 @@ import json
 import logging
 import re
 import time
-from typing import Any, Dict
+from typing import Any
 
 from database.chroma_db import log_to_db, save_blueprint
 from services.llm_service import call_model
@@ -24,7 +24,7 @@ Required shape:
 }"""
 
 
-def _parse_json(text: str) -> Dict[str, Any]:
+def _parse_json(text: str) -> dict[str, Any]:
     for fn in [
         lambda t: json.loads(t),
         lambda t: json.loads(re.search(r"```(?:json)?\s*(\{.*?\})\s*```", t, re.DOTALL).group(1)),
@@ -37,7 +37,7 @@ def _parse_json(text: str) -> Dict[str, Any]:
     raise ValueError(f"Cannot extract JSON: {text[:300]}")
 
 
-def _default(req: Dict) -> Dict:
+def _default(req: dict) -> dict:
     pt = req.get("project_type", "crud_dashboard")
     tables = ["users"]
     if "student"    in pt: tables.append("students")
@@ -99,7 +99,7 @@ def _default(req: Dict) -> Dict:
     }
 
 
-def run(requirements: Dict[str, Any], job_id: str, model: str = None) -> Dict[str, Any]:
+def run(requirements: dict[str, Any], job_id: str, model: str = None) -> dict[str, Any]:
     log_to_db(job_id, "PlannerAgent", "Starting architecture planning.")
 
     prompt = (
@@ -107,7 +107,7 @@ def run(requirements: Dict[str, Any], job_id: str, model: str = None) -> Dict[st
         "Create a complete implementation blueprint. "
         "List every file, all REST routes, all DB tables with columns, all pip dependencies."
     )
-    blueprint: Dict = {}
+    blueprint: dict = {}
     t0 = time.monotonic()
     try:
         blueprint = _parse_json(call_model(prompt, system_prompt=_SYSTEM, model=model or "local"))

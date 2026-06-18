@@ -3,9 +3,9 @@ import json
 import logging
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from database.memory_store import get_project_analytics, get_analytics_summary
+from database.memory_store import get_analytics_summary, get_project_analytics
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class AgentTimer:
     """Context manager to time agent execution and record analytics."""
 
-    def __init__(self, agent_name: str, job_id: str, metadata: Optional[Dict] = None):
+    def __init__(self, agent_name: str, job_id: str, metadata: dict | None = None):
         self.agent_name = agent_name
         self.job_id = job_id
         self.metadata = metadata or {}
@@ -39,7 +39,7 @@ class AgentTimer:
         return False
 
 
-def get_project_stats(job_id: str) -> Dict[str, Any]:
+def get_project_stats(job_id: str) -> dict[str, Any]:
     all_projects = get_project_analytics(limit=200)
     for p in all_projects:
         if p.get("job_id") == job_id:
@@ -47,11 +47,11 @@ def get_project_stats(job_id: str) -> Dict[str, Any]:
     return {}
 
 
-def get_overview() -> Dict[str, Any]:
+def get_overview() -> dict[str, Any]:
     return get_analytics_summary()
 
 
-def get_agent_leaderboard(limit: int = 10) -> List[Dict[str, Any]]:
+def get_agent_leaderboard(limit: int = 10) -> list[dict[str, Any]]:
     all_projects = get_project_analytics(limit=200)
     if not all_projects:
         return []

@@ -15,7 +15,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ ALLOWED_DOMAINS = os.getenv("BROWSER_ALLOWED_DOMAINS", "").split(",") if os.gete
 BLOCKED_DOMAINS = os.getenv("BROWSER_BLOCKED_DOMAINS", "localhost:11434,169.254.0.0/16").split(",")
 
 try:
-    from playwright.sync_api import sync_playwright, Page, Browser, BrowserContext
+    from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
@@ -41,11 +41,11 @@ class BrowserSession:
     context: Any = None
     page: Any = None
     created_at: str = ""
-    actions: List[Dict] = field(default_factory=list)
+    actions: list[dict] = field(default_factory=list)
     current_url: str = ""
 
 
-_sessions: Dict[str, BrowserSession] = {}
+_sessions: dict[str, BrowserSession] = {}
 _playwright_instance = None
 
 
@@ -109,24 +109,24 @@ def close_session(session_id: str) -> bool:
     return False
 
 
-def get_session(session_id: str) -> Optional[BrowserSession]:
+def get_session(session_id: str) -> BrowserSession | None:
     return _sessions.get(session_id)
 
 
-def list_sessions() -> List[Dict]:
+def list_sessions() -> list[dict]:
     return [
         {"session_id": s.session_id, "created_at": s.created_at, "current_url": s.current_url, "actions": len(s.actions)}
         for s in _sessions.values()
     ]
 
 
-def _log_action(session: BrowserSession, action: str, details: Dict):
+def _log_action(session: BrowserSession, action: str, details: dict):
     entry = {"action": action, "timestamp": datetime.utcnow().isoformat(), "url": session.current_url, **details}
     session.actions.append(entry)
     logger.info("Browser action [%s]: %s %s", session.session_id[:8], action, json.dumps(details)[:200])
 
 
-def navigate(session_id: str, url: str, timeout: Optional[int] = None) -> Dict:
+def navigate(session_id: str, url: str, timeout: int | None = None) -> dict:
     session = _get_valid_session(session_id)
     url = _validate_url(url)
     t = timeout or BROWSER_TIMEOUT
@@ -137,7 +137,7 @@ def navigate(session_id: str, url: str, timeout: Optional[int] = None) -> Dict:
     return {"url": session.current_url, "status": status, "title": session.page.title()}
 
 
-def click(session_id: str, selector: str, timeout: Optional[int] = None) -> Dict:
+def click(session_id: str, selector: str, timeout: int | None = None) -> dict:
     session = _get_valid_session(session_id)
     t = timeout or BROWSER_TIMEOUT
     session.page.wait_for_selector(selector, timeout=t)
@@ -146,7 +146,7 @@ def click(session_id: str, selector: str, timeout: Optional[int] = None) -> Dict
     return {"selector": selector, "url": session.page.url}
 
 
-def fill(session_id: str, selector: str, value: str, timeout: Optional[int] = None) -> Dict:
+def fill(session_id: str, selector: str, value: str, timeout: int | None = None) -> dict:
     session = _get_valid_session(session_id)
     t = timeout or BROWSER_TIMEOUT
     session.page.wait_for_selector(selector, timeout=t)
@@ -155,7 +155,7 @@ def fill(session_id: str, selector: str, value: str, timeout: Optional[int] = No
     return {"selector": selector, "filled": True}
 
 
-def select_option(session_id: str, selector: str, value: str) -> Dict:
+def select_option(session_id: str, selector: str, value: str) -> dict:
     session = _get_valid_session(session_id)
     session.page.wait_for_selector(selector, timeout=BROWSER_TIMEOUT)
     session.page.select_option(selector, value)
@@ -163,7 +163,7 @@ def select_option(session_id: str, selector: str, value: str) -> Dict:
     return {"selector": selector, "value": value}
 
 
-def upload_file(session_id: str, selector: str, file_path: str) -> Dict:
+def upload_file(session_id: str, selector: str, file_path: str) -> dict:
     session = _get_valid_session(session_id)
     full_path = Path(file_path)
     if not full_path.exists():
@@ -174,7 +174,7 @@ def upload_file(session_id: str, selector: str, file_path: str) -> Dict:
     return {"selector": selector, "file": file_path, "uploaded": True}
 
 
-def screenshot(session_id: str, full_page: bool = True) -> Dict:
+def screenshot(session_id: str, full_page: bool = True) -> dict:
     session = _get_valid_session(session_id)
     SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
     filename = f"{session_id}_{uuid.uuid4().hex[:8]}.png"
@@ -184,7 +184,7 @@ def screenshot(session_id: str, full_page: bool = True) -> Dict:
     return {"file": filename, "path": str(filepath), "size_bytes": filepath.stat().st_size if filepath.exists() else 0}
 
 
-def get_content(session_id: str) -> Dict:
+def get_content(session_id: str) -> dict:
     session = _get_valid_session(session_id)
     content = session.page.content()
     text = session.page.inner_text("body")
@@ -192,14 +192,14 @@ def get_content(session_id: str) -> Dict:
     return {"html_length": len(content), "text_preview": text[:5000], "title": session.page.title()}
 
 
-def evaluate(session_id: str, script: str) -> Dict:
+def evaluate(session_id: str, script: str) -> dict:
     session = _get_valid_session(session_id)
     result = session.page.evaluate(script)
     _log_action(session, "evaluate", {"script": script[:100]})
     return {"result": str(result)[:5000]}
 
 
-def wait_for_selector(session_id: str, selector: str, timeout: Optional[int] = None, state: str = "visible") -> Dict:
+def wait_for_selector(session_id: str, selector: str, timeout: int | None = None, state: str = "visible") -> dict:
     session = _get_valid_session(session_id)
     t = timeout or BROWSER_TIMEOUT
     session.page.wait_for_selector(selector, timeout=t, state=state)
@@ -207,7 +207,7 @@ def wait_for_selector(session_id: str, selector: str, timeout: Optional[int] = N
     return {"selector": selector, "found": True}
 
 
-def run_test(session_id: str, test_script: str) -> Dict:
+def run_test(session_id: str, test_script: str) -> dict:
     session = _get_valid_session(session_id)
     steps = []
     passed = True
@@ -234,7 +234,7 @@ def run_test(session_id: str, test_script: str) -> Dict:
     return {"passed": passed, "steps": steps, "error": error, "total_steps": len(steps)}
 
 
-def _execute_test_step(session: BrowserSession, action: str, args: List[str]) -> Dict:
+def _execute_test_step(session: BrowserSession, action: str, args: list[str]) -> dict:
     try:
         if action == "navigate" and args:
             return {"status": "ok", "url": session.page.url}
@@ -268,7 +268,7 @@ def _execute_test_step(session: BrowserSession, action: str, args: List[str]) ->
         return {"status": "error", "error": str(exc)}
 
 
-def get_action_log(session_id: str) -> List[Dict]:
+def get_action_log(session_id: str) -> list[dict]:
     session = _get_valid_session(session_id)
     return session.actions
 

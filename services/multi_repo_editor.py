@@ -4,9 +4,9 @@ import subprocess
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from services.org_graph_service import OrganizationGraph
 
@@ -28,7 +28,7 @@ class RepoChange:
     repo_name: str = ""
     repo_path: str = ""
     branch: str = ""
-    files: Dict[str, str] = field(default_factory=dict)
+    files: dict[str, str] = field(default_factory=dict)
     commit_message: str = ""
     status: str = ChangeStatus.PENDING
     pr_url: str = ""
@@ -41,12 +41,12 @@ class CoordinatedChange:
     org_id: str = ""
     description: str = ""
     branch_name: str = ""
-    changes: Dict[str, RepoChange] = field(default_factory=dict)
+    changes: dict[str, RepoChange] = field(default_factory=dict)
     status: str = ChangeStatus.PENDING
     created_at: float = field(default_factory=time.time)
-    completed_at: Optional[float] = None
+    completed_at: float | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "org_id": self.org_id,
@@ -63,11 +63,11 @@ class MultiRepoEditor:
     def __init__(self, graph: OrganizationGraph):
         self.graph = graph
         self._lock = threading.Lock()
-        self._coordinated_changes: Dict[str, CoordinatedChange] = {}
+        self._coordinated_changes: dict[str, CoordinatedChange] = {}
 
     def plan_change(
         self, org_id: str, description: str,
-        repos: Dict[str, Dict[str, str]],
+        repos: dict[str, dict[str, str]],
     ) -> CoordinatedChange:
         branch_name = f"auto-change-{uuid.uuid4().hex[:8]}"
         cc = CoordinatedChange(
@@ -139,7 +139,7 @@ class MultiRepoEditor:
 
     def create_prs(
         self, change_id: str, github_token: str = "",
-        repo_full_names: Optional[Dict[str, str]] = None,
+        repo_full_names: dict[str, str] | None = None,
     ) -> CoordinatedChange:
         cc = self._get_change(change_id)
         if not cc:
@@ -190,16 +190,16 @@ class MultiRepoEditor:
         cc.status = ChangeStatus.PR_CREATED if has_prs else cc.status
         return cc
 
-    def get_status(self, change_id: str) -> Optional[CoordinatedChange]:
+    def get_status(self, change_id: str) -> CoordinatedChange | None:
         return self._get_change(change_id)
 
-    def list_changes(self, org_id: str) -> List[Dict]:
+    def list_changes(self, org_id: str) -> list[dict]:
         return [
             cc.to_dict() for cc in self._coordinated_changes.values()
             if cc.org_id == org_id
         ]
 
-    def _get_change(self, change_id: str) -> Optional[CoordinatedChange]:
+    def _get_change(self, change_id: str) -> CoordinatedChange | None:
         with self._lock:
             return self._coordinated_changes.get(change_id)
 
@@ -241,11 +241,11 @@ class MultiRepoEditor:
             )
 
 
-_multi_repo_editors: Dict[str, MultiRepoEditor] = {}
+_multi_repo_editors: dict[str, MultiRepoEditor] = {}
 _editor_lock = threading.Lock()
 
 
-def get_multi_repo_editor(graph: Optional[OrganizationGraph] = None) -> MultiRepoEditor:
+def get_multi_repo_editor(graph: OrganizationGraph | None = None) -> MultiRepoEditor:
     key = id(graph) if graph else "default"
     with _editor_lock:
         if key not in _multi_repo_editors:

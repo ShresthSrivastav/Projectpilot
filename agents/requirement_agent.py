@@ -8,7 +8,7 @@ New in v4:
 import json
 import logging
 import re
-from typing import Any, Dict, Optional
+from typing import Any
 
 from database.chroma_db import log_to_db, save_requirements
 from services.llm_service import call_model
@@ -60,7 +60,7 @@ def _validate(prompt: str) -> None:
             )
 
 
-def _parse_json(text: str) -> Dict[str, Any]:
+def _parse_json(text: str) -> dict[str, Any]:
     for fn in [
         lambda t: json.loads(t),
         lambda t: json.loads(re.search(r"```(?:json)?\s*(\{.*?\})\s*```", t, re.DOTALL).group(1)),
@@ -73,7 +73,7 @@ def _parse_json(text: str) -> Dict[str, Any]:
     raise ValueError(f"Could not extract JSON from model output: {text[:300]}")
 
 
-def clarify(prompt: str, model: str = None) -> Optional[str]:
+def clarify(prompt: str, model: str = None) -> str | None:
     """
     Returns one clarifying question if the prompt is ambiguous, else None.
     Designed to be called BEFORE run_pipeline — the answer is appended to the prompt.
@@ -96,8 +96,8 @@ def run(
     project_name: str,
     job_id: str,
     model: str = None,
-    stack: Optional[Dict[str, str]] = None,
-) -> Dict[str, Any]:
+    stack: dict[str, str] | None = None,
+) -> dict[str, Any]:
     log_to_db(job_id, "RequirementAgent", f"Analysing prompt ({len(prompt)} chars).")
     _validate(prompt)
 

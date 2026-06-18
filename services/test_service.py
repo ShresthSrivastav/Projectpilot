@@ -1,12 +1,16 @@
 """Test service — syntax validation and pytest runner."""
-import logging, os, py_compile, subprocess, re
+import logging
+import os
+import py_compile
+import re
+import subprocess
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 logger = logging.getLogger(__name__)
 BASE_DIR = Path(os.getenv("GENERATED_PROJECTS_DIR", "./generated_projects"))
 
-def run_syntax_check(file_path: Path) -> Dict[str, Any]:
+def run_syntax_check(file_path: Path) -> dict[str, Any]:
     try:
         py_compile.compile(str(file_path), doraise=True)
         return {"valid": True, "error": None}
@@ -15,7 +19,7 @@ def run_syntax_check(file_path: Path) -> Dict[str, Any]:
     except Exception as exc:
         return {"valid": False, "error": f"Unexpected: {exc}"}
 
-def run_pytest(job_id: str) -> Dict[str, Any]:
+def run_pytest(job_id: str) -> dict[str, Any]:
     project_dir = (BASE_DIR / job_id).resolve()
     if not project_dir.exists():
         return {"passed": False, "output": "Test dir not found", "failures": [], "collected": 0}
@@ -47,7 +51,7 @@ def _parse_collected(output: str) -> int:
         return -1  # signal: import/collection error
     return 0
 
-def parse_traceback(output: str) -> List[Dict[str, Any]]:
+def parse_traceback(output: str) -> list[dict[str, Any]]:
     failures = []
     for m in re.finditer(r"FAILED (.+?) - (.+)", output):
         failures.append({"file": m.group(1).strip(), "line": 0, "error": m.group(2).strip()})

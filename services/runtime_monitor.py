@@ -5,9 +5,9 @@ import statistics
 import threading
 import time
 from collections import defaultdict
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class MetricPoint:
     restart_count: int = 0
     uptime: float = 0.0
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return asdict(self)
 
 
@@ -44,10 +44,10 @@ class Anomaly:
 
 class RuntimeMonitor:
     def __init__(self):
-        self.metrics: Dict[str, List[MetricPoint]] = defaultdict(list)
-        self.anomalies: List[Anomaly] = []
+        self.metrics: dict[str, list[MetricPoint]] = defaultdict(list)
+        self.anomalies: list[Anomaly] = []
         self._lock = threading.Lock()
-        self._collectors: Dict[str, threading.Thread] = {}
+        self._collectors: dict[str, threading.Thread] = {}
         self._running = False
         MONITOR_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -103,14 +103,14 @@ class RuntimeMonitor:
             logger.debug("Metrics collection error: %s", exc)
         return point
 
-    def get_metrics(self, runtime_id: str, since: Optional[float] = None, limit: int = 100) -> List[Dict]:
+    def get_metrics(self, runtime_id: str, since: float | None = None, limit: int = 100) -> list[dict]:
         with self._lock:
             points = list(self.metrics.get(runtime_id, []))
         if since:
             points = [p for p in points if p.timestamp >= since]
         return [p.to_dict() for p in points[-limit:]]
 
-    def get_aggregate(self, runtime_id: str) -> Dict[str, Any]:
+    def get_aggregate(self, runtime_id: str) -> dict[str, Any]:
         points = self.metrics.get(runtime_id, [])
         if not points:
             return {}
@@ -127,7 +127,7 @@ class RuntimeMonitor:
             "uptime_seconds": points[-1].uptime if points else 0,
         }
 
-    def get_trend(self, runtime_id: str, window: int = 10) -> Dict[str, float]:
+    def get_trend(self, runtime_id: str, window: int = 10) -> dict[str, float]:
         points = self.metrics.get(runtime_id, [])
         if len(points) < window:
             return {"trend": "insufficient_data", "slope": 0.0}
@@ -166,10 +166,10 @@ class RuntimeMonitor:
                 severity="warning",
             ))
 
-    def get_anomalies(self, runtime_id: Optional[str] = None, limit: int = 50) -> List[Dict]:
+    def get_anomalies(self, runtime_id: str | None = None, limit: int = 50) -> list[dict]:
         return [asdict(a) for a in self.anomalies[-limit:]]
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         total_points = sum(len(pts) for pts in self.metrics.values())
         return {
             "active_runtimes": len(self._collectors),

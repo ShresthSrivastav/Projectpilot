@@ -5,9 +5,10 @@ import os
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from collections.abc import Callable
+from dataclasses import asdict, dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 from services.llm_service import call_model
 
@@ -40,12 +41,12 @@ class SolverResult:
     confidence: float = 0.0
     score: float = 0.0
     duration_ms: float = 0.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class DebateConfig:
-    solvers: List[str] = field(default_factory=lambda: ["cloud", "cloud", "cloud"])
+    solvers: list[str] = field(default_factory=lambda: ["cloud", "cloud", "cloud"])
     independent_rounds: int = 1
     discussion_rounds: int = 2
     consensus_method: ConsensusMethod = ConsensusMethod.WEIGHTED
@@ -61,17 +62,17 @@ class DebateSession:
     topic: str = ""
     config: DebateConfig = field(default_factory=DebateConfig)
     round: DebateRound = DebateRound.INDEPENDENT
-    results: List[SolverResult] = field(default_factory=list)
-    final_solution: Optional[str] = None
+    results: list[SolverResult] = field(default_factory=list)
+    final_solution: str | None = None
     consensus_score: float = 0.0
     arbitration_reasoning: str = ""
     created_at: float = field(default_factory=time.time)
-    completed_at: Optional[float] = None
+    completed_at: float | None = None
     status: str = "pending"
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    discussion_history: List[Dict] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+    discussion_history: list[dict] = field(default_factory=list)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "id": self.id,
             "topic": self.topic[:100],
@@ -90,9 +91,9 @@ class DebateSession:
 
 class DebateSystem:
     def __init__(self):
-        self.sessions: Dict[str, DebateSession] = {}
+        self.sessions: dict[str, DebateSession] = {}
         self._lock = threading.Lock()
-        self._solvers: Dict[str, Callable] = {}
+        self._solvers: dict[str, Callable] = {}
         self._register_default_solvers()
 
     def _register_default_solvers(self) -> None:
@@ -102,21 +103,21 @@ class DebateSystem:
     def register_solver(self, name: str, solver_fn: Callable) -> None:
         self._solvers[name] = solver_fn
 
-    def _local_solver(self, topic: str, context: str = "", job_id: str = "") -> Tuple[str, str, float]:
+    def _local_solver(self, topic: str, context: str = "", job_id: str = "") -> tuple[str, str, float]:
         result = call_model(
             f"Solve this programming task:\n\n{topic}\n\nContext:\n{context}\n\nProvide a complete solution.",
             model="local", job_id=job_id or None, agent="DebateSolver_local",
         )
         return result, "Using Ollama with local model for independent solution.", 0.7
 
-    def _cloud_solver(self, topic: str, context: str = "", job_id: str = "") -> Tuple[str, str, float]:
+    def _cloud_solver(self, topic: str, context: str = "", job_id: str = "") -> tuple[str, str, float]:
         result = call_model(
             f"Solve this programming task:\n\n{topic}\n\nContext:\n{context}\n\nProvide a comprehensive production-grade solution.",
             model="cloud", job_id=job_id or None, agent="DebateSolver_cloud",
         )
         return result, "Using Google Gemini for independent solution.", 0.8
 
-    def start_debate(self, topic: str, config: Optional[DebateConfig] = None,
+    def start_debate(self, topic: str, config: DebateConfig | None = None,
                      context: str = "", job_id: str = "") -> DebateSession:
         config = config or DebateConfig()
         session = DebateSession(topic=topic, config=config)
@@ -212,7 +213,7 @@ class DebateSystem:
             "Then recommend the best solution or a hybrid approach."
         )
 
-    def _reach_consensus(self, session: DebateSession) -> Tuple[str, float]:
+    def _reach_consensus(self, session: DebateSession) -> tuple[str, float]:
         valid = [r for r in session.results if r.solution and len(r.solution) > 50]
         if not valid:
             return "No valid solutions found.", 0.0
@@ -226,11 +227,11 @@ class DebateSystem:
         else:
             return self._weighted_consensus(valid)
 
-    def _majority_consensus(self, results: List[SolverResult]) -> Tuple[str, float]:
+    def _majority_consensus(self, results: list[SolverResult]) -> tuple[str, float]:
         best = max(results, key=lambda r: r.confidence)
         return best.solution, best.confidence
 
-    def _weighted_consensus(self, results: List[SolverResult]) -> Tuple[str, float]:
+    def _weighted_consensus(self, results: list[SolverResult]) -> tuple[str, float]:
         valid = [r for r in results if r.confidence > 0.3]
         if not valid:
             valid = results
@@ -241,7 +242,7 @@ class DebateSystem:
         avg_confidence = total_weight / len(valid)
         return best.solution, round(avg_confidence, 3)
 
-    def _arbiter_consensus(self, session: DebateSession, results: List[SolverResult]) -> Tuple[str, float]:
+    def _arbiter_consensus(self, session: DebateSession, results: list[SolverResult]) -> tuple[str, float]:
         solutions_json = json.dumps([{"solver": r.solver_name, "solution": r.solution[:3000], "confidence": r.confidence} for r in results])
         prompt = (
             f"Debate topic: {session.topic}\n\n"
@@ -273,7 +274,7 @@ class DebateSystem:
         best = max(results, key=lambda r: r.confidence)
         return best.solution, best.confidence
 
-    def _find_common_patterns(self, results: List[SolverResult]) -> Dict[str, int]:
+    def _find_common_patterns(self, results: list[SolverResult]) -> dict[str, int]:
         patterns = {}
         for r in results:
             words = set(r.solution.lower().split())
@@ -281,14 +282,14 @@ class DebateSystem:
                 patterns[w] = patterns.get(w, 0) + 1
         return {k: v for k, v in sorted(patterns.items(), key=lambda x: -x[1])[:20]}
 
-    def get_session(self, session_id: str) -> Optional[DebateSession]:
+    def get_session(self, session_id: str) -> DebateSession | None:
         return self.sessions.get(session_id)
 
-    def list_sessions(self, limit: int = 20) -> List[Dict]:
+    def list_sessions(self, limit: int = 20) -> list[dict]:
         sessions = sorted(self.sessions.values(), key=lambda s: s.created_at, reverse=True)
         return [s.to_dict() for s in sessions[:limit]]
 
-    def evaluate_quality(self, session_id: str) -> Dict[str, Any]:
+    def evaluate_quality(self, session_id: str) -> dict[str, Any]:
         session = self.sessions.get(session_id)
         if not session:
             return {"error": "Session not found"}

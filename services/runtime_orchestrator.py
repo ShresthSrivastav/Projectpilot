@@ -5,10 +5,10 @@ import os
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -34,14 +34,14 @@ class RuntimeType(Enum):
 class ExecutionEnvironment:
     runtime_type: RuntimeType = RuntimeType.SUBPROCESS
     image: str = "python:3.11-slim"
-    command: List[str] = field(default_factory=list)
+    command: list[str] = field(default_factory=list)
     working_dir: str = ""
-    env_vars: Dict[str, str] = field(default_factory=dict)
-    port_mappings: Dict[int, int] = field(default_factory=dict)
+    env_vars: dict[str, str] = field(default_factory=dict)
+    port_mappings: dict[int, int] = field(default_factory=dict)
     memory_limit: str = "256m"
     cpu_limit: float = 0.5
     network_enabled: bool = True
-    volumes: List[str] = field(default_factory=list)
+    volumes: list[str] = field(default_factory=list)
     timeout: int = 300
 
 
@@ -53,17 +53,17 @@ class RuntimeSession:
     status: RuntimeStatus = RuntimeStatus.CREATED
     runtime_type: RuntimeType = RuntimeType.SUBPROCESS
     environment: ExecutionEnvironment = field(default_factory=ExecutionEnvironment)
-    container_id: Optional[str] = None
-    pid: Optional[int] = None
-    port: Optional[int] = None
+    container_id: str | None = None
+    pid: int | None = None
+    port: int | None = None
     host: str = "localhost"
-    started_at: Optional[float] = None
-    stopped_at: Optional[float] = None
-    error: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    checkpoint_path: Optional[str] = None
+    started_at: float | None = None
+    stopped_at: float | None = None
+    error: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    checkpoint_path: str | None = None
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         d = asdict(self)
         d["status"] = self.status.value
         d["runtime_type"] = self.runtime_type.value
@@ -72,9 +72,9 @@ class RuntimeSession:
 
 class RuntimeOrchestrator:
     def __init__(self):
-        self.sessions: Dict[str, RuntimeSession] = {}
+        self.sessions: dict[str, RuntimeSession] = {}
         self._lock = threading.Lock()
-        self._monitors: Dict[str, threading.Thread] = {}
+        self._monitors: dict[str, threading.Thread] = {}
         self._running = False
         RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
         self._start_health_monitor()
@@ -96,7 +96,7 @@ class RuntimeOrchestrator:
         t = threading.Thread(target=_monitor, daemon=True)
         t.start()
 
-    def create_runtime(self, job_id: str, name: str = "", env: Optional[ExecutionEnvironment] = None) -> RuntimeSession:
+    def create_runtime(self, job_id: str, name: str = "", env: ExecutionEnvironment | None = None) -> RuntimeSession:
         env = env or ExecutionEnvironment()
         session = RuntimeSession(
             job_id=job_id,
@@ -210,17 +210,17 @@ class RuntimeOrchestrator:
         self._save_checkpoint(session)
         logger.info("Runtime %s destroyed", session_id[:8])
 
-    def get_runtime(self, session_id: str) -> Optional[RuntimeSession]:
+    def get_runtime(self, session_id: str) -> RuntimeSession | None:
         return self.sessions.get(session_id)
 
-    def list_runtimes(self, job_id: Optional[str] = None) -> List[Dict]:
+    def list_runtimes(self, job_id: str | None = None) -> list[dict]:
         with self._lock:
             sessions = list(self.sessions.values())
         if job_id:
             sessions = [s for s in sessions if s.job_id == job_id]
         return [s.to_dict() for s in sorted(sessions, key=lambda x: x.started_at or 0, reverse=True)]
 
-    def get_logs(self, session_id: str, tail: int = 100) -> List[str]:
+    def get_logs(self, session_id: str, tail: int = 100) -> list[str]:
         session = self._get_session(session_id)
         log_path = RUNTIME_DIR / session.id / "output.log"
         if not log_path.exists():
@@ -228,7 +228,7 @@ class RuntimeOrchestrator:
         lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
         return lines[-tail:]
 
-    def get_metrics(self, session_id: str) -> Dict[str, Any]:
+    def get_metrics(self, session_id: str) -> dict[str, Any]:
         session = self._get_session(session_id)
         metrics = {
             "session_id": session_id,
@@ -256,7 +256,7 @@ class RuntimeOrchestrator:
                 pass
         return metrics
 
-    def recover_failure(self, session_id: str) -> Optional[RuntimeSession]:
+    def recover_failure(self, session_id: str) -> RuntimeSession | None:
         session = self._get_session(session_id)
         if session.status != RuntimeStatus.FAILED:
             return session
@@ -284,7 +284,7 @@ class RuntimeOrchestrator:
         except Exception as exc:
             logger.warning("Checkpoint save failed: %s", exc)
 
-    def load_checkpoint(self, session_id: str) -> Optional[RuntimeSession]:
+    def load_checkpoint(self, session_id: str) -> RuntimeSession | None:
         path = RUNTIME_DIR / session_id / "checkpoint.json"
         if not path.exists():
             return None

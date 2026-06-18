@@ -2,10 +2,10 @@
 import json
 import logging
 import uuid
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -22,7 +22,7 @@ class VersionSnapshot:
     recorded_at: str = ""
     run_id: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -41,7 +41,7 @@ class VersionComparison:
     summary: str = ""
     created_at: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -57,8 +57,8 @@ class VersionComparator:
         if hasattr(self, "_initialized"):
             return
         self._initialized = True
-        self._snapshots: Dict[str, VersionSnapshot] = {}
-        self._comparisons: Dict[str, VersionComparison] = {}
+        self._snapshots: dict[str, VersionSnapshot] = {}
+        self._comparisons: dict[str, VersionComparison] = {}
         self._logger = logging.getLogger("VersionComparator")
         self._storage_dir = Path("evaluation_data")
         self._storage_dir.mkdir(parents=True, exist_ok=True)
@@ -94,7 +94,7 @@ class VersionComparator:
         data = [c.to_dict() for c in self._comparisons.values()]
         self._comparisons_path().write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
 
-    def record_snapshot(self, version: str, metrics: Dict[str, Any], run_id: str = "") -> VersionSnapshot:
+    def record_snapshot(self, version: str, metrics: dict[str, Any], run_id: str = "") -> VersionSnapshot:
         snapshot = VersionSnapshot(
             version=version,
             autonomy_score=metrics.get("autonomy_score", 0.0),
@@ -104,21 +104,21 @@ class VersionComparator:
             cost_efficiency=metrics.get("cost_efficiency", 0.0),
             success_rate=metrics.get("success_rate", 0.0),
             benchmark_score=metrics.get("benchmark_score", 0.0),
-            recorded_at=datetime.now(timezone.utc).isoformat(),
+            recorded_at=datetime.now(UTC).isoformat(),
             run_id=run_id,
         )
         self._snapshots[snapshot.id] = snapshot
         self._save_snapshots()
         return snapshot
 
-    def get_snapshots(self, version: Optional[str] = None, limit: int = 20) -> List[VersionSnapshot]:
+    def get_snapshots(self, version: str | None = None, limit: int = 20) -> list[VersionSnapshot]:
         results = list(self._snapshots.values())
         if version:
             results = [s for s in results if s.version == version]
         results.sort(key=lambda s: s.recorded_at, reverse=True)
         return results[:limit]
 
-    def compare_versions(self, from_version: str, to_version: str) -> Optional[VersionComparison]:
+    def compare_versions(self, from_version: str, to_version: str) -> VersionComparison | None:
         from_snaps = [s for s in self._snapshots.values() if s.version == from_version]
         to_snaps = [s for s in self._snapshots.values() if s.version == to_version]
 
@@ -142,13 +142,13 @@ class VersionComparator:
             success_rate_delta=pct(avg_from.success_rate, avg_to.success_rate),
             benchmark_delta=pct(avg_from.benchmark_score, avg_to.benchmark_score),
             summary=self._generate_summary(from_version, to_version, avg_from, avg_to),
-            created_at=datetime.now(timezone.utc).isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
         )
         self._comparisons[comparison.id] = comparison
         self._save_comparisons()
         return comparison
 
-    def _average_snapshot(self, snapshots: List[VersionSnapshot]) -> VersionSnapshot:
+    def _average_snapshot(self, snapshots: list[VersionSnapshot]) -> VersionSnapshot:
         n = len(snapshots)
         if n == 0:
             return VersionSnapshot()
@@ -169,14 +169,14 @@ class VersionComparator:
         else:
             parts.append(f"Autonomy declined {((f.autonomy_score - t.autonomy_score) / max(f.autonomy_score, 0.001)) * 100:.1f}%")
         if t.cost_efficiency > f.cost_efficiency:
-            parts.append(f"Cost efficiency improved")
+            parts.append("Cost efficiency improved")
         else:
-            parts.append(f"Cost efficiency declined")
+            parts.append("Cost efficiency declined")
         overall = "improved" if t.autonomy_score + t.deployment_success_rate + t.cost_efficiency > f.autonomy_score + f.deployment_success_rate + f.cost_efficiency else "declined"
         parts.append(f"Overall performance {overall}")
         return ". ".join(parts)
 
-    def list_comparisons(self, limit: int = 20) -> List[VersionComparison]:
+    def list_comparisons(self, limit: int = 20) -> list[VersionComparison]:
         results = sorted(self._comparisons.values(), key=lambda c: c.created_at, reverse=True)
         return results[:limit]
 

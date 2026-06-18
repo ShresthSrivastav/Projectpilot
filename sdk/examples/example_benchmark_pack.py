@@ -1,7 +1,7 @@
 """Example Benchmark Pack — Flutter UI Benchmark.
 Shows how any developer can create a custom benchmark pack without modifying platform source code.
 """
-from typing import Any, Dict, List
+from typing import Any
 
 from sdk.benchmark_sdk.base_benchmark import BaseBenchmarkPack, BenchmarkCriteria, BenchmarkTest
 
@@ -21,7 +21,7 @@ class FlutterBenchmarkPack(BaseBenchmarkPack):
 - flutter_test package
 """
 
-    def load_tests(self) -> List[BenchmarkTest]:
+    def load_tests(self) -> list[BenchmarkTest]:
         return [
             BenchmarkTest(
                 name="widget-rendering",
@@ -39,7 +39,7 @@ class FlutterBenchmarkPack(BaseBenchmarkPack):
             ),
         ]
 
-    def load_criteria(self) -> List[BenchmarkCriteria]:
+    def load_criteria(self) -> list[BenchmarkCriteria]:
         return [
             BenchmarkCriteria(
                 name="render_time",
@@ -57,7 +57,7 @@ class FlutterBenchmarkPack(BaseBenchmarkPack):
             ),
         ]
 
-    def evaluate(self, results: Dict[str, Any]) -> Dict[str, Any]:
+    def evaluate(self, results: dict[str, Any]) -> dict[str, Any]:
         scores = {}
         for criterion in self.criteria:
             actual = results.get(criterion.name, {})

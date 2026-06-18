@@ -2,11 +2,10 @@
 import json
 import logging
 import uuid
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone, timedelta
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 REPORT_TYPE_DAILY = "daily"
 REPORT_TYPE_WEEKLY = "weekly"
@@ -20,16 +19,16 @@ class EvaluationReport:
     title: str = ""
     summary: str = ""
     trend_analysis: str = ""
-    regressions: List[Dict[str, Any]] = field(default_factory=list)
-    improvements: List[Dict[str, Any]] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
-    metrics: Dict[str, float] = field(default_factory=dict)
+    regressions: list[dict[str, Any]] = field(default_factory=list)
+    improvements: list[dict[str, Any]] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
+    metrics: dict[str, float] = field(default_factory=dict)
     generated_at: str = ""
     period_start: str = ""
     period_end: str = ""
     markdown: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -45,7 +44,7 @@ class EvaluationReporter:
         if hasattr(self, "_initialized"):
             return
         self._initialized = True
-        self._reports: Dict[str, EvaluationReport] = {}
+        self._reports: dict[str, EvaluationReport] = {}
         self._logger = logging.getLogger("EvaluationReporter")
         self._storage_dir = Path("evaluation_data/reports")
         self._storage_dir.mkdir(parents=True, exist_ok=True)
@@ -69,7 +68,7 @@ class EvaluationReporter:
         data = [r.to_dict() for r in self._reports.values()]
         self._reports_path().write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
 
-    def _compute_trend(self, values: List[float]) -> str:
+    def _compute_trend(self, values: list[float]) -> str:
         if len(values) < 2:
             return "insufficient data"
         recent = values[-1]
@@ -80,7 +79,7 @@ class EvaluationReporter:
             return "declining"
         return "stable"
 
-    def _detect_regressions(self, runs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _detect_regressions(self, runs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         results = []
         if len(runs) < 2:
             return results
@@ -110,7 +109,7 @@ class EvaluationReporter:
                 })
         return results
 
-    def _detect_improvements(self, runs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _detect_improvements(self, runs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         results = []
         if len(runs) < 2:
             return results
@@ -137,7 +136,7 @@ class EvaluationReporter:
                 })
         return results
 
-    def _generate_recommendations(self, runs: List[Dict[str, Any]]) -> List[str]:
+    def _generate_recommendations(self, runs: list[dict[str, Any]]) -> list[str]:
         recs = []
         if not runs:
             return recs
@@ -161,12 +160,12 @@ class EvaluationReporter:
     def generate_report(
         self,
         report_type: str = REPORT_TYPE_DAILY,
-        runs: Optional[List[Dict[str, Any]]] = None,
-        period_start: Optional[str] = None,
-        period_end: Optional[str] = None,
+        runs: list[dict[str, Any]] | None = None,
+        period_start: str | None = None,
+        period_end: str | None = None,
     ) -> EvaluationReport:
         runs = runs or []
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if not period_end:
             period_end = now.isoformat()
         if not period_start:
@@ -223,8 +222,8 @@ class EvaluationReporter:
 
     def _generate_markdown(
         self, title: str, summary: str, trends: str,
-        regressions: List[Dict], improvements: List[Dict],
-        recommendations: List[str], metrics: Dict[str, float],
+        regressions: list[dict], improvements: list[dict],
+        recommendations: list[str], metrics: dict[str, float],
     ) -> str:
         lines = [
             f"# {title}",
@@ -256,12 +255,12 @@ class EvaluationReporter:
                 lines.append(f"- {key}: {val:.4f}" if isinstance(val, float) else f"- {key}: {val}")
         return "\n".join(lines)
 
-    def get_report(self, report_id: str) -> Optional[EvaluationReport]:
+    def get_report(self, report_id: str) -> EvaluationReport | None:
         return self._reports.get(report_id)
 
     def list_reports(
-        self, report_type: Optional[str] = None, limit: int = 20
-    ) -> List[EvaluationReport]:
+        self, report_type: str | None = None, limit: int = 20
+    ) -> list[EvaluationReport]:
         results = list(self._reports.values())
         if report_type:
             results = [r for r in results if r.report_type == report_type]

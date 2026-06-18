@@ -5,7 +5,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -13,20 +13,20 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Container:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    docker_id: Optional[str] = None
+    docker_id: str | None = None
     image: str = ""
     name: str = ""
     status: str = "created"
-    host_port: Optional[int] = None
+    host_port: int | None = None
     container_port: int = 0
     created_at: float = field(default_factory=time.time)
-    started_at: Optional[float] = None
-    error: Optional[str] = None
+    started_at: float | None = None
+    error: str | None = None
 
 
 class ContainerManager:
     def __init__(self):
-        self.containers: Dict[str, Container] = {}
+        self.containers: dict[str, Container] = {}
         self._lock = threading.Lock()
         self._port_counter = 9000
 
@@ -46,13 +46,13 @@ class ContainerManager:
     def create_container(
         self,
         image: str = "python:3.11-slim",
-        command: Optional[List[str]] = None,
-        env_vars: Optional[Dict[str, str]] = None,
-        port_mappings: Optional[Dict[int, int]] = None,
+        command: list[str] | None = None,
+        env_vars: dict[str, str] | None = None,
+        port_mappings: dict[int, int] | None = None,
         memory_limit: str = "256m",
         cpu_limit: float = 0.5,
         network_enabled: bool = True,
-        volumes: Optional[List[str]] = None,
+        volumes: list[str] | None = None,
         working_dir: str = "",
         name: str = "",
     ) -> Container:
@@ -162,7 +162,7 @@ class ContainerManager:
         container.status = "destroyed"
         logger.info("Container %s destroyed", container.id[:8])
 
-    def get_logs(self, container_id: str, tail: int = 100) -> List[str]:
+    def get_logs(self, container_id: str, tail: int = 100) -> list[str]:
         container = self._get_container(container_id)
         if not container.docker_id:
             return ["(mock mode - no logs)"]
@@ -175,7 +175,7 @@ class ContainerManager:
         except Exception as exc:
             return [f"Error fetching logs: {exc}"]
 
-    def get_stats(self, container_id: str) -> Dict[str, Any]:
+    def get_stats(self, container_id: str) -> dict[str, Any]:
         container = self._get_container(container_id)
         if not container.docker_id:
             return {"cpu_percent": 0.0, "memory_mb": 0.0, "status": container.status}

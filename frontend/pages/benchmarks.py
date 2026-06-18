@@ -1,6 +1,6 @@
 """Benchmark Dashboard — run, compare, and track autonomy scores."""
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
 import streamlit as st
@@ -8,7 +8,7 @@ import streamlit as st
 BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 
 
-def _get(path: str, timeout: int = 10) -> Optional[Dict]:
+def _get(path: str, timeout: int = 10) -> dict | None:
     try:
         r = requests.get(f"{BACKEND}{path}", timeout=timeout)
         r.raise_for_status()
@@ -17,7 +17,7 @@ def _get(path: str, timeout: int = 10) -> Optional[Dict]:
         return None
 
 
-def _post(path: str, data: Any, timeout: int = 30) -> Optional[Dict]:
+def _post(path: str, data: Any, timeout: int = 30) -> dict | None:
     try:
         r = requests.post(f"{BACKEND}{path}", json=data, timeout=timeout)
         if not r.ok:
@@ -226,8 +226,8 @@ def _show_trends_tab():
     }
 
     try:
-        import pandas as pd
         import altair as alt
+        import pandas as pd
         df = pd.DataFrame(data)
         if not df.empty:
             chart = alt.Chart(df).mark_line(point=True).encode(

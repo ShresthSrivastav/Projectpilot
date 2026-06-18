@@ -1,6 +1,6 @@
 [
   {
-    "id": "343c1258-871e-4203-9511-f87cae265a1d",
+    "id": "0dbd95ba-aafe-4ab0-8ce0-fcfa08756712",
     "manifest": {
       "name": "secure-plugin",
       "version": "1.0.0",
@@ -12,13 +12,13 @@
         "read:files"
       ],
       "compatibility": ">=11.0.0",
-      "entry_point": "C:\\Users\\shres\\AppData\\Local\\Temp\\tmpycit6jlo.py",
+      "entry_point": "C:\\Users\\shres\\AppData\\Local\\Temp\\tmpr59uhec_.py",
       "tags": []
     },
-    "source": "plugin_data\\installed\\tmpycit6jlo\\tmpycit6jlo.py",
+    "source": "plugin_data\\installed\\tmpr59uhec_\\tmpr59uhec_.py",
     "enabled": true,
-    "installed_at": "2026-06-14T08:19:48.779806+00:00",
-    "updated_at": "2026-06-14T08:19:48.779806+00:00",
+    "installed_at": "2026-06-17T17:13:28.551765+00:00",
+    "updated_at": "2026-06-17T17:13:28.551765+00:00",
     "resource_limits": {
       "cpu": 1,
       "memory_mb": 256
