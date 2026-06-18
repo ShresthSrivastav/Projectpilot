@@ -1,163 +1,298 @@
-# Deployment Guide — ProjectPilot
+# ProjectPilot Production Deployment Guide
 
-## 1. Prerequisites
+## Architecture
 
-| Requirement | Version | Check |
-|-------------|---------|-------|
-| Docker | 24+ | `docker --version` |
-| Docker Compose | 2.23+ | `docker compose version` |
-| Python | 3.11+ | `python --version` |
-| Git | 2.40+ | `git --version` |
-| Disk Space | 10GB+ | `df -h .` |
-| RAM | 4GB+ | `free -h` |
-| GPU (optional) | CUDA 12+ | `nvidia-smi` (for local LLMs) |
+```
+Internet → Nginx (HTTPS) → Backend (FastAPI :8000)
+                         → Frontend (Streamlit :8501)
+                         → PostgreSQL (Managed)
+```
 
-## 2. Quick Start (Docker)
+## Prerequisites
+
+| Tool | Version | Install |
+|------|---------|---------|
+| Terraform | >= 1.5.0 | https://developer.hashicorp.com/terraform/install |
+| Docker | 24+ | https://docs.docker.com/engine/install/ |
+| GitHub Account | — | For GHCR and Actions |
+
+## 1. GitHub Secrets Setup
+
+Add these secrets in **Settings → Secrets and variables → Actions**:
+
+| Secret | Description |
+|--------|-------------|
+| `DO_TOKEN` | DigitalOcean API token |
+| `DO_SSH_KEY_ID` | DigitalOcean SSH key ID |
+| `DO_HOST` | Droplet IP (set after first apply) |
+| `DO_USER` | SSH username (`deploy`) |
+| `DOMAIN_NAME` | Your domain (e.g., `app.example.com`) |
+| `SPACES_ACCESS_KEY_ID` | DigitalOcean Spaces access key |
+| `SPACES_SECRET_ACCESS_KEY` | DigitalOcean Spaces secret key |
+
+## 2. DigitalOcean Spaces (Terraform State)
+
+1. Create a Spaces bucket: `projectpilot-terraform-state` in `nyc3`
+2. Generate Spaces API keys: **API → Tokens → Spaces Keys**
+3. Add keys to GitHub Secrets
+
+## 3. Generate SSH Key
 
 ```bash
-# 1. Clone
-git clone <repo> autodev-ai
-cd autodev-ai
-
-# 2. Configure
-cp .env.example .env
-# Edit .env: set API keys (Gemini, etc.)
-
-# 3. Build & Start
-docker compose up --build -d
-
-# 4. Verify
-curl http://localhost:8000/health
-# Expected: {"status":"ok","version":"13.0.0"}
-
-# 5. Access
-# Frontend: http://localhost:8501
-# Backend:  http://localhost:8000
-# API Docs: http://localhost:8000/docs
+ssh-keygen -t ed25519 -f ~/.ssh/projectpilot -N ""
 ```
 
-## 3. Quick Start (Local)
+Upload to DigitalOcean:
+```bash
+# Using doctl CLI
+doctl compute ssh-key create projectpilot --public-key-file ~/.ssh/projectpilot.pub
+```
+
+## 4. Terraform Deployment
+
+### Initialize
 
 ```bash
-# 1. Setup Python
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-.\venv\Scripts\Activate   # Windows
+cd terraform
 
-# 2. Install
-pip install -r requirements.txt
+# Copy and edit variables
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your values
 
-# 3. Configure
-cp .env.example .env
-# Edit .env: set API keys
+# Initialize
+terraform init \
+  -backend-config="access_key=$SPACES_ACCESS_KEY_ID" \
+  -backend-config="secret_key=$SPACES_SECRET_ACCESS_KEY"
 
-# 4. Start Backend
-python backend/main.py &
-# Listening on port 8000
-
-# 5. Start Frontend
-streamlit run frontend/app.py &
-# Listening on port 8501
+# Create workspace
+terraform workspace new prod
+terraform workspace select prod
 ```
 
-## 4. Environment Variables
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `GEMINI_API_KEY` | Yes | — | Google Gemini API key |
-| `DATABASE_URL` | No | `sqlite:///./data/analytics.db` | SQLite path |
-| `CHROMA_PERSIST_DIR` | No | `./data/chroma` | ChromaDB directory |
-| `LOG_LEVEL` | No | `INFO` | Logging level |
-| `MAX_HEALING_ATTEMPTS` | No | `3` | Max repair loop iterations |
-| `HEALING_FIX_TIMEOUT` | No | `120` | Timeout per fix (seconds) |
-| `SKIP_RUNTIME_VALIDATION` | No | `false` | Skip runtime gate |
-| `SKIP_IMPORT_VALIDATION` | No | `false` | Skip import gate |
-| `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Local LLM URL |
-| `EXPORT_DIR` | No | `./exports` | Generated ZIP output |
-
-## 5. Docker Images
-
-| Service | Image | Ports | Volumes | Depends On |
-|---------|-------|-------|---------|------------|
-| backend | autodev-ai-backend | 8000:8000 | ./data:/app/data, ./exports:/app/exports | — |
-| frontend | autodev-ai-frontend | 8501:8501 | — | backend |
-
-## 6. Production Deployment
-
-### 6.1. Single Host
+### Plan
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d
+terraform plan \
+  -var-file="environments/prod.tfvars" \
+  -var="do_token=$DO_TOKEN" \
+  -var="ssh_key_ids=[SSH_KEY_ID]" \
+  -var="domain_name=app.example.com"
 ```
 
-### 6.2. Load Balancing
-
-```
-nginx/
-├── backend  → upstream backend:8000 (workers=4)
-├── frontend → upstream frontend:8501
-└── static   → /app/exports (ZIP downloads)
-```
-
-### 6.3. SSL (Let's Encrypt)
+### Apply
 
 ```bash
-docker run -d --name nginx-ssl \
-  -v ./nginx.conf:/etc/nginx/nginx.conf \
-  -v /etc/letsencrypt:/etc/letsencrypt \
-  -p 443:443 \
-  nginx:alpine
+terraform apply \
+  -var-file="environments/prod.tfvars" \
+  -var="do_token=$DO_TOKEN" \
+  -var="ssh_key_ids=[SSH_KEY_ID]" \
+  -var="domain_name=app.example.com"
 ```
 
-## 7. Monitoring
+### Output
 
-| Tool | Endpoint | Purpose |
-|------|----------|---------|
-| Health Check | GET /health | Liveness probe |
-| Metrics | GET /metrics | Prometheus (if enabled) |
-| Logs | docker logs -f backend | Container logs |
-| Debug | GET /debug | Diagnostic info |
-
-## 8. Backup & Restore
-
-### Backup
+After apply, get the droplet IP:
 ```bash
-# SQLite
-cp ./data/analytics.db ./backups/analytics-$(date +%F).db
-
-# ChromaDB
-cp -r ./data/chroma ./backups/chroma-$(date +%F)
-
-# Exports
-cp -r ./exports ./backups/exports-$(date +%F)
+terraform output droplet_ip
+terraform output ssh_command
 ```
 
-### Restore
-```bash
-cp ./backups/analytics-2024-01-01.db ./data/analytics.db
-```
+## 5. Domain Setup
 
-## 9. Cleanup
+1. Point your domain A record to the droplet IP
+2. Update `DO_HOST` secret with the droplet IP
+3. Update `DOMAIN_NAME` secret with your domain
 
 ```bash
-# Remove old artifacts (24h TTL)
-python -m backend.services.cleanup_service
-
-# Remove all artifacts
-rm -rf ./exports/* ./data/chroma/*
-
-# Full reset
-docker compose down -v
-rm -rf ./data ./exports
+# Example DNS records
+Type    Name    Value           TTL
+A       app     192.168.1.100   300
+CNAME   www     app.example.com 300
 ```
 
-## 10. Troubleshooting
+## 6. SSL Certificate
 
-| Problem | Cause | Solution |
-|---------|-------|----------|
-| Backend won't start | Port 8000 in use | `netstat -ano | findstr :8000`, kill process |
-| Frontend won't start | Port 8501 in use | Same as above |
-| LLM returns 500 | Invalid API key | Check `.env` GEMINI_API_KEY |
-| Tests fail | Python version | Ensure 3.11+ |
-| Docker build slow | No cache | `docker compose build --no-cache` (once) |
-| ZIP download fails | Export dir missing | `mkdir -p exports` |
+On the droplet:
+```bash
+# SSH into the droplet
+ssh root@YOUR_DROPLET_IP
+
+# Get SSL certificate
+certbot --nginx -d app.example.com --non-interactive --agree-tos --email admin@example.com
+
+# Verify auto-renewal
+certbot renew --dry-run
+```
+
+## 7. GHCR Setup
+
+The `build-and-push.yml` workflow automatically pushes to `ghcr.io/shresthsrivastav/projectpilot`.
+
+To manually push:
+```bash
+# Login to GHCR
+echo $GITHUB_TOKEN | docker login ghcr.io -u ShresthSrivastav --password-stdin
+
+# Build and push
+docker build -t ghcr.io/shresthsrivastav/projectpilot:latest .
+docker push ghcr.io/shresthsrivastav/projectpilot:latest
+```
+
+## 8. Environment Variables
+
+Create `/opt/projectpilot/.env` on the droplet:
+
+```bash
+ADMIN_API_KEY=ak-admin-your-admin-key
+USER_API_KEY=ak-user-your-user-key
+TOKEN_ENCRYPTION_KEY=your-encryption-key
+OLLAMA_BASE_URL=http://localhost:11434
+MODEL_FAST=qwen2.5-coder:1.5b
+MODEL_BALANCED=qwen2.5-coder:7b
+MODEL_POWERFUL=qwen2.5-coder:14b
+GOOGLE_API_KEY=your-google-api-key
+BACKEND_PORT=8000
+FRONTEND_PORT=8501
+CHROMA_PATH=./chroma_data
+GENERATED_PROJECTS_DIR=./generated_projects
+MEMORY_STORE_DIR=./memory_store
+LOG_LEVEL=INFO
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_GENERATE=5
+RATE_LIMIT_DEFAULT=60
+```
+
+## 9. Verify Deployment
+
+```bash
+# Health check
+curl https://app.example.com/health
+
+# API docs
+curl https://app.example.com/docs
+
+# Frontend
+open https://app.example.com/
+```
+
+## 10. Rollback
+
+### Rollback Application
+
+```bash
+# SSH into droplet
+ssh root@YOUR_DROPLET_IP
+
+# List available images
+docker images ghcr.io/shresthsrivastav/projectpilot
+
+# Deploy specific version
+cd /opt/projectpilot
+export IMAGE_TAG=v1.0.0
+docker compose -f docker-compose.prod.yml up -d --force-recreate
+```
+
+### Rollback Infrastructure
+
+```bash
+cd terraform
+terraform plan -out=tfplan
+# Review changes
+terraform apply tfplan
+```
+
+### Full Destroy
+
+```bash
+cd terraform
+terraform destroy \
+  -var-file="environments/prod.tfvars" \
+  -var="do_token=$DO_TOKEN"
+```
+
+## 11. Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Container won't start | `docker logs projectpilot_backend` |
+| Port 80/443 blocked | Check firewall: `ufw status` |
+| SSL not working | Verify cert: `certbot certificates` |
+| Database connection failed | Check `.env` DATABASE_URL |
+| Out of memory | Increase droplet size or add swap |
+| GHCR auth failed | Re-login: `docker login ghcr.io` |
+
+### Logs
+
+```bash
+# Backend logs
+docker logs -f projectpilot_backend
+
+# Frontend logs
+docker logs -f projectpilot_frontend
+
+# Nginx logs
+tail -f /var/log/nginx/access.log
+tail -f /var/log/nginx/error.log
+
+# System logs
+journalctl -u projectpilot -f
+```
+
+### Disk Cleanup
+
+```bash
+# Remove old images
+docker image prune -af
+
+# Remove unused volumes
+docker volume prune -f
+
+# Check disk usage
+df -h
+```
+
+## 12. Monitoring
+
+```bash
+# Container stats
+docker stats
+
+# System resources
+htop
+
+# Network connections
+ss -tlnp
+
+# Process list
+ps aux | grep docker
+```
+
+## File Structure
+
+```
+terraform/
+├── main.tf                    # Root module
+├── providers.tf               # Provider config
+├── versions.tf                # Version constraints + backend
+├── variables.tf               # Input variables
+├── outputs.tf                 # Output values
+├── terraform.tfvars.example   # Variable template
+├── cloud-init.yaml            # Server provisioning
+├── environments/
+│   ├── dev.tfvars
+│   ├── staging.tfvars
+│   └── prod.tfvars
+└── modules/
+    ├── droplet/               # Droplet + Reserved IP
+    ├── firewall/              # Firewall rules
+    └── database/              # Managed PostgreSQL
+
+.github/workflows/
+├── terraform.yml              # IaC pipeline
+├── build-and-push.yml         # CI/CD + GHCR
+├── deploy.yml                 # Deployment trigger
+└── ci.yml                     # PR checks
+
+docker-compose.prod.yml        # Production compose
+nginx/nginx.conf               # Nginx config
+```

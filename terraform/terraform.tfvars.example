@@ -1,0 +1,11 @@
+# Copy this file to terraform.tfvars and fill in the values
+# cp terraform.tfvars.example terraform.tfvars
+
+do_token      = "your-digitalocean-api-token"
+do_region     = "nyc3"
+droplet_size  = "s-2vcpu-4gb"
+environment   = "prod"
+domain_name   = "your-domain.com"
+ssh_key_ids   = ["your-ssh-key-id"]
+github_username = "ShresthSrivastav"
+ghcr_token    = "your-github-personal-access-token"

@@ -1,0 +1,71 @@
+services:
+  backend:
+    image: ghcr.io/shresthsrivastav/projectpilot:latest
+    container_name: projectpilot_backend
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 2 --log-level info
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - /opt/projectpilot/data/chroma_data:/app/chroma_data
+      - /opt/projectpilot/data/generated_projects:/app/generated_projects
+      - /opt/projectpilot/data/memory_store:/app/memory_store
+      - /opt/projectpilot/logs/backend:/app/logs
+    env_file: /opt/projectpilot/.env
+    environment:
+      - BACKEND_URL=http://127.0.0.1:8000
+      - LOG_LEVEL=INFO
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.5"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - projectpilot
+
+  frontend:
+    image: ghcr.io/shresthsrivastav/projectpilot:latest
+    container_name: projectpilot_frontend
+    command: streamlit run frontend/app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true --server.enableCORS false --server.enableXsrfProtection false
+    ports:
+      - "127.0.0.1:8501:8501"
+    env_file: /opt/projectpilot/.env
+    environment:
+      - BACKEND_URL=http://127.0.0.1:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - projectpilot
+
+networks:
+  projectpilot:
+    driver: bridge
