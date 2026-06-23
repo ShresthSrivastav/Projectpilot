@@ -205,6 +205,11 @@ class TestAnalyticsHistoryIsolation:
 
 
 class TestAPIEndpointIsolation:
+    def setup_method(self):
+        skip_auth = os.getenv("SKIP_AUTH", "").lower() in ("true", "1", "yes")
+        if skip_auth:
+            pytest.skip("SKIP_AUTH is active — auth isolation tests not applicable")
+
     def test_list_jobs_api_only_shows_own(self, setup):
         from services.jwt_service import create_access_token
 
