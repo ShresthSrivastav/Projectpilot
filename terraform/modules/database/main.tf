@@ -1,33 +1,25 @@
-resource "digitalocean_database_cluster" "postgres" {
-  name       = "${var.project_name}-${var.environment}-db"
-  engine     = "pg"
-  version    = var.version
-  size       = var.size
-  region     = var.region
-  node_count = 1
+resource "oci_psql_db_system" "postgres" {
+  display_name    = "${var.project_name}-${var.environment}-db"
+  compartment_id  = var.compartment_ocid
+  db_version      = var.db_version
+  shape           = var.shape
+  system_type     = "OCI_OPTIMIZED_STORAGE"
 
-  tags = values(var.tags)
-}
+  subnet_id = var.subnet_id
 
-resource "digitalocean_database_user" "app" {
-  cluster_id = digitalocean_database_cluster.postgres.id
-  name       = "${var.project_name}_app"
-
-  role {
-    role = "doadmin"
+  credentials {
+    username = replace("${var.project_name}_admin", "-", "_")
+    password = var.db_password
   }
-}
 
-resource "digitalocean_database_db" "app" {
-  cluster_id = digitalocean_database_cluster.postgres.id
-  name       = var.project_name
-}
+  storage_details {
+    is_regionally_durable = true
+    capacity_in_gb        = var.storage_gbs
+  }
 
-resource "digitalocean_database_firewall" "app" {
-  cluster_id = digitalocean_database_cluster.postgres.id
+  freeform_tags = var.tags
 
-  rule {
-    type    = "tag"
-    value   = "${var.project_name}-${var.environment}"
+  lifecycle {
+    prevent_destroy = true
   }
 }

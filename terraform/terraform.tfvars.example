@@ -1,11 +1,24 @@
 # Copy this file to terraform.tfvars and fill in the values
 # cp terraform.tfvars.example terraform.tfvars
 
-do_token      = "your-digitalocean-api-token"
-do_region     = "nyc3"
-droplet_size  = "s-2vcpu-4gb"
-environment   = "prod"
-domain_name   = "your-domain.com"
-ssh_key_ids   = ["your-ssh-key-id"]
+# OCI Authentication
+oci_tenancy_ocid     = "ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+oci_user_ocid        = "ocid1.user.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+oci_fingerprint      = "xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx"
+oci_private_key_path = "~/.oci/oci_api_key.pem"
+
+# OCI Resources
+compartment_ocid = "ocid1.compartment.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+oci_region       = "us-ashburn-1"
+
+# Project
+project_name = "projectpilot"
+environment  = "prod"
+domain_name  = "your-domain.com"
+
+# Compute
+ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ..."
+
+# App
 github_username = "ShresthSrivastav"
-ghcr_token    = "your-github-personal-access-token"
+ghcr_token      = "your-github-personal-access-token"

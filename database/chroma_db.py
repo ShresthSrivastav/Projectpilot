@@ -1,15 +1,18 @@
 """
 ChromaDB storage layer — ProjectPilot.
 
-Uses EphemeralClient with pre-computed dummy embeddings ([0.0]) to completely
-bypass the ONNX embedding model download. ChromaDB is used as a pure
-key-value + log store — no semantic search needed.
+Workspace-isolated collections: each workspace gets its own set of
+collections named workspace_{ws_id}_{type}.
+
+Uses contextvars for automatic workspace detection from request context.
 """
+from __future__ import annotations
 
 import json
 import logging
 import os
 import uuid
+from contextvars import ContextVar
 from datetime import UTC, datetime
 from typing import Any
 
@@ -21,7 +24,27 @@ logger = logging.getLogger(__name__)
 CHROMA_PATH = os.getenv("CHROMA_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "chroma_data"))
 _client: chromadb.PersistentClient | None = None
 
-_DUMMY_EMBED = [[0.0]]   # single-dim dummy — skips ONNX download entirely
+_DUMMY_EMBED = [[0.0]]
+
+_COLLECTION_TYPES = ("jobs", "generation_logs", "requirements", "blueprints")
+
+# Per-request workspace context
+_current_workspace: ContextVar[str] = ContextVar("_current_workspace", default="")
+
+
+def set_workspace_context(workspace_id: str) -> None:
+    """Set the workspace_id for the current request context."""
+    _current_workspace.set(workspace_id)
+
+
+def get_workspace_context() -> str:
+    """Get the workspace_id from the current request context."""
+    return _current_workspace.get()
+
+
+def _get_ws() -> str:
+    """Get workspace_id from context, falling back to empty string."""
+    return _current_workspace.get()
 
 
 def _get_client() -> chromadb.PersistentClient:
@@ -43,26 +66,75 @@ def _col(name: str):
 
 
 def _embed(n: int = 1) -> list[list[float]]:
-    """Return n dummy embeddings — one per document."""
     return [[0.0]] * n
 
 
+def _ws_col(workspace_id: str, collection_type: str):
+    """Get or create a workspace-scoped collection."""
+    name = f"workspace_{workspace_id}_{collection_type}"
+    return _col(name)
+
+
+def get_workspace_collection(workspace_id: str, collection_type: str):
+    """Public helper — returns a workspace-scoped ChromaDB collection."""
+    return _ws_col(workspace_id, collection_type)
+
+
 def init_db() -> None:
-    for name in ("jobs", "generation_logs", "requirements", "blueprints"):
+    """Initialize default (legacy) collections. New usage should call init_workspace()."""
+    for name in _COLLECTION_TYPES:
         _col(name)
     logger.info("ChromaDB ready (persistent at %s)", CHROMA_PATH)
 
 
-# ── Jobs ──────────────────────────────────────────────────────────────────────
+def init_workspace(workspace_id: str) -> None:
+    """Ensure all collections exist for a given workspace."""
+    for ct in _COLLECTION_TYPES:
+        _ws_col(workspace_id, ct)
 
-def create_job(job_id: str) -> None:
+
+# ── Internal helpers ──────────────────────────────────────────────────────
+
+def _resolve_ws(workspace_id: str) -> str:
+    """Resolve workspace_id: use explicit value, then contextvar."""
+    return workspace_id or _get_ws()
+
+
+def _collection(workspace_id: str, ct: str):
+    """Return workspace-scoped collection name, falling back to global."""
+    wid = _resolve_ws(workspace_id)
+    if wid:
+        return f"workspace_{wid}_{ct}"
+    return ct
+
+
+def _get_job_meta(workspace_id: str, job_id: str) -> dict | None:
+    wid = _resolve_ws(workspace_id)
+    coll = _collection(wid, "jobs")
+    try:
+        r = _col(coll).get(ids=[job_id], include=["metadatas", "documents"])
+        if r["ids"]:
+            meta = dict(r["metadatas"][0])
+            meta["prompt"] = r["documents"][0]
+            return meta
+    except Exception:
+        pass
+    return None
+
+
+# ── Jobs ──────────────────────────────────────────────────────────────────
+
+def create_job(job_id: str, workspace_id: str = "", user_id: str = "") -> None:
     now = datetime.now(UTC).isoformat()
-    for collection_name in ("generation_logs", "requirements", "blueprints"):
+    wid = _resolve_ws(workspace_id)
+    for ct in ("generation_logs", "requirements", "blueprints"):
+        coll = _collection(wid, ct)
         try:
-            _col(collection_name).delete(where={"job_id": job_id})
+            _col(coll).delete(where={"job_id": job_id})
         except Exception:
             pass
-    _col("jobs").upsert(
+    coll = _collection(wid, "jobs")
+    _col(coll).upsert(
         ids=[job_id],
         embeddings=_embed(1),
         documents=[""],
@@ -74,16 +146,20 @@ def create_job(job_id: str) -> None:
             "error_message": "",
             "file_count":    0,
             "zip_path":      "",
+            "workspace_id":  wid,
+            "user_id":       user_id,
             "created_at":    now,
             "updated_at":    now,
         }],
     )
 
 
-def save_prompt(job_id: str, prompt: str, project_name: str) -> None:
-    existing = _get_job_meta(job_id) or {}
+def save_prompt(job_id: str, prompt: str, project_name: str, workspace_id: str = "", user_id: str = "") -> None:
+    wid = _resolve_ws(workspace_id)
+    existing = _get_job_meta(wid, job_id) or {}
     now = datetime.now(UTC).isoformat()
-    _col("jobs").upsert(
+    coll = _collection(wid, "jobs")
+    _col(coll).upsert(
         ids=[job_id],
         embeddings=_embed(1),
         documents=[prompt],
@@ -95,39 +171,38 @@ def save_prompt(job_id: str, prompt: str, project_name: str) -> None:
             "error_message": existing.get("error_message", ""),
             "file_count":    existing.get("file_count", 0),
             "zip_path":      existing.get("zip_path", ""),
+            "workspace_id":  wid,
+            # Preserve existing user_id; use provided value as fallback
+            "user_id":       existing.get("user_id") or user_id,
             "created_at":    existing.get("created_at", now),
             "updated_at":    now,
         }],
     )
 
 
-def _get_job_meta(job_id: str) -> dict | None:
-    try:
-        r = _col("jobs").get(ids=[job_id], include=["metadatas", "documents"])
-        if r["ids"]:
-            meta = dict(r["metadatas"][0])
-            meta["prompt"] = r["documents"][0]
-            return meta
-    except Exception:
-        pass
-    return None
-
-
-def get_job(job_id: str) -> dict[str, Any] | None:
-    meta = _get_job_meta(job_id)
+def get_job(job_id: str, workspace_id: str = "") -> dict[str, Any] | None:
+    wid = _resolve_ws(workspace_id)
+    meta = _get_job_meta(wid, job_id)
     if meta:
         meta["job_id"] = job_id
     return meta
 
 
-def list_jobs(limit: int = 20) -> list[dict[str, Any]]:
+def list_jobs(workspace_id: str = "", user_id: str = "", limit: int = 20) -> list[dict[str, Any]]:
+    wid = _resolve_ws(workspace_id)
+    coll = _collection(wid, "jobs")
     try:
-        r = _col("jobs").get(include=["metadatas", "documents"])
+        r = _col(coll).get(include=["metadatas", "documents"])
         jobs = []
         for i, jid in enumerate(r["ids"]):
             meta = dict(r["metadatas"][i])
             meta["job_id"] = jid
             meta["prompt"] = r["documents"][i]
+            # User-level isolation: skip records that belong to a different user.
+            # Legacy records with no user_id are shown to all workspace members.
+            record_uid = meta.get("user_id", "")
+            if user_id and record_uid and record_uid != user_id:
+                continue
             jobs.append(meta)
         jobs.sort(key=lambda j: j.get("created_at", ""), reverse=True)
         return jobs[:limit]
@@ -135,10 +210,21 @@ def list_jobs(limit: int = 20) -> list[dict[str, Any]]:
         return []
 
 
-def delete_job(job_id: str) -> bool:
+def get_job_owner(job_id: str, workspace_id: str = "") -> str | None:
+    """Return the user_id stored in the job record, or None if not found."""
+    wid = _resolve_ws(workspace_id)
+    meta = _get_job_meta(wid, job_id)
+    if meta is None:
+        return None
+    return meta.get("user_id", "")
+
+
+def delete_job(job_id: str, workspace_id: str = "") -> bool:
+    wid = _resolve_ws(workspace_id)
+    coll = _collection(wid, "jobs")
     try:
-        _col("jobs").delete(ids=[job_id])
-        logger.info("Deleted job %s from ChromaDB", job_id)
+        _col(coll).delete(ids=[job_id])
+        logger.info("Deleted job %s from ChromaDB (ws=%s)", job_id, wid)
         return True
     except Exception as exc:
         logger.warning("Failed to delete job %s: %s", job_id, exc)
@@ -148,14 +234,16 @@ def delete_job(job_id: str) -> bool:
 def update_job_status(
     job_id: str,
     status: str,
+    workspace_id: str = "",
     current_agent: str = "",
     progress_pct: int = 0,
     error_message: str = "",
     **extra: Any,
 ) -> None:
-    existing = _get_job_meta(job_id)
+    wid = _resolve_ws(workspace_id)
+    existing = _get_job_meta(wid, job_id)
     if not existing:
-        logger.warning("update_job_status: job %s not found", job_id)
+        logger.warning("update_job_status: job %s not found (ws=%s)", job_id, wid)
         return
     meta = {
         "status":        status,
@@ -171,11 +259,15 @@ def update_job_status(
         "test_skipped":  existing.get("test_skipped", 0),
         "test_summary":  existing.get("test_summary", ""),
         "test_details":  existing.get("test_details", ""),
+        "workspace_id":  wid,
+        # Preserve user_id — ownership must survive status updates
+        "user_id":       existing.get("user_id", ""),
         "created_at":    existing.get("created_at", datetime.now(UTC).isoformat()),
         "updated_at":    datetime.now(UTC).isoformat(),
     }
     meta.update(extra)
-    _col("jobs").upsert(
+    coll = _collection(wid, "jobs")
+    _col(coll).upsert(
         ids=[job_id],
         embeddings=_embed(1),
         documents=[existing.get("prompt", "")],
@@ -183,9 +275,11 @@ def update_job_status(
     )
 
 
-def save_generated_project(job_id: str, file_count: int, zip_path: str) -> None:
-    existing = _get_job_meta(job_id) or {}
-    _col("jobs").upsert(
+def save_generated_project(job_id: str, file_count: int, zip_path: str, workspace_id: str = "") -> None:
+    wid = _resolve_ws(workspace_id)
+    existing = _get_job_meta(wid, job_id) or {}
+    coll = _collection(wid, "jobs")
+    _col(coll).upsert(
         ids=[job_id],
         embeddings=_embed(1),
         documents=[existing.get("prompt", "")],
@@ -197,40 +291,49 @@ def save_generated_project(job_id: str, file_count: int, zip_path: str) -> None:
             "progress_pct": existing.get("progress_pct", 100),
             "file_count":   file_count,
             "zip_path":     zip_path,
+            "workspace_id": wid,
+            # Preserve user_id — must not be lost when project is saved
+            "user_id":      existing.get("user_id", ""),
             "updated_at":   datetime.now(UTC).isoformat(),
         }],
     )
 
 
-# ── Logs ──────────────────────────────────────────────────────────────────────
+# ── Logs ──────────────────────────────────────────────────────────────────
 
 def log_to_db(
     job_id: str,
     agent_name: str,
     message: str,
     log_level: str = "INFO",
+    workspace_id: str = "",
 ) -> None:
+    wid = _resolve_ws(workspace_id)
     level = getattr(logging, log_level, logging.INFO)
     logger.log(level, "[%s/%s] %s", agent_name, job_id[:8], message)
+    coll = _collection(wid, "generation_logs")
     try:
-        _col("generation_logs").add(
+        _col(coll).add(
             ids=[f"{job_id}_{uuid.uuid4().hex[:10]}"],
             embeddings=_embed(1),
             documents=[message],
             metadatas=[{
-                "job_id":     job_id,
-                "agent_name": agent_name,
-                "log_level":  log_level,
-                "timestamp":  datetime.now(UTC).isoformat(),
+                "job_id":       job_id,
+                "agent_name":   agent_name,
+                "log_level":    log_level,
+                "workspace_id": wid,
+                "timestamp":    datetime.now(UTC).isoformat(),
             }],
         )
     except Exception as exc:
         logger.warning("ChromaDB log write failed: %s", exc)
 
 
-def get_logs(job_id: str, limit: int = 200) -> list[dict[str, Any]]:
+def get_logs(job_id: str, workspace_id: str = "", limit: int = 200) -> list[dict[str, Any]]:
+    wid = _resolve_ws(workspace_id)
+    coll = _collection(wid, "generation_logs")
     try:
-        r = _col("generation_logs").get(
+        r = _col(coll).get(
             where={"job_id": job_id},
             include=["documents", "metadatas"],
         )
@@ -249,20 +352,24 @@ def get_logs(job_id: str, limit: int = 200) -> list[dict[str, Any]]:
         return []
 
 
-# ── Requirements & Blueprints ─────────────────────────────────────────────────
+# ── Requirements & Blueprints ─────────────────────────────────────────────
 
-def _upsert_json(collection: str, rec_id: str, job_id: str, data: dict) -> None:
-    _col(collection).upsert(
+def _upsert_json(workspace_id: str, collection: str, rec_id: str, job_id: str, data: dict) -> None:
+    wid = _resolve_ws(workspace_id)
+    coll = _collection(wid, collection)
+    _col(coll).upsert(
         ids=[rec_id],
         embeddings=_embed(1),
         documents=[json.dumps(data)],
-        metadatas=[{"job_id": job_id, "updated_at": datetime.now(UTC).isoformat()}],
+        metadatas=[{"job_id": job_id, "workspace_id": wid, "updated_at": datetime.now(UTC).isoformat()}],
     )
 
 
-def _fetch_json(collection: str, rec_id: str) -> dict | None:
+def _fetch_json(workspace_id: str, collection: str, rec_id: str) -> dict | None:
+    wid = _resolve_ws(workspace_id)
+    coll = _collection(wid, collection)
     try:
-        r = _col(collection).get(ids=[rec_id], include=["documents"])
+        r = _col(coll).get(ids=[rec_id], include=["documents"])
         if r["documents"]:
             return json.loads(r["documents"][0])
     except Exception:
@@ -270,24 +377,27 @@ def _fetch_json(collection: str, rec_id: str) -> dict | None:
     return None
 
 
-def save_requirements(job_id: str, data: dict) -> None:
-    _upsert_json("requirements", f"req_{job_id}", job_id, data)
+def save_requirements(job_id: str, data: dict, workspace_id: str = "") -> None:
+    wid = _resolve_ws(workspace_id)
+    _upsert_json(wid, "requirements", f"req_{job_id}", job_id, data)
 
 
-def get_requirements(job_id: str) -> dict | None:
-    return _fetch_json("requirements", f"req_{job_id}")
+def get_requirements(job_id: str, workspace_id: str = "") -> dict | None:
+    return _fetch_json(workspace_id, "requirements", f"req_{job_id}")
 
 
-def save_blueprint(job_id: str, data: dict) -> None:
-    _upsert_json("blueprints", f"bp_{job_id}", job_id, data)
+def save_blueprint(job_id: str, data: dict, workspace_id: str = "") -> None:
+    wid = _resolve_ws(workspace_id)
+    _upsert_json(wid, "blueprints", f"bp_{job_id}", job_id, data)
 
 
-def get_blueprint(job_id: str) -> dict | None:
-    return _fetch_json("blueprints", f"bp_{job_id}")
+def get_blueprint(job_id: str, workspace_id: str = "") -> dict | None:
+    return _fetch_json(workspace_id, "blueprints", f"bp_{job_id}")
 
 
-def update_parsed_requirements(job_id: str, parsed_json: str) -> None:
+def update_parsed_requirements(job_id: str, parsed_json: str, workspace_id: str = "") -> None:
+    wid = _resolve_ws(workspace_id)
     try:
-        save_requirements(job_id, json.loads(parsed_json))
+        save_requirements(job_id, json.loads(parsed_json), wid)
     except Exception:
         pass

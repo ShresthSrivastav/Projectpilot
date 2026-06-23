@@ -9,9 +9,16 @@ import streamlit as st
 BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 
 
+def _headers() -> dict:
+    token = st.session_state.get("access_token")
+    if token:
+        return {"Authorization": f"Bearer {token}"}
+    return {}
+
+
 def _get(path: str, timeout: int = 10) -> dict | None:
     try:
-        r = requests.get(f"{BACKEND}{path}", timeout=timeout)
+        r = requests.get(f"{BACKEND}{path}", headers=_headers(), timeout=timeout)
         r.raise_for_status()
         return r.json()
     except Exception:

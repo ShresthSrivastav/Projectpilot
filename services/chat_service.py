@@ -25,11 +25,11 @@ PROJECT_KEYWORDS = [
 ]
 
 
-def _find_project(query: str) -> list[dict]:
+def _find_project(query: str, workspace_id: str = "") -> list[dict]:
     """Search projects by name or prompt text matching."""
     q = query.lower().strip()
     words = [w for w in re.sub(r'[^a-z0-9\s]', ' ', q).split() if len(w) > 2]
-    jobs = chroma_db.list_jobs(limit=50)
+    jobs = chroma_db.list_jobs(workspace_id=workspace_id, limit=50)
     scored = []
     for j in jobs:
         name = (j.get("project_name") or "").lower()
@@ -115,7 +115,7 @@ GUIDELINES:
 """
 
 
-def process_message(message: str, conversation_id: str, context: dict = None) -> dict:
+def process_message(message: str, conversation_id: str, context: dict = None, workspace_id: str = "") -> dict:
     """Process a user message by pre-fetching project data and calling the LLM."""
 
     memory_store.add_chat_message(conversation_id, "user", message)
@@ -137,12 +137,12 @@ def process_message(message: str, conversation_id: str, context: dict = None) ->
         # Non-confirm/cancel response while action is pending - let it fall through
 
     # Check for action keywords
-    action = _detect_action(message, conversation_id)
+    action = _detect_action(message, conversation_id, workspace_id=workspace_id)
     if action:
         return _handle_action(conversation_id, action, message)
 
     # Find matching projects
-    projects = _find_project(message)
+    projects = _find_project(message, workspace_id=workspace_id)
     context_parts = []
 
     if projects:
@@ -197,10 +197,10 @@ def execute_confirmed_action(conversation_id: str, tool_name: str, args: dict) -
         return {"reply": err, "conversation_id": conversation_id}
 
 
-def _detect_action(message: str, conversation_id: str = "") -> dict:
+def _detect_action(message: str, conversation_id: str = "", workspace_id: str = "") -> dict:
     """Detect if user wants to perform an action."""
     m = message.lower()
-    jid = _extract_job_id(message, conversation_id)
+    jid = _extract_job_id(message, conversation_id, workspace_id=workspace_id)
 
     # Check for fix tests - even without a matched project, try harder
     fix_keywords = ["fix test", "fix failing", "fix-test", "failing test", "test fail",
@@ -209,7 +209,7 @@ def _detect_action(message: str, conversation_id: str = "") -> dict:
     if any(x in m for x in fix_keywords):
         if not jid:
             # Try finding any project with failed tests
-            jobs = chroma_db.list_jobs(limit=50)
+            jobs = chroma_db.list_jobs(workspace_id=workspace_id, limit=50)
             for j in jobs:
                 if j.get("test_failed", 0) and j.get("test_failed", 0) > 0:
                     jid = j.get("job_id", "")
@@ -237,7 +237,7 @@ def _detect_action(message: str, conversation_id: str = "") -> dict:
     return None
 
 
-def _extract_job_id(message: str, conversation_id: str = "") -> str:
+def _extract_job_id(message: str, conversation_id: str = "", workspace_id: str = "") -> str:
     """Try to find a job_id from the message or match a project name."""
     m = re.search(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', message.lower())
     if m:
@@ -251,7 +251,7 @@ def _extract_job_id(message: str, conversation_id: str = "") -> str:
         return _last_project_id.get(conversation_id, "")
 
     q_words = [w for w in re.sub(r'[^a-z0-9\s]', ' ', msg_lower).split() if len(w) > 2]
-    jobs = chroma_db.list_jobs(limit=50)
+    jobs = chroma_db.list_jobs(workspace_id=workspace_id, limit=50)
     best = ("", 0)
     for j in jobs:
         name = (j.get("project_name") or "").lower()

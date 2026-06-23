@@ -399,11 +399,13 @@ def test_req_agent_parses():
     with patch("agents.requirement_agent.call_model", return_value=mock_resp):
         from agents import requirement_agent
         r = requirement_agent.run(
-            "Build a task manager with CRUD and database.", "Task", "req-v4-001", model="local"
+            "Build a task manager with CRUD and database.", "Task", "req-v4-001",
+            model="local",
+            stack={"backend": "fastapi", "frontend": "streamlit", "db": "sqlite"},
         )
     assert r["project_type"] == "task_manager"
     assert len(r["features"]) >= 3
-    assert "stack" in r  # v4: stack always attached
+    assert "stack" in r
 
 
 def test_req_agent_stack_attached():
@@ -498,7 +500,7 @@ def test_testgen_agent_writes_file(tmp_path):
     os.environ["GENERATED_PROJECTS_DIR"] = "./test_generated_projects_v4"
 
 
-def test_testgen_agent_fallback_on_empty(tmp_path):
+def test_testgen_agent_fallback_writes_minimal_tests(tmp_path):
     import os
     os.environ["GENERATED_PROJECTS_DIR"] = str(tmp_path)
     import importlib
@@ -512,11 +514,12 @@ def test_testgen_agent_fallback_on_empty(tmp_path):
     req = {"project_name": "App", "features": []}
     bp  = {"routes": [{"method": "GET", "path": "/health", "description": "Health"}], "db_tables": []}
 
-    with patch("agents.test_gen_agent.call_model", return_value="x"):  # too short → no fallback
+    with patch("agents.test_gen_agent.call_model", return_value="x"):  # too short → fallback
         from agents import test_gen_agent
         files = test_gen_agent.run(req, bp, [], jid, model="local")
 
-    assert len(files) == 0  # No mock fallback — per methodology: no fake tests
+    assert len(files) >= 2  # __init__.py + test_app.py written as fallback
+    assert any("test_app.py" in f for f in files)
     os.environ["GENERATED_PROJECTS_DIR"] = "./test_generated_projects_v4"
 
 

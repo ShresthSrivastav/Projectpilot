@@ -1,16 +1,26 @@
-"""Workspace — browse local projects and GitHub repositories with full management UI."""
+"""Workspace — workspace management, members, invites, activity feed, and settings."""
+
 import os
 from typing import Any
 
 import requests
 import streamlit as st
 
+import frontend.auth as auth_client
+
 BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+
+
+def _headers():
+    token = st.session_state.get("access_token")
+    if token:
+        return {"Authorization": f"Bearer {token}"}
+    return {}
 
 
 def _get(path: str, timeout: int = 10) -> dict | None:
     try:
-        r = requests.get(f"{BACKEND}{path}", timeout=timeout)
+        r = requests.get(f"{BACKEND}{path}", headers=_headers(), timeout=timeout)
         r.raise_for_status()
         return r.json()
     except Exception:
@@ -19,7 +29,7 @@ def _get(path: str, timeout: int = 10) -> dict | None:
 
 def _post(path: str, data: Any, timeout: int = 15) -> dict | None:
     try:
-        r = requests.post(f"{BACKEND}{path}", json=data, timeout=timeout)
+        r = requests.post(f"{BACKEND}{path}", json=data, headers=_headers(), timeout=timeout)
         if not r.ok:
             try:
                 detail = r.json().get("detail", r.text[:200])
@@ -33,14 +43,204 @@ def _post(path: str, data: Any, timeout: int = 15) -> dict | None:
         return None
 
 
-# 
-#   Local Projects Section
-# 
+def _refresh_workspaces():
+    try:
+        ws_list = auth_client.list_workspaces(st.session_state.access_token)
+        st.session_state.workspace_list = ws_list
+    except Exception:
+        st.session_state.workspace_list = []
+
+
+def _switch_workspace(ws_id: str):
+    try:
+        result = auth_client.switch_workspace(st.session_state.access_token, ws_id)
+        st.session_state.access_token = result["access_token"]
+        st.session_state.workspace_info = result["workspace"]
+        st.query_params["rt"] = st.session_state.refresh_token
+        st.rerun()
+    except Exception as e:
+        st.error(f"Switch failed: {e}")
+
+
+# ── Workspace Switcher ──────────────────────────────────────────────
+
+def _show_workspace_switcher():
+    st.markdown("### Workspace Switcher")
+    if "workspace_list" not in st.session_state:
+        _refresh_workspaces()
+    ws_list = st.session_state.get("workspace_list", [])
+    current_ws = st.session_state.get("workspace_info", {})
+    current_id = current_ws.get("id", "")
+
+    if ws_list:
+        ws_options = {f"{w['name']} ({w['role']})": w["id"] for w in ws_list}
+        default_label = next((k for k, v in ws_options.items() if v == current_id), list(ws_options.keys())[0])
+        selected = st.selectbox("Switch workspace", list(ws_options.keys()), index=list(ws_options.keys()).index(default_label) if default_label in ws_options else 0, key="ws_switcher")
+        if selected and ws_options[selected] != current_id:
+            _switch_workspace(ws_options[selected])
+
+    with st.expander("Create New Workspace"):
+        new_name = st.text_input("Workspace name", placeholder="My New Workspace", key="ws_create_name")
+        if st.button("Create", key="ws_create_btn", disabled=not new_name.strip()):
+            try:
+                ws = auth_client.create_workspace(st.session_state.access_token, new_name.strip())
+                st.success(f"Workspace '{ws['name']}' created!")
+                _refresh_workspaces()
+                st.rerun()
+            except Exception as e:
+                st.error(f"Creation failed: {e}")
+
+    st.divider()
+
+
+# ── Members Management ──────────────────────────────────────────────
+
+def _show_members():
+    st.markdown("### Members")
+    try:
+        members = auth_client.get_workspace_members(st.session_state.access_token)
+    except Exception as e:
+        st.error(f"Failed to load members: {e}")
+        return
+
+    for m in members:
+        with st.container():
+            cols = st.columns([2, 2, 1, 1])
+            cols[0].markdown(f"**{m['name']}**")
+            cols[1].markdown(m["email"])
+            cols[2].markdown(f"`{m['role']}`")
+            role_rank = {"OWNER": 4, "ADMIN": 3, "MEMBER": 2, "VIEWER": 1}
+            my_ws_info = st.session_state.get("workspace_info", {})
+            current_ws_id = my_ws_info.get("id", "")
+            my_ws_list = st.session_state.get("workspace_list", [])
+            my_role = next((w["role"] for w in my_ws_list if w["id"] == current_ws_id), "VIEWER")
+            if role_rank.get(my_role, 0) > role_rank.get(m["role"], 0):
+                if cols[3].button("Remove", key=f"ws_rm_member_{m['id']}"):
+                    try:
+                        auth_client.remove_member(st.session_state.access_token, m["id"])
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Remove failed: {e}")
+
+    # Invite section
+    with st.expander("Invite Member"):
+        invite_email = st.text_input("Email address", key="ws_invite_email")
+        invite_role = st.selectbox("Role", ["MEMBER", "ADMIN", "VIEWER"], key="ws_invite_role")
+        if st.button("Send Invite", key="ws_invite_btn", disabled=not invite_email.strip()):
+            try:
+                result = auth_client.invite_member(st.session_state.access_token, invite_email.strip(), invite_role)
+                token = result.get("token", "")
+                st.success(f"Invite sent! Share this token with {invite_email.strip()}:")
+                st.code(token, language="text")
+            except Exception as e:
+                st.error(f"Invite failed: {e}")
+
+    # Pending invites
+    st.markdown("### Pending Invites")
+    try:
+        invites = auth_client.get_pending_invites(st.session_state.access_token)
+        if invites:
+            for inv in invites:
+                st.caption(f"{inv['email']} — `{inv['role']}` (sent {inv.get('created_at', '')[:10]})")
+        else:
+            st.caption("No pending invites.")
+    except Exception:
+        pass
+
+    # Accept invite
+    st.markdown("### Accept Invite")
+    accept_token = st.text_input("Invite token", key="ws_accept_token")
+    if st.button("Accept Invite", key="ws_accept_btn", disabled=not accept_token.strip()):
+        try:
+            result = auth_client.accept_invite(st.session_state.access_token, accept_token.strip())
+            st.success(f"Joined workspace '{result.get('name', '')}' as {result.get('role', '')}!")
+            _refresh_workspaces()
+            st.rerun()
+        except Exception as e:
+            st.error(f"Accept failed: {e}")
+
+    st.divider()
+
+
+# ── Activity Feed ───────────────────────────────────────────────────
+
+def _show_activity():
+    st.markdown("### Activity Feed")
+    try:
+        activities = auth_client.get_activities(st.session_state.access_token, limit=50)
+    except Exception as e:
+        st.error(f"Failed to load activity: {e}")
+        return
+
+    if not activities:
+        st.caption("No activity yet.")
+        return
+
+    for act in activities:
+        ts = act.get("timestamp", "")[:19] if act.get("timestamp") else ""
+        desc = act.get("description", "")
+        action = act.get("action", "")
+        st.markdown(f"`{ts}` **{action}** — {desc}")
+
+
+# ── Workspace Settings ──────────────────────────────────────────────
+
+def _show_settings():
+    st.markdown("### Workspace Settings")
+    ws = st.session_state.get("workspace_info", {})
+    st.markdown(f"**Name:** {ws.get('name', '')}")
+    st.markdown(f"**ID:** `{ws.get('id', '')}`")
+    st.markdown(f"**Owner ID:** `{ws.get('owner_id', '')}`")
+    st.markdown(f"**Created:** {ws.get('created_at', '')[:10] if ws.get('created_at') else 'N/A'}")
+
+    st.markdown("#### Rename Workspace")
+    new_name = st.text_input("New name", value=ws.get("name", ""), key="ws_rename_input")
+    if st.button("Rename", key="ws_rename_btn", disabled=not new_name.strip() or new_name.strip() == ws.get("name", "")):
+        try:
+            result = _post("/api/workspace/rename", {"name": new_name.strip()})
+            if result:
+                st.success("Workspace renamed!")
+                st.session_state.workspace_info = result
+                st.rerun()
+        except Exception as e:
+            st.error(f"Rename failed: {e}")
+
+
+# ── Main Entry Point ────────────────────────────────────────────────
+
+def show_workspace_tab():
+    st.markdown("## Workspace Management")
+
+    if not st.session_state.get("access_token"):
+        st.info("Please sign in to manage workspaces.")
+        return
+
+    _show_workspace_switcher()
+
+    ws_tabs = st.tabs(["Members", "Activity", "Settings", "Local Projects", "GitHub"])
+
+    with ws_tabs[0]:
+        _show_members()
+
+    with ws_tabs[1]:
+        _show_activity()
+
+    with ws_tabs[2]:
+        _show_settings()
+
+    with ws_tabs[3]:
+        _show_local_projects()
+
+    with ws_tabs[4]:
+        _show_github_section()
+
+
+# ── Local Projects (from old workspace tab) ─────────────────────────
 
 def _show_local_projects():
     st.markdown("#### Local Generated Projects")
     try:
-        r = requests.get(f"{BACKEND}/jobs", timeout=8)
+        r = requests.get(f"{BACKEND}/jobs", headers=_headers(), timeout=8)
         r.raise_for_status()
         jobs = r.json().get("jobs", [])
     except Exception:
@@ -74,7 +274,7 @@ def _show_local_projects():
         sf = st.selectbox("File", fl, key="ws_local_file", label_visibility="collapsed")
         if sf:
             enc = sf.replace("\\", "/")
-            resp = requests.get(f"{BACKEND}/read-project-file/{jid}/{enc}", timeout=10)
+            resp = requests.get(f"{BACKEND}/read-project-file/{jid}/{enc}", headers=_headers(), timeout=10)
             if resp.ok:
                 ext = os.path.splitext(sf)[1]
                 lang = {"py":"python","js":"javascript","ts":"typescript","html":"html",
@@ -101,6 +301,7 @@ def _show_local_projects():
                     r = requests.post(
                         f"{BACKEND}/iterate/{jid}",
                         json={"prompt": iter_prompt, "model": st.session_state.selected_model},
+                        headers=_headers(),
                         timeout=300,
                     )
                     if r.ok:
@@ -126,7 +327,6 @@ def _show_local_projects():
                             with st.expander("Syntax Errors"):
                                 for f, err in data.get("syntax_errors", {}).items():
                                     st.code(f"{f}: {err}")
-                        # Show diffs
                         diffs = data.get("diffs", {})
                         if diffs:
                             with st.expander("Code Diffs", expanded=True):
@@ -144,7 +344,7 @@ def _show_local_projects():
                      help="Permanently delete this project and all its files."):
             import urllib.parse
             try:
-                r = requests.delete(f"{BACKEND}/jobs/{urllib.parse.quote(jid)}", timeout=10)
+                r = requests.delete(f"{BACKEND}/jobs/{urllib.parse.quote(jid)}", headers=_headers(), timeout=10)
                 if r.ok:
                     st.success("Project deleted.")
                     st.rerun()
@@ -183,11 +383,10 @@ def _show_test_results(detail: dict):
     if sm:
         st.caption(f"Summary: {sm}")
 
-    # Show test source code
     jid = detail.get("job_id", "")
     if jid:
         try:
-            tr = requests.get(f"{BACKEND}/test-files/{jid}", timeout=10)
+            tr = requests.get(f"{BACKEND}/test-files/{jid}", headers=_headers(), timeout=10)
             if tr.ok:
                 tfiles = tr.json().get("test_files", {})
                 if tfiles:
@@ -198,14 +397,14 @@ def _show_test_results(detail: dict):
         except Exception:
             pass
 
-    # Fix failing tests button
     if tf > 0 and jid:
         if st.button("\U0001f527 Fix Failing Tests", key=f"fix_tests_{jid}", type="primary",
                      help="Use AI to fix source code so all tests pass"):
             with st.spinner("Running tests, analysing failures, and fixing code..."):
                 try:
                     fr = requests.post(f"{BACKEND}/fix-tests/{jid}",
-                                       json={"model": st.session_state.selected_model}, timeout=300)
+                                       json={"model": st.session_state.selected_model},
+                                       headers=_headers(), timeout=300)
                     if fr.ok:
                         fdata = fr.json()
                         if fdata.get("already_passing"):
@@ -236,7 +435,6 @@ def _show_test_results(detail: dict):
                 except Exception as exc:
                     st.error(str(exc))
 
-    #  AI Review 
     rs_raw = detail.get("review_summary", "")
     if rs_raw:
         import json as _json
@@ -272,7 +470,8 @@ def _show_test_results(detail: dict):
             with st.spinner("Analyzing project..."):
                 try:
                     rr = requests.post(f"{BACKEND}/review/{jid}",
-                                       json={"model": st.session_state.selected_model}, timeout=300)
+                                       json={"model": st.session_state.selected_model},
+                                       headers=_headers(), timeout=300)
                     if rr.ok:
                         st.rerun()
                     else:
@@ -283,7 +482,7 @@ def _show_test_results(detail: dict):
 
 def _show_changelog(jid: str):
     try:
-        r = requests.get(f"{BACKEND}/changelog/{jid}", timeout=10)
+        r = requests.get(f"{BACKEND}/changelog/{jid}", headers=_headers(), timeout=10)
         if r.ok:
             data = r.json()
             if data.get("exists"):
@@ -305,9 +504,7 @@ def _show_logs(detail: dict):
                 st.code(f"[{ts}] [{lv}] [{ag}] {msg}")
 
 
-# 
-#   GitHub Integration Section
-# 
+# ── GitHub Section ──────────────────────────────────────────────────
 
 def _gh_get(path: str, timeout: int = 10) -> dict | None:
     return _get(path, timeout)
@@ -321,7 +518,6 @@ def _show_github_section():
     st.markdown("---")
     st.markdown("## GitHub Integration")
 
-    #  Connection 
     conns = _gh_get("/github/connections")
     connections = (conns or {}).get("connections", [])
     current_username = st.session_state.get("gh_username", "")
@@ -356,33 +552,24 @@ def _show_github_section():
         return
 
     username = current_username
-    #  Tabs within GitHub 
     gh_tab1, gh_tab2, gh_tab3, gh_tab4, gh_tab5 = st.tabs([
         "Repositories", "Branches && Files", "Commits", "Pull Requests", "Issues",
     ])
 
-    # 
-    # GH TAB 1 — Repositories
-    # 
     with gh_tab1:
         st.markdown("### Your Repositories")
-
         col1, col2 = st.columns([3, 1])
         with col1:
-            search_q = st.text_input("Search repos", placeholder="e.g. my-project or organization/repo",
-                                     key="gh_search_q")
+            search_q = st.text_input("Search repos", placeholder="e.g. my-project or organization/repo", key="gh_search_q")
         with col2:
             st.write("")
             if st.button("Refresh", key="gh_refresh_repos", use_container_width=True):
-                pass  # triggers rerun below
-
+                pass
         repos_data = _gh_get(f"/github/{username}/repos")
         repos = (repos_data or {}).get("repos", [])
-
         if search_q:
             q = search_q.lower()
             repos = [r for r in repos if q in r["full_name"].lower() or q in r.get("description","").lower()]
-
         if not repos:
             st.caption("No repositories found. Make sure your token has repo scope.")
         else:
@@ -404,20 +591,14 @@ def _show_github_section():
                         st.session_state.gh_active_tab = "Branches && Files"
                         st.rerun()
 
-    # 
-    # GH TAB 2 — Branches & Files
-    # 
     with gh_tab2:
         repo = st.session_state.get("gh_active_repo", "")
         if not repo:
-            repo = st.text_input("Repository (user/repo)", placeholder="e.g. octocat/Hello-World",
-                                 key="gh_repo_input")
+            repo = st.text_input("Repository (user/repo)", placeholder="e.g. octocat/Hello-World", key="gh_repo_input")
             if not repo:
                 st.caption("Select a repo from the Repositories tab or type one above.")
                 st.stop()
-
         st.markdown(f"**Repo:** `{repo}`")
-
         branches_data = _gh_get(f"/github/{repo}/branches?username={username}")
         branches = (branches_data or {}).get("branches", [])
         branch_names = [b["name"] for b in branches]
@@ -426,14 +607,12 @@ def _show_github_section():
             current_branch = st.selectbox("Branch", branch_names, index=branch_names.index(current_branch)
                                           if current_branch in branch_names else 0, key="gh_branch_sel")
             st.session_state.gh_branch = current_branch
-
         col1, col2 = st.columns([2, 1])
         with col1:
             new_branch = st.text_input("New branch name", placeholder="feature/xyz", key="gh_new_branch")
             if st.button("Create Branch", key="gh_create_branch") and new_branch:
                 res = _gh_post(f"/github/{repo}/branches", {
-                    "username": username, "branch": new_branch,
-                    "source_branch": current_branch,
+                    "username": username, "branch": new_branch, "source_branch": current_branch,
                 })
                 if res:
                     st.success(f"Branch `{new_branch}` created")
@@ -442,16 +621,12 @@ def _show_github_section():
             st.write("")
             if st.button("\U0001f504 Refresh Branches", key="gh_refresh_branches"):
                 st.rerun()
-
-        #  File Browser 
         st.markdown("#### Files")
         gh_path = st.session_state.get("gh_file_path", "")
         gh_path = st.text_input("Path", value=gh_path, placeholder="/", key="gh_file_path_inp")
         st.session_state.gh_file_path = gh_path
-
         files_data = _gh_get(f"/github/{repo}/files?path={gh_path}&ref={current_branch}&username={username}")
         files = (files_data or {}).get("files", [])
-
         if files:
             cols = st.columns(4)
             for i, f in enumerate(files):
@@ -467,31 +642,23 @@ def _show_github_section():
                         if st.button(f"{icon} {name}", key=f"gh_file_{name}_{i}"):
                             st.session_state.gh_selected_file = f["path"]
                             st.session_state.gh_edit_mode = "view"
-
-        #  File Viewer/Editor 
         selected_file = st.session_state.get("gh_selected_file", "")
         if selected_file:
             st.markdown(f"#### `{selected_file}`")
             doc = _gh_get(f"/github/{repo}/file?path={selected_file}&ref={current_branch}&username={username}")
             content = (doc or {}).get("content", "")
             sha = (doc or {}).get("sha", "")
-
             edit_mode = st.session_state.get("gh_edit_mode", "view")
             if edit_mode == "edit":
-                new_content = st.text_area("Edit content", value=content, height=400,
-                                           key="gh_edit_area")
-                commit_msg = st.text_input("Commit message", placeholder=f"Update {selected_file.split('/')[-1]}",
-                                           key="gh_commit_msg")
+                new_content = st.text_area("Edit content", value=content, height=400, key="gh_edit_area")
+                commit_msg = st.text_input("Commit message", placeholder=f"Update {selected_file.split('/')[-1]}", key="gh_commit_msg")
                 ccol1, ccol2 = st.columns(2)
                 with ccol1:
                     if st.button("Save & Commit", key="gh_save_file"):
                         res = _gh_post(f"/github/{repo}/file", {
-                            "username": username,
-                            "path": selected_file,
-                            "content": new_content,
+                            "username": username, "path": selected_file, "content": new_content,
                             "message": commit_msg or f"Update {selected_file.split('/')[-1]}",
-                            "branch": current_branch,
-                            "sha": sha,
+                            "branch": current_branch, "sha": sha,
                         })
                         if res:
                             st.success(f"Committed: `{res.get('commit','')[:12]}`")
@@ -512,27 +679,21 @@ def _show_github_section():
                     st.session_state.gh_edit_mode = "edit"
                     st.rerun()
 
-    # 
-    # GH TAB 3 — Commits
-    # 
     with gh_tab3:
-        repo = st.session_state.get("gh_active_repo", repo if 'repo' in dir() else "")
+        repo = st.session_state.get("gh_active_repo", "")
         if not repo:
             repo = st.text_input("Repository", placeholder="user/repo", key="gh_commits_repo")
         if repo:
-            branch = st.text_input("Branch", value=st.session_state.get("gh_branch", ""),
-                                   key="gh_commits_branch")
+            branch = st.text_input("Branch", value=st.session_state.get("gh_branch", ""), key="gh_commits_branch")
             since = st.text_input("Since (ISO date)", placeholder="2026-01-01", key="gh_commits_since")
-            commits_data = _gh_get(
-                f"/github/{repo}/commits?branch={branch}&since={since}&username={username}")
+            commits_data = _gh_get(f"/github/{repo}/commits?branch={branch}&since={since}&username={username}")
             commits = (commits_data or {}).get("commits", [])
             if commits:
                 for c in commits:
                     with st.expander(f"{c['sha'][:8]} \u2014 {c['message'][:80]}"):
                         st.markdown(f"**Author:** {c['author']} <{c.get('author_email','')}>")
                         st.markdown(f"**Date:** {c['date'][:19]}")
-                        st.markdown(f"**Changes:** {c.get('files_changed',0)} files, "
-                                    f"+{c.get('additions',0)} -{c.get('deletions',0)}")
+                        st.markdown(f"**Changes:** {c.get('files_changed',0)} files, +{c.get('additions',0)} -{c.get('deletions',0)}")
                         st.markdown(f"[View on GitHub]({c.get('url','')})")
                         sha = c["sha"]
                         diff = _gh_get(f"/github/{repo}/commits/{sha}?username={username}")
@@ -542,11 +703,8 @@ def _show_github_section():
             else:
                 st.caption("No commits found.")
 
-    # 
-    # GH TAB 4 — Pull Requests
-    # 
     with gh_tab4:
-        repo = st.session_state.get("gh_active_repo", repo if 'repo' in dir() else "")
+        repo = st.session_state.get("gh_active_repo", "")
         if not repo:
             repo = st.text_input("Repository", placeholder="user/repo", key="gh_pr_repo")
         if repo:
@@ -592,11 +750,8 @@ def _show_github_section():
                         st.success(f"PR #{res.get('number')} created!")
                         st.rerun()
 
-    # 
-    # GH TAB 5 — Issues
-    # 
     with gh_tab5:
-        repo = st.session_state.get("gh_active_repo", repo if 'repo' in dir() else "")
+        repo = st.session_state.get("gh_active_repo", "")
         if not repo:
             repo = st.text_input("Repository", placeholder="user/repo", key="gh_issues_repo")
         if repo:
@@ -610,8 +765,7 @@ def _show_github_section():
                         st.markdown(f"**State:** {iss['state']} | **Author:** {iss['author']}")
                         st.markdown(f"**Comments:** {iss.get('comments_count',0)}")
                         if iss.get("body"):
-                            st.text_area("Description", iss["body"][:500], disabled=True,
-                                         key=f"gh_iss_body_{iss['number']}")
+                            st.text_area("Description", iss["body"][:500], disabled=True, key=f"gh_iss_body_{iss['number']}")
                         comment_text = st.text_area("Add comment", placeholder="Write a comment...",
                                                      key=f"gh_iss_comment_{iss['number']}", height=60)
                         if st.button("Comment", key=f"gh_iss_comment_btn_{iss['number']}") and comment_text:
@@ -638,8 +792,7 @@ def _show_github_section():
             with st.expander("Create Issue"):
                 iss_title = st.text_input("Title", key="gh_new_iss_title")
                 iss_body = st.text_area("Description", key="gh_new_iss_body", height=100)
-                iss_labels = st.text_input("Labels (comma-separated)", placeholder="bug, enhancement",
-                                           key="gh_new_iss_labels")
+                iss_labels = st.text_input("Labels (comma-separated)", placeholder="bug, enhancement", key="gh_new_iss_labels")
                 if st.button("Create Issue", key="gh_create_iss_btn") and iss_title:
                     lbls = [l.strip() for l in iss_labels.split(",") if l.strip()] if iss_labels else []
                     res = _gh_post(f"/github/{repo}/issues", {
@@ -648,16 +801,3 @@ def _show_github_section():
                     if res:
                         st.success(f"Issue #{res.get('number')} created!")
                         st.rerun()
-
-
-# 
-#   Main Workspace Entry Point
-# 
-
-def show_workspace_tab():
-    st.markdown("## Workspace")
-    main_tab_local, main_tab_github = st.tabs(["Local Projects", "GitHub"])
-    with main_tab_local:
-        _show_local_projects()
-    with main_tab_github:
-        _show_github_section()

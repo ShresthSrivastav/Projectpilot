@@ -13,6 +13,8 @@ import time
 import requests
 import streamlit as st
 
+import frontend.auth as auth_client
+
 BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 POLL_SEC = 2
 
@@ -57,95 +59,168 @@ for k, v in {
     "chat_loading": False,
     "chat_pending_confirm": None,
     "chat_conversations": [],
+    "access_token": None,
+    "refresh_token": None,
+    "user_info": None,
+    "workspace_info": None,
+    "show_password": False,
+    "auth_loading": False,
+    "show_profile": False,
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
+# ── Session persistence (restore from refresh token in URL params) ────
+if not st.session_state.access_token:
+    try:
+        params = st.query_params
+        saved_rt = params.get("rt", "")
+        if saved_rt:
+            result = auth_client.refresh_access_token(saved_rt)
+            st.session_state.access_token = result["access_token"]
+            st.session_state.refresh_token = result["refresh_token"]
+            st.session_state.user_info = result["user"]
+            workspace = auth_client.get_current_workspace(result["access_token"])
+            st.session_state.workspace_info = workspace
+            st.query_params.clear()
+            st.rerun()
+    except Exception:
+        st.query_params.clear()
+
+# ── Auth wall ──────────────────────────────────────────────────────────
+
+if not st.session_state.access_token:
+    st.markdown("""
+    <div style='text-align:center; padding:2rem 0 1rem 0;'>
+        <h1 style='font-size:2.5rem; margin:0;'>🚀 ProjectPilot</h1>
+        <p style='color:#9ca3af; font-size:1.1rem;'>Multi-Agent AI Project Generator</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns([1, 1])
+
+    with col1:
+        st.markdown("### Sign In")
+        login_email = st.text_input("Email", key="login_email")
+        login_password = st.text_input(
+            "Password", type="password" if not st.session_state.show_password else "default",
+            key="login_password",
+        )
+        if st.button("Sign In", type="primary", use_container_width=True, disabled=st.session_state.auth_loading):
+            if not login_email or not login_password:
+                st.error("Please enter email and password.")
+            else:
+                st.session_state.auth_loading = True
+                try:
+                    result = auth_client.login(login_email, login_password)
+                    st.session_state.access_token = result["access_token"]
+                    st.session_state.refresh_token = result["refresh_token"]
+                    st.session_state.user_info = result["user"]
+                    workspace = auth_client.get_current_workspace(result["access_token"])
+                    st.session_state.workspace_info = workspace
+                    st.session_state.auth_loading = False
+                    st.rerun()
+                except requests.HTTPError as e:
+                    st.session_state.auth_loading = False
+                    detail = ""
+                    try:
+                        detail = e.response.json().get("detail", str(e))
+                    except Exception:
+                        detail = str(e)
+                    st.error(f"Login failed: {detail}")
+                except Exception as e:
+                    st.session_state.auth_loading = False
+                    st.error(f"Login failed: {e}")
+
+    with col2:
+        st.markdown("### Create Account")
+        reg_name = st.text_input("Name", key="reg_name")
+        reg_email = st.text_input("Email", key="reg_email")
+        reg_password = st.text_input("Password", type="password", key="reg_password")
+        reg_confirm = st.text_input("Confirm Password", type="password", key="reg_confirm")
+        if reg_password:
+            strength = len(reg_password)
+            if strength < 8:
+                st.caption(":red[Weak — minimum 8 characters]")
+            elif strength < 12:
+                st.caption(":orange[Medium]")
+            else:
+                st.caption(":green[Strong]")
+        if reg_confirm and reg_password != reg_confirm:
+            st.caption(":red[Passwords do not match]")
+        if st.button("Register", type="primary", use_container_width=True, disabled=st.session_state.auth_loading):
+            if not reg_name or not reg_email or not reg_password:
+                st.error("Please fill in all fields.")
+            elif reg_password != reg_confirm:
+                st.error("Passwords do not match.")
+            elif len(reg_password) < 8:
+                st.error("Password must be at least 8 characters.")
+            else:
+                st.session_state.auth_loading = True
+                try:
+                    result = auth_client.register(reg_name, reg_email, reg_password, reg_confirm)
+                    st.session_state.access_token = result["access_token"]
+                    st.session_state.refresh_token = result["refresh_token"]
+                    st.session_state.user_info = result["user"]
+                    workspace = auth_client.get_current_workspace(result["access_token"])
+                    st.session_state.workspace_info = workspace
+                    st.session_state.auth_loading = False
+                    st.success("Account created! Welcome to ProjectPilot.")
+                    st.rerun()
+                except requests.HTTPError as e:
+                    st.session_state.auth_loading = False
+                    detail = ""
+                    try:
+                        detail = e.response.json().get("detail", str(e))
+                    except Exception:
+                        detail = str(e)
+                    st.error(f"Registration failed: {detail}")
+                except Exception as e:
+                    st.session_state.auth_loading = False
+                    st.error(f"Registration failed: {e}")
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.toggle("Show passwords", key="show_password", help="Toggle password visibility")
+
+    st.stop()
+
+# ── Session persistence: save refresh token to URL ────────────────────
+if st.session_state.access_token and st.session_state.refresh_token:
+    params = st.query_params
+    if params.get("rt") != st.session_state.refresh_token:
+        params["rt"] = st.session_state.refresh_token
+        st.query_params = params
+
 
 PROJECT_TYPE_DEFAULTS = {
-    "Web API (backend only)": {
-        "backend": "fastapi",
-        "frontend": "none",
-        "db": "sqlite",
-        "orm": "sqlalchemy",
-        "auth": "none",
-        "testing": "pytest",
-        "css": "none",
-        "deploy": "docker",
-    },
-    "Full-stack Web App": {
-        "backend": "fastapi",
-        "frontend": "react",
-        "db": "sqlite",
-        "orm": "sqlalchemy",
-        "auth": "jwt",
-        "testing": "pytest",
-        "css": "bootstrap",
-        "deploy": "docker",
-    },
-    "CLI Tool": {
-        "backend": "none",
-        "frontend": "none",
-        "db": "none",
-        "orm": "none",
-        "auth": "none",
-        "testing": "pytest",
-        "css": "none",
-        "deploy": "none",
-    },
-    "Data Pipeline / ETL": {
-        "backend": "fastapi",
-        "frontend": "none",
-        "db": "postgresql",
-        "orm": "sqlalchemy",
-        "auth": "none",
-        "testing": "pytest",
-        "css": "none",
-        "deploy": "docker",
-    },
-    "Automation Script": {
-        "backend": "none",
-        "frontend": "none",
-        "db": "none",
-        "orm": "none",
-        "auth": "none",
-        "testing": "pytest",
-        "css": "none",
-        "deploy": "none",
-    },
-    "Library / SDK": {
-        "backend": "none",
-        "frontend": "none",
-        "db": "none",
-        "orm": "none",
-        "auth": "none",
-        "testing": "pytest",
-        "css": "none",
-        "deploy": "none",
-    },
+    "Web API": {"category": "api"},
+    "Full-stack Web App": {"category": "fullstack"},
+    "CLI Tool": {"category": "cli"},
+    "Data Pipeline / ETL": {"category": "pipeline"},
+    "Automation Script": {"category": "script"},
+    "Library / SDK": {"category": "library"},
 }
 
 
 def _sync_project_defaults(project_type: str) -> dict[str, str]:
     current = dict(st.session_state.wizard_data)
-    defaults = PROJECT_TYPE_DEFAULTS.get(project_type, PROJECT_TYPE_DEFAULTS["Web API (backend only)"])
     current["project_type"] = project_type
-    for key, value in defaults.items():
-        current.setdefault(key, value)
-    if project_type in {"CLI Tool", "Automation Script", "Library / SDK"}:
-        current["frontend"] = "none"
-        current["db"] = "none"
-        current["orm"] = "none"
-        current["auth"] = "none"
-        current["css"] = "none"
     st.session_state.wizard_data = current
     return current
 
 
 #  API helpers 
+def _headers() -> dict:
+    token = st.session_state.get("access_token")
+    if token:
+        return {"Authorization": f"Bearer {token}"}
+    return {}
+
+
 def _get(path: str, timeout: int = 8) -> dict | None:
     try:
-        r = requests.get(f"{BACKEND}{path}", timeout=timeout)
+        r = requests.get(f"{BACKEND}{path}", headers=_headers(), timeout=timeout)
         r.raise_for_status()
         return r.json()
     except Exception:
@@ -154,7 +229,7 @@ def _get(path: str, timeout: int = 8) -> dict | None:
 
 def _post(path: str, payload: dict, timeout: int = 60) -> dict | None:
     try:
-        r = requests.post(f"{BACKEND}{path}", json=payload, timeout=timeout)
+        r = requests.post(f"{BACKEND}{path}", json=payload, headers=_headers(), timeout=timeout)
         r.raise_for_status()
         return r.json()
     except requests.HTTPError as exc:
@@ -172,7 +247,7 @@ def _post(path: str, payload: dict, timeout: int = 60) -> dict | None:
 
 def _download(job_id: str) -> bytes | None:
     try:
-        r = requests.get(f"{BACKEND}/download/{job_id}", timeout=30)
+        r = requests.get(f"{BACKEND}/download/{job_id}", headers=_headers(), timeout=30)
         r.raise_for_status()
         return r.content
     except Exception as exc:
@@ -183,7 +258,7 @@ def _download(job_id: str) -> bytes | None:
 def _delete_chat_conv(conversation_id):
     try:
         import requests as _req
-        r = _req.delete(f"{BACKEND}/chat/conversations/{conversation_id}", timeout=8)
+        r = _req.delete(f"{BACKEND}/chat/conversations/{conversation_id}", headers=_headers(), timeout=8)
         r.raise_for_status()
         return r.json()
     except Exception:
@@ -202,8 +277,66 @@ MODELS = {
 with st.sidebar:
     st.markdown("##  ProjectPilot")
     st.caption("Multi-agent project generator")
-    st.divider()
 
+    if st.session_state.get("user_info"):
+        user = st.session_state.user_info
+        ws = st.session_state.workspace_info or {}
+        st.markdown(f"**{user.get('name', '')}**")
+        st.caption(f"{user.get('email', '')}")
+
+        # Workspace switcher (re-fetch if access_token changed)
+        last_token = st.session_state.get("_ws_list_token", "")
+        if "workspace_list" not in st.session_state or last_token != st.session_state.access_token:
+            try:
+                import frontend.auth as auth
+                st.session_state.workspace_list = auth.list_workspaces(st.session_state.access_token)
+            except Exception:
+                st.session_state.workspace_list = []
+            st.session_state._ws_list_token = st.session_state.access_token
+        ws_list = st.session_state.get("workspace_list", [])
+        current_ws_id = ws.get("id", "")
+        if ws_list:
+            ws_options = {w["name"]: w["id"] for w in ws_list}
+            current_label = next((k for k, v in ws_options.items() if v == current_ws_id), list(ws_options.keys())[0] if ws_options else "")
+            selected = st.selectbox("Workspace", list(ws_options.keys()),
+                                    index=list(ws_options.keys()).index(current_label) if current_label in ws_options else 0,
+                                    key="sidebar_ws_switcher", label_visibility="collapsed")
+            if selected and ws_options[selected] != current_ws_id:
+                try:
+                    import frontend.auth as auth
+                    result = auth.switch_workspace(st.session_state.access_token, ws_options[selected])
+                    st.session_state.access_token = result["access_token"]
+                    st.session_state.workspace_info = result["workspace"]
+                    st.query_params["rt"] = st.session_state.refresh_token
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Switch failed: {e}")
+
+        if st.button("Logout", key="logout_btn", use_container_width=True):
+            try:
+                rt = st.session_state.refresh_token
+                if rt:
+                    requests.post(f"{BACKEND}/api/auth/logout", json={"refresh_token": rt}, timeout=5)
+            except Exception:
+                pass
+            for key in ["access_token", "refresh_token", "user_info", "workspace_info"]:
+                st.session_state[key] = None
+            st.query_params.clear()
+            st.rerun()
+        if st.button("Profile", key="profile_btn", use_container_width=True, type="secondary"):
+            st.session_state.show_profile = not st.session_state.get("show_profile", False)
+            st.rerun()
+        if st.session_state.get("show_profile"):
+            with st.expander("Profile", expanded=True):
+                st.markdown(f"**Name:** {user.get('name', '')}")
+                st.markdown(f"**Email:** {user.get('email', '')}")
+                st.markdown(f"**Workspace:** {ws.get('name', '')}")
+                st.markdown(f"**Workspace ID:** `{ws.get('id', '')}`")
+                st.markdown(f"**Member since:** {user.get('created_at', '')[:10] if user.get('created_at') else 'N/A'}")
+                st.markdown(f"**Last login:** {user.get('last_login', '')[:16] if user.get('last_login') else 'N/A'}")
+        st.divider()
+
+    st.caption("--- or ---")
     health = _get("/health")
 
     #  Model selector 
@@ -240,18 +373,11 @@ with st.sidebar:
 
     st.divider()
     with st.expander("Tech Stack", expanded=False):
-        st.caption("Configured from the Generate form.")
+        st.caption("The AI architect selects the optimal stack based on your project description.")
         wd = st.session_state.get("wizard_data", {})
         if wd:
             st.json({
-                "Backend": wd.get("backend", "—"),
-                "Frontend": wd.get("frontend", "—"),
-                "Database": wd.get("db", "—"),
-                "Auth": wd.get("auth", "—"),
-                "Testing": wd.get("testing", "—"),
-                "CSS": wd.get("css", "—"),
-                "ORM": wd.get("orm", "—"),
-                "Deploy": wd.get("deploy", "—"),
+                "Category": wd.get("project_type", "—"),
             })
         else:
             st.caption("No wizard data yet — start a generation to configure.")
@@ -459,91 +585,21 @@ with tab_gen:
     current_type = st.session_state.wizard_data.get("project_type", project_types[0])
     wiz = _sync_project_defaults(current_type)
 
-    st.caption("Choose the stack in one place, then describe what you want built below.")
+    st.caption("Describe what you want built — the AI architect will select the best tech stack automatically.")
 
     project_type = st.radio(
-        "Project Type",
+        "Project Category",
         project_types,
         index=project_types.index(current_type),
         horizontal=True,
         key="project_type_radio",
-        help="This sets sensible defaults that you can still override below.",
     )
     if project_type != current_type:
-        st.session_state.wizard_data = dict(PROJECT_TYPE_DEFAULTS[project_type], project_type=project_type)
+        wiz = _sync_project_defaults(project_type)
         st.rerun()
 
     wiz = st.session_state.wizard_data
-    is_web = project_type in {"Web API (backend only)", "Full-stack Web App", "Data Pipeline / ETL"}
-    has_frontend = True
-    uses_db = project_type not in {"CLI Tool", "Automation Script", "Library / SDK"}
 
-    st.markdown("### Stack Configuration")
-    top_left, top_mid, top_right = st.columns(3)
-    with top_left:
-        backend_options = ["fastapi", "flask", "express", "none"] if is_web else ["none"]
-        wiz["backend"] = st.selectbox(
-            "Backend",
-            backend_options,
-            index=backend_options.index(wiz.get("backend", backend_options[0])),
-            help="Server framework for APIs and business logic.",
-        )
-        wiz["auth"] = st.selectbox(
-            "Authentication",
-            ["none", "jwt", "oauth2", "session", "firebase"],
-            index=["none", "jwt", "oauth2", "session", "firebase"].index(wiz.get("auth", "none")),
-            disabled=wiz["backend"] == "none",
-            help="Keep this off unless the project really needs login flows.",
-        )
-        wiz["testing"] = st.selectbox(
-            "Testing",
-            ["pytest", "unittest", "jest", "none"],
-            index=["pytest", "unittest", "jest", "none"].index(wiz.get("testing", "pytest")),
-        )
-    with top_mid:
-        frontend_options = ["react", "vue", "angular", "svelte", "html", "streamlit", "none"] if has_frontend else ["none"]
-        wiz["frontend"] = st.selectbox(
-            "Frontend",
-            frontend_options,
-            index=frontend_options.index(wiz.get("frontend", frontend_options[0])),
-            help="Pick `none` for backend-only work.",
-        )
-        db_default = wiz.get("db", "sqlite" if uses_db else "none")
-        wiz["db"] = st.selectbox(
-            "Database",
-            ["sqlite", "postgresql", "mysql", "mongodb", "none"] if uses_db else ["none"],
-            index=(["sqlite", "postgresql", "mysql", "mongodb", "none"] if uses_db else ["none"]).index(db_default),
-            help="SQLite is fastest to start with; PostgreSQL is the safer production default.",
-        )
-        orm_options = ["sqlalchemy", "prisma", "django-orm", "mongoose", "none"]
-        orm_default = "none" if wiz["db"] == "none" else wiz.get("orm", "sqlalchemy")
-        wiz["orm"] = st.selectbox(
-            "ORM / ODM",
-            orm_options,
-            index=orm_options.index(orm_default),
-            disabled=wiz["db"] == "none",
-        )
-    with top_right:
-        css_options = ["bootstrap", "tailwind", "bulma", "none"] if wiz["frontend"] != "none" else ["none"]
-        wiz["css"] = st.selectbox(
-            "CSS",
-            css_options,
-            index=css_options.index(wiz.get("css", css_options[0])),
-            disabled=wiz["frontend"] == "none",
-        )
-        wiz["deploy"] = st.selectbox(
-            "Deployment",
-            ["docker", "docker-compose", "none"],
-            index=["docker", "docker-compose", "none"].index(wiz.get("deploy", "docker")),
-        )
-        st.markdown("**Current model**")
-        sel = st.session_state.selected_model
-        model_label, model_tag, _, _ = MODELS[sel]
-        st.caption(f"{model_label} · `{model_tag}`")
-
-    st.session_state.wizard_data = wiz
-
-    st.markdown("### Project Brief")
     brief_left, brief_right = st.columns([1.3, 1])
     with brief_left:
         proj_name = st.text_input("Project name", value="My Project", max_chars=80, key="wiz_name")
@@ -563,6 +619,15 @@ with tab_gen:
             unsafe_allow_html=True,
         )
 
+        with st.expander("Tech Constraints (optional)", expanded=False):
+            st.caption("If you need specific technologies, mention them here. Otherwise the AI architect chooses for you.")
+            tech_constraints = st.text_area(
+                "e.g. use React for frontend, use PostgreSQL, use Docker",
+                key="wiz_constraints",
+                placeholder="use React, use PostgreSQL, deploy with Docker",
+                height=80,
+            )
+
         action_col, clarify_col = st.columns([1.4, 1])
         with action_col:
             gen_btn = st.button(
@@ -579,21 +644,15 @@ with tab_gen:
             )
 
     with brief_right:
-        st.markdown("#### Stack Summary")
+        st.markdown("#### Project Summary")
         st.markdown(
             "\n".join([
                 f"- **Type**: {project_type}",
-                f"- **Backend**: {wiz.get('backend', 'none')}",
-                f"- **Frontend**: {wiz.get('frontend', 'none')}",
-                f"- **Database**: {wiz.get('db', 'none')}",
-                f"- **ORM**: {wiz.get('orm', 'none')}",
-                f"- **Auth**: {wiz.get('auth', 'none')}",
-                f"- **Testing**: {wiz.get('testing', 'none')}",
-                f"- **CSS**: {wiz.get('css', 'none')}",
-                f"- **Deploy**: {wiz.get('deploy', 'none')}",
+                f"- **Name**: {proj_name.strip() or 'My Project'}",
             ])
         )
-        st.caption("This summary is what will be sent with the prompt when you generate.")
+        if tech_constraints.strip():
+            st.markdown(f"- **Constraints**: {tech_constraints.strip()}")
 
     if clarify_btn:
         if len(prompt.strip()) < 10:
@@ -633,25 +692,18 @@ with tab_gen:
                 st.rerun()
 
     if gen_btn:
-        clean_prompt = prompt.strip()
-        if len(clean_prompt) < 10:
-            st.error("Enter a project description with at least 10 characters.")
-        else:
-            payload = {
-                "prompt": clean_prompt,
-                "project_name": proj_name.strip() or "My Project",
-                "model": st.session_state.selected_model,
-                "stack": {
-                    "backend": wiz.get("backend", "fastapi"),
-                    "frontend": wiz.get("frontend", "none"),
-                    "db": wiz.get("db", "sqlite"),
-                    "css": wiz.get("css", "none"),
-                    "testing": wiz.get("testing", "pytest"),
-                    "orm": wiz.get("orm", "none" if wiz.get("db") == "none" else "sqlalchemy"),
-                    "auth": wiz.get("auth", "none"),
-                    "deploy": wiz.get("deploy", "docker"),
-                },
-            }
+            clean_prompt = prompt.strip()
+            constraints = st.session_state.get("wiz_constraints", "").strip()
+            if constraints:
+                clean_prompt += f"\n\nTech constraints: {constraints}"
+            if len(clean_prompt) < 10:
+                st.error("Enter a project description with at least 10 characters.")
+            else:
+                payload = {
+                    "prompt": clean_prompt,
+                    "project_name": proj_name.strip() or "My Project",
+                    "model": st.session_state.selected_model,
+                }
             if st.session_state.clarify_answer.strip():
                 payload["clarification"] = st.session_state.clarify_answer.strip()
 

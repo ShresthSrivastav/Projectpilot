@@ -6,21 +6,42 @@ variable "environment" {
   type = string
 }
 
-variable "region" {
+variable "compartment_ocid" {
   type = string
 }
 
-variable "size" {
+variable "subnet_id" {
   type = string
 }
 
-variable "image" {
-  type = string
-}
-
-variable "ssh_key_ids" {
+variable "nsg_ids" {
   type    = list(string)
   default = []
+}
+
+variable "shape" {
+  type    = string
+  default = "VM.Standard.E4.Flex"
+}
+
+variable "ocpus" {
+  type    = number
+  default = 2
+}
+
+variable "memory_gbs" {
+  type    = number
+  default = 8
+}
+
+variable "os" {
+  type    = string
+  default = "Canonical Ubuntu 24.04"
+}
+
+variable "ssh_public_key" {
+  type    = string
+  default = ""
 }
 
 variable "enable_monitoring" {

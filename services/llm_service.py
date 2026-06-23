@@ -130,6 +130,105 @@ def is_cloud_available() -> bool:
     return bool(GOOGLE_API_KEY.strip() or ANTHROPIC_API_KEY.strip())
 
 
+# ── Google AI Diagnostics ───────────────────────────────────────────────────
+
+GOOGLE_CREDENTIAL_DIAGNOSTICS: dict[str, Any] = {
+    "api_key_configured": False,
+    "api_key_format_valid": False,
+    "api_key_prefix": "",
+    "base_url_configured": False,
+    "last_diagnostic_error": "",
+    "diagnostic_timestamp": 0,
+}
+
+
+def diagnose_google_credentials() -> dict[str, Any]:
+    """Run diagnostics on Google AI credentials. Returns diagnostic results."""
+    now = time.time()
+    diag = {
+        "api_key_configured": bool(GOOGLE_API_KEY.strip()),
+        "api_key_format_valid": False,
+        "api_key_prefix": GOOGLE_API_KEY[:8] + "..." if len(GOOGLE_API_KEY) > 8 else "",
+        "base_url": CLOUD_BASE_URL,
+        "base_url_configured": bool(CLOUD_BASE_URL.strip()),
+        "model": CLOUD_MODEL,
+        "errors": [],
+        "can_authenticate": False,
+    }
+
+    # Check API key format
+    if GOOGLE_API_KEY:
+        if GOOGLE_API_KEY.startswith("AIza"):
+            diag["api_key_format_valid"] = True
+        elif GOOGLE_API_KEY.startswith("sk-"):
+            # OpenRouter style key
+            diag["api_key_format_valid"] = True
+        elif len(GOOGLE_API_KEY) > 20:
+            diag["api_key_format_valid"] = True
+        else:
+            diag["errors"].append("API key too short or invalid format")
+
+    # Try a lightweight auth test
+    if diag["api_key_format_valid"] and diag["base_url_configured"]:
+        try:
+            client = OpenAI(base_url=CLOUD_BASE_URL, api_key=GOOGLE_API_KEY, timeout=httpx.Timeout(10))
+            # List models as a lightweight auth check
+            response = client.models.list()
+            diag["can_authenticate"] = True
+            available_models = [m.id for m in response.data]
+            diag["available_models"] = available_models[:10]
+            diag["model_available"] = CLOUD_MODEL in available_models
+        except Exception as exc:
+            error_str = str(exc)
+            diag["errors"].append(error_str[:200])
+            if "401" in error_str or "UNAUTHENTICATED" in error_str:
+                diag["errors"].append("Authentication failed (401). API key may be invalid or expired.")
+            elif "ACCESS_TOKEN_TYPE_UNSUPPORTED" in error_str:
+                diag["errors"].append(
+                    "ACCESS_TOKEN_TYPE_UNSUPPORTED — the Google AI base URL may be incorrect. "
+                    "Expected: https://generativelanguage.googleapis.com/v1beta/openai/"
+                )
+            elif "403" in error_str:
+                diag["errors"].append("Forbidden (403). API key may lack permissions or quota exhausted.")
+            elif "404" in error_str:
+                diag["errors"].append("Not found (404). Check CLOUD_BASE_URL and model name.")
+
+    # Update global diagnostics cache
+    global GOOGLE_CREDENTIAL_DIAGNOSTICS
+    GOOGLE_CREDENTIAL_DIAGNOSTICS.update({
+        "api_key_configured": diag["api_key_configured"],
+        "api_key_format_valid": diag["api_key_format_valid"],
+        "api_key_prefix": diag["api_key_prefix"],
+        "base_url_configured": diag["base_url_configured"],
+        "last_diagnostic_error": diag["errors"][-1] if diag["errors"] else "",
+        "diagnostic_timestamp": now,
+    })
+
+    return diag
+
+
+def get_cloud_health() -> dict[str, Any]:
+    """Get comprehensive health status for all cloud providers."""
+    google_diag = diagnose_google_credentials()
+    anthropic_ok = bool(ANTHROPIC_API_KEY.strip())
+
+    return {
+        "google": {
+            "configured": google_diag["api_key_configured"],
+            "authenticated": google_diag["can_authenticate"],
+            "model": CLOUD_MODEL,
+            "model_available": google_diag.get("model_available", False),
+            "errors": google_diag["errors"],
+        },
+        "anthropic": {
+            "configured": anthropic_ok,
+            "model": ANTHROPIC_MODEL,
+        },
+        "overall": google_diag["can_authenticate"] or anthropic_ok,
+        "timestamp": time.time(),
+    }
+
+
 def is_available() -> bool:
     try:
         r = httpx.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
@@ -329,6 +428,13 @@ def _call_cloud(
         except ValueError as exc:
             raise RuntimeError(str(exc)) from exc
         except Exception as exc:
+            error_str = str(exc)
+            # Auth errors — fall back to local model
+            if any(kw in error_str for kw in ("401", "UNAUTHENTICATED", "ACCESS_TOKEN_TYPE_UNSUPPORTED",
+                                                "403", "authentication", "api key", "unauthorized")):
+                diagnose_google_credentials()
+                logger.error("Cloud auth error, falling back to local: %s", error_str[:200])
+                return _call_local(prompt, resolve_model("local"), system_prompt, job_id, agent)
             raise RuntimeError(f"Cloud LLM call failed: {exc}") from exc
     raise RuntimeError(f"Cloud (Gemma 4 31B) failed after {MAX_RETRIES} attempts: {last_exc}")
 
@@ -377,6 +483,11 @@ def _call_anthropic(
         except ValueError as exc:
             raise RuntimeError(str(exc)) from exc
         except Exception as exc:
+            error_str = str(exc)
+            if any(kw in error_str for kw in ("401", "UNAUTHENTICATED", "403",
+                                                "authentication", "api key", "unauthorized")):
+                logger.error("Anthropic auth error, falling back to local: %s", error_str[:200])
+                return _call_local(prompt, resolve_model("local"), system_prompt, job_id, agent)
             raise RuntimeError(f"Anthropic LLM call failed: {exc}") from exc
     raise RuntimeError(f"Anthropic (Claude 3.5 Sonnet via OpenRouter) failed after {MAX_RETRIES} attempts: {last_exc}")
 

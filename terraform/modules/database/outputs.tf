@@ -1,13 +1,13 @@
 output "host" {
-  value = digitalocean_database_cluster.postgres.host
+  value = try(oci_psql_db_system.postgres.endpoints[0].fqdn, oci_psql_db_system.postgres.endpoints[0].ip_address)
 }
 
 output "port" {
-  value = digitalocean_database_cluster.postgres.port
+  value = try(oci_psql_db_system.postgres.endpoints[0].port, 5432)
 }
 
 output "user" {
-  value = digitalocean_database_user.app.name
+  value = replace("${var.project_name}_admin", "-", "_")
 }
 
 output "password" {
@@ -16,14 +16,14 @@ output "password" {
 }
 
 output "database_name" {
-  value = digitalocean_database_db.app.name
+  value = replace("${var.project_name}_db", "-", "_")
 }
 
 output "uri" {
-  value     = "postgresql://${digitalocean_database_user.app.name}:${var.db_password}@${digitalocean_database_cluster.postgres.host}:${digitalocean_database_cluster.postgres.port}/${digitalocean_database_db.app.name}?sslmode=require"
+  value     = "postgresql://${replace("${var.project_name}_admin", "-", "_")}:${var.db_password}@${try(oci_psql_db_system.postgres.endpoints[0].fqdn, oci_psql_db_system.postgres.endpoints[0].ip_address)}:${try(oci_psql_db_system.postgres.endpoints[0].port, 5432)}/${replace("${var.project_name}_db", "-", "_")}?sslmode=require"
   sensitive = true
 }
 
-output "cluster_id" {
-  value = digitalocean_database_cluster.postgres.id
+output "db_system_id" {
+  value = oci_psql_db_system.postgres.id
 }

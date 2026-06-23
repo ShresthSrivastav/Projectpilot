@@ -31,8 +31,39 @@ def _get_conn() -> sqlite3.Connection:
     return _local.conn
 
 
+def _migrate_workspace_id():
+    """Add workspace_id and user_id columns to existing tables (safe to run multiple times)."""
+    conn = _get_conn()
+    migrations = [
+        "ALTER TABLE agent_memory ADD COLUMN workspace_id TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE project_analytics ADD COLUMN workspace_id TEXT NOT NULL DEFAULT ''",
+        # user_id isolation column — Phase 2 user-level history isolation
+        "ALTER TABLE project_analytics ADD COLUMN user_id TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE project_insights ADD COLUMN workspace_id TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE graph_sessions ADD COLUMN workspace_id TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE autonomous_sessions ADD COLUMN workspace_id TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE cost_tracking ADD COLUMN workspace_id TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE chat_conversations ADD COLUMN workspace_id TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE chat_conversations ADD COLUMN user_id TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE runtime_sessions ADD COLUMN workspace_id TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE deployment_sessions ADD COLUMN workspace_id TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE healing_sessions ADD COLUMN workspace_id TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE learning_patterns ADD COLUMN workspace_id TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE process_logs ADD COLUMN workspace_id TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE benchmark_results ADD COLUMN workspace_id TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE agent_memory ADD COLUMN workspace_id_idx_added TEXT DEFAULT ''",
+    ]
+    for sql in migrations:
+        try:
+            conn.execute(sql)
+        except Exception:
+            pass
+    conn.commit()
+
+
 def init_db() -> None:
     conn = _get_conn()
+    _migrate_workspace_id()
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS agent_memory (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,6 +71,7 @@ def init_db() -> None:
             job_id TEXT NOT NULL,
             key TEXT,
             value TEXT,
+            workspace_id TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
         CREATE INDEX IF NOT EXISTS idx_agent_memory_agent ON agent_memory(agent_name);
@@ -76,8 +108,12 @@ def init_db() -> None:
             total_duration_ms INTEGER DEFAULT 0,
             model_used TEXT DEFAULT '',
             status TEXT DEFAULT '',
+            workspace_id TEXT NOT NULL DEFAULT '',
+            user_id TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
+        CREATE INDEX IF NOT EXISTS idx_analytics_user_id ON project_analytics(user_id);
+        CREATE INDEX IF NOT EXISTS idx_analytics_ws_user ON project_analytics(workspace_id, user_id);
 
         CREATE TABLE IF NOT EXISTS coding_preferences (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -109,6 +145,7 @@ def init_db() -> None:
             insight_type TEXT NOT NULL,
             summary TEXT NOT NULL,
             details TEXT DEFAULT '',
+            workspace_id TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
         CREATE INDEX IF NOT EXISTS idx_insights_job ON project_insights(job_id);
@@ -137,6 +174,7 @@ def init_db() -> None:
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL DEFAULT 'New Chat',
             message_count INTEGER DEFAULT 0,
+            workspace_id TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
@@ -157,6 +195,7 @@ def init_db() -> None:
             job_id TEXT DEFAULT '',
             graph_data TEXT NOT NULL DEFAULT '{}',
             status TEXT DEFAULT 'pending',
+            workspace_id TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
@@ -193,6 +232,7 @@ def init_db() -> None:
             initial_score REAL DEFAULT 0.0,
             final_score REAL DEFAULT 0.0,
             improvement_pct REAL DEFAULT 0.0,
+            workspace_id TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             completed_at TEXT
         );
@@ -205,6 +245,7 @@ def init_db() -> None:
             tokens_used INTEGER DEFAULT 0,
             cost REAL DEFAULT 0.0,
             duration_ms INTEGER DEFAULT 0,
+            workspace_id TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
         CREATE INDEX IF NOT EXISTS idx_cost_job ON cost_tracking(job_id);
@@ -225,6 +266,7 @@ def init_db() -> None:
             started_at REAL,
             stopped_at REAL,
             metadata TEXT DEFAULT '{}',
+            workspace_id TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
 
@@ -255,6 +297,7 @@ def init_db() -> None:
             deploy_log TEXT DEFAULT '',
             health_check_ok INTEGER,
             error TEXT,
+            workspace_id TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             completed_at TEXT
         );
@@ -273,6 +316,7 @@ def init_db() -> None:
             max_retries INTEGER DEFAULT 3,
             patches TEXT DEFAULT '[]',
             metadata TEXT DEFAULT '{}',
+            workspace_id TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             completed_at TEXT
         );
@@ -286,6 +330,7 @@ def init_db() -> None:
             confidence REAL DEFAULT 1.0,
             tags TEXT DEFAULT '[]',
             job_id TEXT DEFAULT '',
+            workspace_id TEXT NOT NULL DEFAULT '',
             created_at REAL,
             last_used REAL
         );
@@ -302,6 +347,7 @@ def init_db() -> None:
             exit_code INTEGER,
             duration_ms REAL DEFAULT 0.0,
             error TEXT,
+            workspace_id TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
 
@@ -683,33 +729,36 @@ def init_db() -> None:
         CREATE INDEX IF NOT EXISTS idx_campaign_runs_status ON campaign_runs(status);
     """)
     conn.commit()
+    # Initialize audit table
+    from services.audit_service import init_audit_db
+    init_audit_db()
     logger.info("Memory store ready at %s", MEMORY_DB)
 
 
-def store_agent_memory(agent_name: str, job_id: str, key: str, value: str) -> None:
+def store_agent_memory(agent_name: str, job_id: str, key: str, value: str, workspace_id: str = "") -> None:
     try:
         conn = _get_conn()
         conn.execute(
-            "INSERT INTO agent_memory (agent_name, job_id, key, value) VALUES (?, ?, ?, ?)",
-            (agent_name, job_id, key, value),
+            "INSERT INTO agent_memory (agent_name, job_id, key, value, workspace_id) VALUES (?, ?, ?, ?, ?)",
+            (agent_name, job_id, key, value, workspace_id),
         )
         conn.commit()
     except Exception as exc:
         logger.warning("Memory store failed: %s", exc)
 
 
-def get_agent_memory(agent_name: str, key: str | None = None, limit: int = 50) -> list[dict]:
+def get_agent_memory(agent_name: str, key: str | None = None, workspace_id: str = "", limit: int = 50) -> list[dict]:
     try:
         conn = _get_conn()
         if key:
             cur = conn.execute(
-                "SELECT * FROM agent_memory WHERE agent_name=? AND key=? ORDER BY id DESC LIMIT ?",
-                (agent_name, key, limit),
+                "SELECT * FROM agent_memory WHERE agent_name=? AND key=? AND workspace_id=? ORDER BY id DESC LIMIT ?",
+                (agent_name, key, workspace_id, limit),
             )
         else:
             cur = conn.execute(
-                "SELECT * FROM agent_memory WHERE agent_name=? ORDER BY id DESC LIMIT ?",
-                (agent_name, limit),
+                "SELECT * FROM agent_memory WHERE agent_name=? AND workspace_id=? ORDER BY id DESC LIMIT ?",
+                (agent_name, workspace_id, limit),
             )
         return [dict(r) for r in cur.fetchall()]
     except Exception as exc:
@@ -793,61 +842,92 @@ def record_project_analytics(
     total_duration_ms: int = 0,
     model_used: str = "",
     status: str = "",
+    workspace_id: str = "",
+    user_id: str = "",
 ) -> None:
     try:
         conn = _get_conn()
         conn.execute(
             """INSERT INTO project_analytics
                (job_id, project_name, agent_count, file_count, test_count, test_passed,
-                token_usage, total_duration_ms, model_used, status)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                token_usage, total_duration_ms, model_used, status, workspace_id, user_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(job_id) DO UPDATE SET
                 project_name=excluded.project_name, agent_count=excluded.agent_count,
                 file_count=excluded.file_count,
                 test_count=excluded.test_count, test_passed=excluded.test_passed,
                 token_usage=excluded.token_usage, total_duration_ms=excluded.total_duration_ms,
-                model_used=excluded.model_used, status=excluded.status""",
+                model_used=excluded.model_used, status=excluded.status,
+                workspace_id=excluded.workspace_id, user_id=excluded.user_id""",
             (job_id, project_name, agent_count, file_count, test_count, test_passed,
-             token_usage, total_duration_ms, model_used, status),
+             token_usage, total_duration_ms, model_used, status, workspace_id, user_id),
         )
         conn.commit()
     except Exception as exc:
         logger.warning("Analytics record failed: %s", exc)
 
 
-def get_project_analytics(limit: int = 50) -> list[dict]:
+def get_project_analytics(workspace_id: str = "", user_id: str = "", limit: int = 50) -> list[dict]:
     try:
         conn = _get_conn()
-        cur = conn.execute(
-            "SELECT * FROM project_analytics ORDER BY created_at DESC LIMIT ?",
-            (limit,),
-        )
+        if workspace_id and user_id:
+            cur = conn.execute(
+                "SELECT * FROM project_analytics WHERE workspace_id=? AND user_id=? ORDER BY created_at DESC LIMIT ?",
+                (workspace_id, user_id, limit),
+            )
+        elif workspace_id:
+            cur = conn.execute(
+                "SELECT * FROM project_analytics WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?",
+                (workspace_id, limit),
+            )
+        elif user_id:
+            cur = conn.execute(
+                "SELECT * FROM project_analytics WHERE user_id=? ORDER BY created_at DESC LIMIT ?",
+                (user_id, limit),
+            )
+        else:
+            cur = conn.execute(
+                "SELECT * FROM project_analytics ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            )
         return [dict(r) for r in cur.fetchall()]
     except Exception:
         return []
 
 
-def delete_project_analytics(job_id: str) -> bool:
+def delete_project_analytics(job_id: str, workspace_id: str = "", user_id: str = "") -> bool:
     try:
         conn = _get_conn()
-        conn.execute("DELETE FROM project_analytics WHERE job_id = ?", (job_id,))
+        if workspace_id and user_id:
+            conn.execute(
+                "DELETE FROM project_analytics WHERE job_id = ? AND workspace_id = ? AND user_id = ?",
+                (job_id, workspace_id, user_id),
+            )
+        elif workspace_id:
+            conn.execute("DELETE FROM project_analytics WHERE job_id = ? AND workspace_id = ?", (job_id, workspace_id))
+        else:
+            conn.execute("DELETE FROM project_analytics WHERE job_id = ?", (job_id,))
         conn.commit()
-        logger.info("Deleted analytics for job %s", job_id)
+        logger.info("Deleted analytics for job %s (ws=%s, uid=%s)", job_id, workspace_id, user_id)
         return True
     except Exception as exc:
         logger.warning("Failed to delete analytics for %s: %s", job_id, exc)
         return False
 
 
-def get_analytics_summary() -> dict[str, Any]:
+def get_analytics_summary(workspace_id: str = "") -> dict[str, Any]:
     try:
         conn = _get_conn()
-        projects = conn.execute("SELECT COUNT(*) as c FROM project_analytics").fetchone()
-        total_tokens = conn.execute("SELECT COALESCE(SUM(token_usage),0) as t FROM project_analytics").fetchone()
-        total_files = conn.execute("SELECT COALESCE(SUM(file_count),0) as f FROM project_analytics").fetchone()
-        total_tests = conn.execute("SELECT COALESCE(SUM(test_count),0) as t FROM project_analytics").fetchone()
+        ws_clause = " WHERE workspace_id=? " if workspace_id else " "
+        ws_param = (workspace_id,) if workspace_id else ()
+        projects = conn.execute(f"SELECT COUNT(*) as c FROM project_analytics{ws_clause}", ws_param).fetchone()
+        total_tokens = conn.execute(f"SELECT COALESCE(SUM(token_usage),0) as t FROM project_analytics{ws_clause}", ws_param).fetchone()
+        total_files = conn.execute(f"SELECT COALESCE(SUM(file_count),0) as f FROM project_analytics{ws_clause}", ws_param).fetchone()
+        total_tests = conn.execute(f"SELECT COALESCE(SUM(test_count),0) as t FROM project_analytics{ws_clause}", ws_param).fetchone()
+        avg_duration_ws = f" AND workspace_id=? " if workspace_id else " "
         avg_duration = conn.execute(
-            "SELECT COALESCE(AVG(total_duration_ms),0) as a FROM project_analytics WHERE total_duration_ms>0"
+            f"SELECT COALESCE(AVG(total_duration_ms),0) as a FROM project_analytics WHERE total_duration_ms>0{avg_duration_ws}",
+            (workspace_id,) if workspace_id else (),
         ).fetchone()
         return {
             "total_projects": projects["c"] if projects else 0,
@@ -931,30 +1011,30 @@ def get_reusable_components(component_type: str | None = None, limit: int = 20) 
 
 # ── Project Insights ─────────────────────────────────────────────────────
 
-def save_project_insight(job_id: str, insight_type: str, summary: str, details: str = "") -> None:
+def save_project_insight(job_id: str, insight_type: str, summary: str, details: str = "", workspace_id: str = "") -> None:
     try:
         conn = _get_conn()
         conn.execute(
-            "INSERT INTO project_insights (job_id, insight_type, summary, details) VALUES (?, ?, ?, ?)",
-            (job_id, insight_type, summary, details),
+            "INSERT INTO project_insights (job_id, insight_type, summary, details, workspace_id) VALUES (?, ?, ?, ?, ?)",
+            (job_id, insight_type, summary, details, workspace_id),
         )
         conn.commit()
     except Exception as exc:
         logger.warning("save_project_insight failed: %s", exc)
 
 
-def get_project_insights(insight_type: str | None = None, limit: int = 50) -> list[dict]:
+def get_project_insights(insight_type: str | None = None, workspace_id: str = "", limit: int = 50) -> list[dict]:
     try:
         conn = _get_conn()
         if insight_type:
             cur = conn.execute(
-                "SELECT * FROM project_insights WHERE insight_type=? ORDER BY created_at DESC LIMIT ?",
-                (insight_type, limit),
+                "SELECT * FROM project_insights WHERE insight_type=? AND workspace_id=? ORDER BY created_at DESC LIMIT ?",
+                (insight_type, workspace_id, limit),
             )
         else:
             cur = conn.execute(
-                "SELECT * FROM project_insights ORDER BY created_at DESC LIMIT ?",
-                (limit,),
+                "SELECT * FROM project_insights WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?",
+                (workspace_id, limit),
             )
         return [dict(r) for r in cur.fetchall()]
     except Exception:
@@ -1054,13 +1134,13 @@ def delete_github_repo(full_name: str) -> None:
 # ── Chat Conversations CRUD ───────────────────────────────────────────────
 
 
-def create_chat_conversation(title: str = "New Chat", conversation_id: str | None = None) -> str:
+def create_chat_conversation(title: str = "New Chat", conversation_id: str | None = None, workspace_id: str = "", user_id: str = "") -> str:
     try:
         conn = _get_conn()
         cid = conversation_id or str(uuid.uuid4())
         conn.execute(
-            "INSERT INTO chat_conversations (id, title) VALUES (?, ?)",
-            (cid, title),
+            "INSERT INTO chat_conversations (id, title, workspace_id, user_id) VALUES (?, ?, ?, ?)",
+            (cid, title, workspace_id, user_id),
         )
         conn.commit()
         return cid
@@ -1099,13 +1179,42 @@ def get_chat_messages(conversation_id: str, limit: int = 50) -> list[dict]:
         return []
 
 
-def list_chat_conversations(limit: int = 20) -> list[dict]:
+def get_chat_conversation(conversation_id: str) -> dict | None:
     try:
         conn = _get_conn()
         cur = conn.execute(
-            "SELECT * FROM chat_conversations ORDER BY updated_at DESC LIMIT ?",
-            (limit,),
+            "SELECT * FROM chat_conversations WHERE id=?",
+            (conversation_id,),
         )
+        r = cur.fetchone()
+        return dict(r) if r else None
+    except Exception as exc:
+        logger.warning("get_chat_conversation failed: %s", exc)
+        return None
+
+
+def verify_conversation_ownership(conversation_id: str, user_id: str) -> bool:
+    conv = get_chat_conversation(conversation_id)
+    if not conv:
+        return False
+    return conv.get("user_id") == user_id
+
+
+def list_chat_conversations(workspace_id: str = "", user_id: str = "", limit: int = 20) -> list[dict]:
+    try:
+        conn = _get_conn()
+        if workspace_id and user_id:
+            cur = conn.execute(
+                "SELECT * FROM chat_conversations WHERE workspace_id=? AND user_id=? ORDER BY updated_at DESC LIMIT ?",
+                (workspace_id, user_id, limit),
+            )
+        elif workspace_id:
+            cur = conn.execute(
+                "SELECT * FROM chat_conversations WHERE workspace_id=? ORDER BY updated_at DESC LIMIT ?",
+                (workspace_id, limit),
+            )
+        else:
+            return []
         return [dict(r) for r in cur.fetchall()]
     except Exception as exc:
         logger.warning("list_chat_conversations failed: %s", exc)
@@ -1140,26 +1249,31 @@ def delete_chat_conversation(conversation_id: str) -> bool:
 
 
 def record_cost(job_id: str, session_type: str, tokens_used: int, cost: float,
-                duration_ms: int = 0, provider: str = "") -> None:
+                duration_ms: int = 0, provider: str = "", workspace_id: str = "") -> None:
     try:
         conn = _get_conn()
         conn.execute(
-            "INSERT INTO cost_tracking (job_id, session_type, provider, tokens_used, cost, duration_ms) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (job_id, session_type, provider, tokens_used, cost, duration_ms),
+            "INSERT INTO cost_tracking (job_id, session_type, provider, tokens_used, cost, duration_ms, workspace_id) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (job_id, session_type, provider, tokens_used, cost, duration_ms, workspace_id),
         )
         conn.commit()
     except Exception as exc:
         logger.warning("record_cost failed: %s", exc)
 
 
-def get_cost_summary(job_id: str | None = None) -> dict[str, Any]:
+def get_cost_summary(job_id: str | None = None, workspace_id: str = "") -> dict[str, Any]:
     try:
         conn = _get_conn()
         if job_id:
             cur = conn.execute(
                 "SELECT COUNT(*) as sessions, COALESCE(SUM(tokens_used),0) as tokens, "
                 "COALESCE(SUM(cost),0) as cost FROM cost_tracking WHERE job_id=?", (job_id,)
+            )
+        elif workspace_id:
+            cur = conn.execute(
+                "SELECT COUNT(*) as sessions, COALESCE(SUM(tokens_used),0) as tokens, "
+                "COALESCE(SUM(cost),0) as cost FROM cost_tracking WHERE workspace_id=?", (workspace_id,)
             )
         else:
             cur = conn.execute(
@@ -1172,7 +1286,7 @@ def get_cost_summary(job_id: str | None = None) -> dict[str, Any]:
         return {}
 
 
-def save_iteration_history(job_id: str, session_id: str, iteration_data: str) -> None:
+def save_iteration_history(job_id: str, session_id: str, iteration_data: str, workspace_id: str = "") -> None:
     try:
         conn = _get_conn()
         existing = conn.execute(
@@ -1185,15 +1299,15 @@ def save_iteration_history(job_id: str, session_id: str, iteration_data: str) ->
             )
         else:
             conn.execute(
-                "INSERT OR REPLACE INTO autonomous_sessions (id, job_id, iterations) VALUES (?, ?, ?)",
-                (session_id, job_id, iteration_data),
+                "INSERT OR REPLACE INTO autonomous_sessions (id, job_id, iterations, workspace_id) VALUES (?, ?, ?, ?)",
+                (session_id, job_id, iteration_data, workspace_id),
             )
         conn.commit()
     except Exception as exc:
         logger.warning("save_iteration_history failed: %s", exc)
 
 
-def get_iteration_history(job_id: str, limit: int = 10) -> list[dict]:
+def get_iteration_history(job_id: str, workspace_id: str = "", limit: int = 10) -> list[dict]:
     try:
         conn = _get_conn()
         cur = conn.execute(
@@ -1213,13 +1327,13 @@ def get_iteration_history(job_id: str, limit: int = 10) -> list[dict]:
         return []
 
 
-def save_graph_session(graph_id: str, job_id: str, graph_data: str, status: str = "pending") -> None:
+def save_graph_session(graph_id: str, job_id: str, graph_data: str, status: str = "pending", workspace_id: str = "") -> None:
     try:
         conn = _get_conn()
         conn.execute(
-            "INSERT INTO graph_sessions (id, job_id, graph_data, status) VALUES (?, ?, ?, ?) "
-            "ON CONFLICT(id) DO UPDATE SET graph_data=excluded.graph_data, status=excluded.status, updated_at=datetime('now')",
-            (graph_id, job_id, graph_data, status),
+            "INSERT INTO graph_sessions (id, job_id, graph_data, status, workspace_id) VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(id) DO UPDATE SET graph_data=excluded.graph_data, status=excluded.status, workspace_id=excluded.workspace_id, updated_at=datetime('now')",
+            (graph_id, job_id, graph_data, status, workspace_id),
         )
         conn.commit()
     except Exception as exc:
@@ -1236,10 +1350,13 @@ def get_graph_session(graph_id: str) -> dict | None:
         return None
 
 
-def list_graph_sessions(limit: int = 20) -> list[dict]:
+def list_graph_sessions(workspace_id: str = "", limit: int = 20) -> list[dict]:
     try:
         conn = _get_conn()
-        cur = conn.execute("SELECT * FROM graph_sessions ORDER BY created_at DESC LIMIT ?", (limit,))
+        if workspace_id:
+            cur = conn.execute("SELECT * FROM graph_sessions WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?", (workspace_id, limit))
+        else:
+            cur = conn.execute("SELECT * FROM graph_sessions ORDER BY created_at DESC LIMIT ?", (limit,))
         return [dict(r) for r in cur.fetchall()]
     except Exception:
         return []

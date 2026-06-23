@@ -1,5 +1,10 @@
-do_region    = "nyc3"
-droplet_size = "s-2vcpu-4gb"
-environment  = "staging"
-db_size      = "db-s-1vcpu-2gb"
-enable_backups = true
+oci_region          = "us-ashburn-1"
+instance_shape      = "VM.Standard.E4.Flex"
+instance_ocpus      = 2
+instance_memory_gbs = 8
+environment         = "staging"
+db_shape            = "VM.Standard.E4.Flex"
+db_ocpus            = 2
+db_memory_gbs       = 8
+db_storage_gbs      = 50
+enable_backups      = true

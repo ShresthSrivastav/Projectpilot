@@ -2,9 +2,9 @@ terraform {
   required_version = ">= 1.5.0"
 
   required_providers {
-    digitalocean = {
-      source  = "digitalocean/digitalocean"
-      version = "~> 2.34"
+    oci = {
+      source  = "oracle/oci"
+      version = "~> 5.0"
     }
     random = {
       source  = "hashicorp/random"
@@ -12,16 +12,18 @@ terraform {
     }
   }
 
-  backend "s3" {
-    endpoints = {
-      s3 = "https://nyc3.digitaloceanspaces.com"
-    }
-    bucket                      = "projectpilot-terraform-state"
-    key                         = "terraform.tfstate"
-    region                      = "us-east-1"
-    skip_credentials_validation = true
-    skip_metadata_api_check     = true
-    skip_requesting_account_id  = true
-    skip_s3_checksum            = true
-  }
+  # OCI Object Storage backend (S3-compatible API)
+  # Uncomment and configure for remote state:
+  # backend "s3" {
+  #   bucket                      = "projectpilot-terraform-state"
+  #   key                         = "terraform.tfstate"
+  #   region                      = var.oci_region
+  #   skip_credentials_validation = true
+  #   skip_metadata_api_check     = true
+  #   skip_requesting_account_id  = true
+  #   skip_s3_checksum            = true
+  #   endpoints = {
+  #     s3 = "https://<namespace>.compat.objectstorage.${var.oci_region}.oraclecloud.com"
+  #   }
+  # }
 }

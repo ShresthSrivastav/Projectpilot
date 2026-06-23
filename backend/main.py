@@ -35,6 +35,7 @@ from database.chroma_db import (
     delete_job,
     get_blueprint,
     get_job,
+    get_job_owner,
     get_logs,
     init_db,
     list_jobs,
@@ -53,6 +54,7 @@ from database.memory_store import (
     get_project_analytics,
     get_repository_relationships,
     list_chat_conversations,
+    verify_conversation_ownership,
     mem_delete_custom_agent,
     mem_delete_custom_workflow,
     mem_delete_plugin,
@@ -106,7 +108,14 @@ from database.memory_store import (
 from database.memory_store import (
     save_repository as mem_save_repository,
 )
+from backend.routes.auth_routes import router as auth_router, router_workspace as workspace_router
+from database.chroma_db import set_workspace_context
+from database.database import init_db as init_sqlalchemy_db
 from services.auth_service import Role, lookup_role
+from services.audit_service import init_audit_db, log_audit_event
+from services.activity_service import init_activity_db
+from services.notification_service import init_notifications_db
+from services.jwt_service import decode_access_token
 from services.chat_service import execute_confirmed_action as chat_execute_action
 from services.chat_service import process_message as chat_process_message
 from services.cleanup_service import start_cleanup_daemon
@@ -146,7 +155,11 @@ _flags_lock = threading.Lock()
 async def lifespan(app: FastAPI):
     init_db()
     init_memory_db()
-    logger.info('{"event":"db_ready","store":"chromadb+sqlite"}')
+    init_sqlalchemy_db()
+    init_audit_db()
+    init_activity_db()
+    init_notifications_db()
+    logger.info('{"event":"db_ready","store":"chromadb+sqlite+sqlalchemy"}')
 
     if os.getenv("ADMIN_API_KEY"):
         logger.info('{"event":"auth_configured","mode":"admin_api_key"}')
@@ -221,6 +234,9 @@ app.add_middleware(
 )
 app.add_middleware(RateLimitMiddleware)
 
+app.include_router(auth_router)
+app.include_router(workspace_router)
+
 MAX_BODY_SIZE = int(os.getenv("MAX_REQUEST_BODY_SIZE", "10_485_760"))
 
 
@@ -237,13 +253,15 @@ async def limit_request_body(request: Request, call_next):
 
 
 PROTECTED_PREFIXES = [
-    "/workspace/", "/jobs/", "/regenerate-file", "/iterate/",
+    "/workspace/", "/jobs", "/regenerate-file", "/iterate/",
     "/validate/", "/deploy/", "/plugins/", "/marketplace/",
     "/agents/", "/workflows/", "/organization/",
     "/github/", "/sandbox/", "/supervisor/",
     "/autonomous/", "/debate/",
     "/evaluation/", "/benchmarks/", "/benchmark/", "/campaign/",
     "/rag/", "/chat/", "/browser/", "/runtime/", "/process/",
+    "/api/workspace/", "/api/workspace",
+    "/analytics/",
 ]
 
 ADMIN_ONLY_PREFIXES = [
@@ -263,6 +281,10 @@ async def authenticate_request(request: Request, call_next):
 
     path = request.url.path
 
+    # Skip auth for docs, health, and auth endpoints themselves
+    if path in ("/docs", "/openapi.json", "/health") or path.startswith("/api/auth/"):
+        return await call_next(request)
+
     needs_auth = any(path.startswith(p) for p in PROTECTED_PREFIXES)
     needs_admin = any(path.startswith(p) for p in ADMIN_ONLY_PREFIXES)
 
@@ -271,16 +293,26 @@ async def authenticate_request(request: Request, call_next):
         if not auth_header.startswith("Bearer "):
             return JSONResponse(
                 status_code=401,
-                content={"detail": "Missing or invalid Authorization header. Use: Bearer <API_KEY>"},
+                content={"detail": "Missing or invalid Authorization header. Use: Bearer <token>"},
             )
 
-        api_key = auth_header[7:]
-        role = lookup_role(api_key)
+        token = auth_header[7:]
+
+        # Try JWT first (for frontend users)
+        jwt_payload = decode_access_token(token)
+        if jwt_payload:
+            request.state.user_id = jwt_payload.get("sub")
+            request.state.workspace_id = jwt_payload.get("ws", "")
+            set_workspace_context(request.state.workspace_id)
+            return await call_next(request)
+
+        # Fall back to static API key (for CLI/API users)
+        role = lookup_role(token)
 
         if needs_admin and role != Role.ADMIN:
             return JSONResponse(status_code=403, content={"detail": "Admin access required."})
         if needs_auth and role == Role.NONE:
-            return JSONResponse(status_code=401, content={"detail": "Invalid API key."})
+            return JSONResponse(status_code=401, content={"detail": "Invalid or expired token."})
 
     return await call_next(request)
 
@@ -433,14 +465,24 @@ def run_pipeline(
     model: str = "local",
     stack: dict[str, Any] | None = None,
     cancel_flag: threading.Event | None = None,
+    workspace_id: str = "",
+    user_id: str = "",
 ) -> dict[str, Any]:
-    """Run the generation pipeline through the orchestrator."""
+    """Run the generation pipeline through the orchestrator with explicit workspace context."""
     from agents.orchestrator_agent import Orchestrator
+    from services.agent_context import AgentContext
+
+    context = AgentContext(
+        workspace_id=workspace_id,
+        user_id=user_id,
+        job_id=job_id,
+        project_name=project_name,
+        extra={"model": model or "local", "stack": stack or {}},
+    )
 
     orchestrator = Orchestrator(
-        job_id=job_id,
+        context=context,
         prompt=prompt,
-        project_name=project_name,
         model=model or "local",
         stack=stack,
         cancel_flag=cancel_flag,
@@ -462,11 +504,20 @@ async def clarify_prompt(req: ClarifyRequest):
 
 
 @app.post("/generate-project")
-async def generate_project(req: GenerateRequest):
+async def generate_project(req: GenerateRequest, request: Request = None):
     """Queue a new project generation job and run it in a background thread."""
     job_id = str(uuid.uuid4())
-    create_job(job_id)
-    save_prompt(job_id, req.prompt, req.project_name)
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
+    create_job(job_id, workspace_id=ws_id, user_id=uid)
+    save_prompt(job_id, req.prompt, req.project_name, workspace_id=ws_id, user_id=uid)
+
+    # Audit log
+    try:
+        if ws_id:
+            log_audit_event(ws_id, uid, "Project Created", "project", job_id)
+    except Exception:
+        pass
 
     prompt = req.prompt.strip()
     if req.clarification and req.clarification.strip():
@@ -486,6 +537,8 @@ async def generate_project(req: GenerateRequest):
             "model": req.model or "local",
             "stack": stack,
             "cancel_flag": cancel_flag,
+            "workspace_id": ws_id,
+            "user_id": uid,
         },
         daemon=True,
         name=f"pipeline-{job_id[:8]}",
@@ -527,12 +580,36 @@ async def cancel_job(job_id: str):
     return {"job_id": job_id, "status": "cancelled"}
 
 
-@app.post("/regenerate-file")
-async def regenerate_file(req: RegenerateRequest):
-    """Regenerate a single file for a completed project."""
-    job = get_job(req.job_id)
+# ── Ownership check helper ──────────────────────────────────────────────────
+
+def _require_job_owner(job_id: str, ws_id: str, uid: str) -> dict:
+    """Load the job and verify the caller is the owner. Returns the job dict.
+
+    Raises:
+        404  if the job does not exist.
+        403  if the authenticated user does not own the job.
+
+    Legacy behaviour: records created before user_id tracking was added
+    (user_id == "") are accessible to any authenticated member of the same
+    workspace.  Once a user_id is stored the check is strict.
+    SKIP_AUTH mode (uid == "") skips the ownership check entirely so that
+    dev/test environments are unaffected.
+    """
+    job = get_job(job_id, workspace_id=ws_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found.")
+    owner = job.get("user_id", "")
+    if uid and owner and owner != uid:
+        raise HTTPException(status_code=403, detail="Forbidden: you do not own this project.")
+    return job
+
+
+@app.post("/regenerate-file")
+async def regenerate_file(req: RegenerateRequest, request: Request = None):
+    """Regenerate a single file for a completed project."""
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
+    job = _require_job_owner(req.job_id, ws_id, uid)
     if job.get("status") not in {"complete", "failed"}:
         raise HTTPException(status_code=400, detail="Job must be complete or failed before regenerating files.")
 
@@ -593,8 +670,11 @@ class FixTestsRequest(BaseModel):
 
 
 @app.get("/test-files/{job_id}")
-async def get_test_files(job_id: str):
+async def get_test_files(job_id: str, request: Request = None):
     """Return all test files for a project."""
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
+    _require_job_owner(job_id, ws_id, uid)
     job_dir = BASE_DIR / job_id
     if not job_dir.exists():
         raise HTTPException(status_code=404, detail="Project not found.")
@@ -930,15 +1010,15 @@ async def _read_all_project_files(job_dir: Path) -> dict[str, str]:
 
 
 @app.post("/iterate/{job_id}")
-async def iterate_project(job_id: str, req: IterateRequest):
+async def iterate_project(job_id: str, req: IterateRequest, request: Request = None):
     """
     Modify an existing completed project with new instructions.
     Reads all generated files, sends to LLM with the new prompt,
     applies changes, re-runs syntax checks and tests.
     """
-    job = get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found.")
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
+    job = _require_job_owner(job_id, ws_id, uid)
     if job.get("status") not in ("complete", "failed"):
         raise HTTPException(status_code=400, detail="Job must be complete or failed to iterate.")
     job_dir = BASE_DIR / job_id
@@ -1158,14 +1238,14 @@ async def iterate_project(job_id: str, req: IterateRequest):
 
 
 @app.get("/files/{job_id}")
-async def get_file_tree(job_id: str):
+async def get_file_tree(job_id: str, request: Request = None):
     """
     Return the live file tree for a job — shows files as they appear during generation.
     Works on running jobs (partial list) and completed jobs.
     """
-    job = get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found.")
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
+    job = _require_job_owner(job_id, ws_id, uid)
 
     try:
         job_dir = _resolve_job_path(job_id)
@@ -1186,8 +1266,11 @@ async def get_file_tree(job_id: str):
 
 
 @app.get("/read-project-file/{job_id}/{path:path}")
-async def read_project_file(job_id: str, path: str):
+async def read_project_file(job_id: str, path: str, request: Request = None):
     """Read a single generated file's content."""
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
+    _require_job_owner(job_id, ws_id, uid)
     job_dir = _resolve_job_path(job_id)
     full = _validate_file_path(job_dir, path)
     if not full.is_file():
@@ -1199,14 +1282,14 @@ async def read_project_file(job_id: str, path: str):
 
 
 @app.get("/validate/{job_id}")
-async def validate_project(job_id: str):
+async def validate_project(job_id: str, request: Request = None):
     """
     Re-run syntax checks + pytest on an existing job's generated files.
     Useful after /regenerate-file.
     """
-    job = get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found.")
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
+    job = _require_job_owner(job_id, ws_id, uid)
 
     try:
         job_dir = _resolve_job_path(job_id)
@@ -1388,10 +1471,10 @@ async def review_project(job_id: str, req: ReviewRequest):
 
 
 @app.get("/status/{job_id}")
-async def get_status(job_id: str):
-    job = get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found.")
+async def get_status(job_id: str, request: Request = None):
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
+    job = _require_job_owner(job_id, ws_id, uid)
     import json
     test_details_raw = job.get("test_details", "")
     try:
@@ -1432,11 +1515,11 @@ async def get_status(job_id: str):
 
 
 @app.get("/changelog/{job_id}")
-async def get_changelog(job_id: str):
+async def get_changelog(job_id: str, request: Request = None):
     """Return the per-project CHANGELOG.md content."""
-    job = get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found.")
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
+    job = _require_job_owner(job_id, ws_id, uid)
     changelog = BASE_DIR / job_id / "CHANGELOG.md"
     if not changelog.exists():
         return {"job_id": job_id, "changelog": "", "exists": False}
@@ -1448,10 +1531,10 @@ async def get_changelog(job_id: str):
 
 
 @app.get("/download/{job_id}")
-async def download(job_id: str):
-    job = get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found.")
+async def download(job_id: str, request: Request = None):
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
+    job = _require_job_owner(job_id, ws_id, uid)
     # Allow download for SUCCESS, PARTIAL, or complete (legacy) status
     if job.get("status") not in ("SUCCESS", "PARTIAL", "complete"):
         raise HTTPException(status_code=400, detail=f"Project not ready for download (status: {job.get('status')}).")
@@ -1465,29 +1548,41 @@ async def download(job_id: str):
 
 
 @app.get("/jobs")
-async def list_recent_jobs():
-    return {"jobs": list_jobs(limit=20)}
+async def list_recent_jobs(request: Request = None):
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
+    return {"jobs": list_jobs(workspace_id=ws_id, user_id=uid, limit=20)}
 
 
 @app.delete("/jobs/{job_id}")
-async def delete_project(job_id: str):
+async def delete_project(job_id: str, request: Request = None):
     """Delete a project: removes ChromaDB record, SQLite analytics, files, and zip."""
-    job = get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found.")
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
+    # Ownership check — 403 if not owner, 404 if not found
+    _require_job_owner(job_id, ws_id, uid)
     import shutil
 
     from database.memory_store import delete_project_analytics
     ok = True
-    if not delete_job(job_id):
+    if not delete_job(job_id, workspace_id=ws_id):
         ok = False
-    delete_project_analytics(job_id)
+    delete_project_analytics(job_id, workspace_id=ws_id, user_id=uid)
     job_dir = BASE_DIR / job_id
     if job_dir.exists():
         shutil.rmtree(str(job_dir))
     zpath = get_zip_path(job_id)
     if zpath and Path(zpath).exists():
         Path(zpath).unlink(missing_ok=True)
+
+    try:
+        ws_id = getattr(request.state, "workspace_id", "") if request else ""
+        uid = getattr(request.state, "user_id", "") if request else ""
+        if ws_id:
+            log_audit_event(ws_id, uid, "Project Deleted", "project", job_id)
+    except Exception:
+        pass
+
     if ok:
         return {"status": "deleted", "job_id": job_id}
     raise HTTPException(status_code=500, detail="Failed to delete job from database.")
@@ -1524,8 +1619,11 @@ class RagUploadRequest(BaseModel):
 
 
 @app.post("/rag/upload")
-async def rag_upload(file: UploadFile = File(...), tags: str | None = Form(None)):
+async def rag_upload(file: UploadFile = File(...), tags: str | None = Form(None),
+                     request: Request = None):
     from services.rag_service import upload_document
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
     if file.filename:
         safe_name = Path(file.filename).name
     else:
@@ -1538,29 +1636,33 @@ async def rag_upload(file: UploadFile = File(...), tags: str | None = Form(None)
     save_path = RAG_UPLOAD_DIR / safe_name
     save_path.write_bytes(content)
     tag_list = json.loads(tags) if tags else []
-    result = upload_document(save_path, tags=tag_list)
+    result = upload_document(save_path, tags=tag_list, workspace_id=ws_id, uploaded_by=uid)
     os.remove(str(save_path))
     return result
 
 
 @app.post("/rag/query")
 async def rag_query(text: str = Body(..., embed=True), top_k: int = Body(5, embed=True),
-                    tags: list[str] | None = Body(None, embed=True)):
+                    tags: list[str] | None = Body(None, embed=True),
+                    request: Request = None):
     from services.rag_service import query
-    results = query(text, top_k=top_k, tags=tags)
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    results = query(text, top_k=top_k, tags=tags, workspace_id=ws_id)
     return {"results": results}
 
 
 @app.get("/rag/list")
-async def rag_list():
+async def rag_list(request: Request = None):
     from services.rag_service import list_documents
-    return {"documents": list_documents()}
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    return {"documents": list_documents(workspace_id=ws_id)}
 
 
 @app.delete("/rag/{doc_id}")
-async def rag_delete(doc_id: str):
+async def rag_delete(doc_id: str, request: Request = None):
     from services.rag_service import delete_document
-    ok = delete_document(doc_id)
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    ok = delete_document(doc_id, workspace_id=ws_id)
     return {"deleted": ok}
 
 
@@ -1569,13 +1671,15 @@ async def rag_delete(doc_id: str):
 # ═══════════════════════════════════════════════════════════════════════════
 
 @app.get("/analytics/overview")
-async def analytics_overview():
-    return get_analytics_summary()
+async def analytics_overview(request: Request = None):
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    return get_analytics_summary(workspace_id=ws_id)
 
 
 @app.get("/analytics/projects")
-async def analytics_projects():
-    return {"projects": get_project_analytics(limit=50)}
+async def analytics_projects(request: Request = None):
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    return {"projects": get_project_analytics(workspace_id=ws_id, limit=50)}
 
 
 @app.get("/analytics/project/{job_id}")
@@ -2142,43 +2246,55 @@ class NewChatRequest(BaseModel):
 
 
 @app.post("/chat/new")
-def chat_new(req: NewChatRequest):
+def chat_new(req: NewChatRequest, request: Request = None):
+    uid = getattr(request.state, "user_id", "") if request else ""
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
     cid = req.conversation_id or str(uuid.uuid4())
-    create_chat_conversation(conversation_id=cid, title=req.title or "New Chat")
+    create_chat_conversation(conversation_id=cid, title=req.title or "New Chat", workspace_id=ws_id, user_id=uid)
     return {"ok": True, "conversation_id": cid}
 
 
 @app.post("/chat")
-def chat_endpoint(req: ChatRequest):
+def chat_endpoint(req: ChatRequest, request: Request = None):
+    uid = getattr(request.state, "user_id", "") if request else ""
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
     cid = req.conversation_id
     if not cid:
-        cid = create_chat_conversation(title=req.title or "New Chat")
-    result = chat_process_message(req.message, cid)
+        cid = create_chat_conversation(title=req.title or "New Chat", workspace_id=ws_id, user_id=uid)
+    result = chat_process_message(req.message, cid, workspace_id=ws_id)
     result["conversation_id"] = cid
     return result
 
 
 @app.post("/chat/confirm-action")
-def chat_confirm_action(req: ChatConfirmRequest):
+def chat_confirm_action(req: ChatConfirmRequest, request: Request = None):
     result = chat_execute_action(req.conversation_id, req.tool_name, req.args)
     result["conversation_id"] = req.conversation_id
     return result
 
 
 @app.get("/chat/conversations")
-def chat_list_conversations():
-    convos = list_chat_conversations(limit=20)
+def chat_list_conversations(request: Request = None):
+    uid = getattr(request.state, "user_id", "") if request else ""
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    convos = list_chat_conversations(workspace_id=ws_id, user_id=uid, limit=20)
     return {"conversations": convos}
 
 
 @app.get("/chat/conversations/{conversation_id}/messages")
-def chat_get_messages(conversation_id: str, limit: int = 50):
+def chat_get_messages(conversation_id: str, limit: int = 50, request: Request = None):
+    uid = getattr(request.state, "user_id", "") if request else ""
+    if uid and not verify_conversation_ownership(conversation_id, uid):
+        return {"messages": []}
     msgs = get_chat_messages(conversation_id, limit=limit)
     return {"messages": msgs}
 
 
 @app.delete("/chat/conversations/{conversation_id}")
-def chat_delete_conversation(conversation_id: str):
+def chat_delete_conversation(conversation_id: str, request: Request = None):
+    uid = getattr(request.state, "user_id", "") if request else ""
+    if uid and not verify_conversation_ownership(conversation_id, uid):
+        return {"ok": False}
     ok = delete_chat_conversation(conversation_id)
     return {"ok": ok}
 
@@ -2324,19 +2440,21 @@ async def deploy_project(job_id: str, req: DeployRequest):
 
 
 @app.get("/metrics")
-async def metrics():
+async def metrics(request: Request = None):
     import time as _time
 
     from database.memory_store import get_analytics_summary, get_cost_summary
     from services.llm_service import get_token_count
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
     tokens = get_token_count()
-    analytics = get_analytics_summary()
-    cost = get_cost_summary()
+    analytics = get_analytics_summary(workspace_id=ws_id)
+    cost = get_cost_summary(workspace_id=ws_id)
     return {
         "total_tokens": tokens,
         "analytics": analytics,
         "cost": cost,
         "timestamp": _time.time(),
+        "workspace_id": ws_id,
     }
 
 

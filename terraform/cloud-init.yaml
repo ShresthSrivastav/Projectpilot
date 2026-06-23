@@ -296,6 +296,13 @@ runcmd:
   # Add deploy user to docker group
   - usermod -aG docker deploy
 
+  # Copy SSH authorized keys from default user to deploy
+  - mkdir -p /home/deploy/.ssh
+  - cp /home/ubuntu/.ssh/authorized_keys /home/deploy/.ssh/authorized_keys 2>/dev/null || true
+  - chown -R deploy:deploy /home/deploy/.ssh
+  - chmod 700 /home/deploy/.ssh
+  - chmod 600 /home/deploy/.ssh/authorized_keys
+
   # Configure UFW
   - ufw default deny incoming
   - ufw default allow outgoing

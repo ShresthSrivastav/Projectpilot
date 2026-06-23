@@ -1,0 +1,38 @@
+# Ruff configuration file
+
+# Exclude a variety of common directories.
+exclude = [
+    ".git",
+    ".pytest_cache",
+    ".ruff_cache",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "chroma_data",
+    "chroma_db_v4",
+    "generated_projects",
+    "test_chroma_data_v4",
+    "test_generated_projects_v4",
+    "test_security_chroma",
+    "test_security_projects",
+    "test_chroma_ci",
+    "test_generated_ci",
+    "build",
+    "dist"
+]
+
+# Same as Black.
+line-length = 120
+indent-width = 4
+
+target-version = "py311"
+
+[lint]
+# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`) codes by default.
+# Also enable isort (`I`) for import checks.
+select = ["E4", "E7", "E9", "F", "I", "UP", "B", "C4"]
+ignore = ["E402", "E741", "E701", "E702", "F821", "B007", "B905", "C401", "B008", "F401", "F823", "C416", "B904", "UP042", "E722", "F811"] # ignore imports not at top of file, ambiguous names, and pre-existing codebase warnings
+
+# Allow fix behavior
+fixable = ["ALL"]
+unfixable = []

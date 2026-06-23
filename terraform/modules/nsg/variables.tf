@@ -6,7 +6,15 @@ variable "environment" {
   type = string
 }
 
-variable "droplet_id" {
+variable "compartment_ocid" {
+  type = string
+}
+
+variable "vcn_id" {
+  type = string
+}
+
+variable "compute_id" {
   type = string
 }
 
