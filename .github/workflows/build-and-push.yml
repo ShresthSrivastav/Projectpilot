@@ -24,7 +24,7 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -45,7 +45,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install ruff pytest-cov pytest-asyncio
+          pip install ruff pytest-cov pytest-asyncio pytest-timeout
 
       - name: Ruff Lint
         run: ruff check .
@@ -64,7 +64,7 @@ jobs:
           RATE_LIMIT_ENABLED: "false"
           SKIP_AUTH: "true"
         run: |
-          pytest --cov=. --cov-report=xml --cov-report=term -v --tb=short --no-header
+          pytest --cov=. --cov-report=xml --cov-report=term -v --tb=short --no-header --timeout=120
 
       - name: Upload Coverage
         if: always()
