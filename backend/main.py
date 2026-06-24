@@ -398,6 +398,10 @@ def _validate_file_path(base: Path, relative: str) -> Path:
 def _wait_and_pull_models() -> None:
     import time
 
+    if os.environ.get("SKIP_AUTH") == "true":
+        logger.info('{"event":"ollama_skip_wait","reason":"test_mode"}')
+        return
+
     for attempt in range(40):
         if is_available():
             logger.info('{"event":"ollama_ready","pulling_models":true}')
