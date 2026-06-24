@@ -141,7 +141,7 @@ jobs:
           echo "- **Platform**: linux/amd64" >> $GITHUB_STEP_SUMMARY
 
   deploy:
-    name: Deploy to Production
+    name: Deploy to OCI
     runs-on: ubuntu-latest
     needs: build-and-push
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -151,9 +151,9 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USER }}
-          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          host: ${{ secrets.OCI_HOST }}
+          username: ${{ secrets.OCI_USER }}
+          key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
           script_stop: true
           script: |
             cd /opt/projectpilot

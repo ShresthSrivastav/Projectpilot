@@ -1,4 +1,4 @@
-name: Deploy to DigitalOcean
+name: Deploy to OCI
 
 on:
   workflow_run:
@@ -31,9 +31,9 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USER }}
-          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          host: ${{ secrets.OCI_HOST }}
+          username: ${{ secrets.OCI_USER }}
+          key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
           script_stop: true
           script: |
             cd /opt/projectpilot
@@ -51,7 +51,7 @@ jobs:
             # Create .env file if not exists
             if [ ! -f .env ]; then
               cat > .env << 'ENVEOF'
-            ${{ secrets.DO_ENV_FILE }}
+            ${{ secrets.OCI_ENV_FILE }}
             ENVEOF
             fi
 
@@ -65,7 +65,7 @@ jobs:
       - name: Health Check
         run: |
           for i in $(seq 1 30); do
-            if curl -sf "http://${{ secrets.DO_HOST }}:8000/health" > /dev/null 2>&1; then
+            if curl -sf "http://${{ secrets.OCI_HOST }}:8000/health" > /dev/null 2>&1; then
               echo "Backend is healthy"
               exit 0
             fi
