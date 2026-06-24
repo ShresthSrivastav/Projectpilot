@@ -81,8 +81,8 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     outputs:
-      image-tag = ${{ steps.meta.outputs.tags }}
-      image-digest = ${{ steps.build.outputs.digest }}
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
 
     steps:
       - name: Checkout
