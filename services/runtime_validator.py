@@ -30,15 +30,44 @@ def validate(job_dir: Path, timeout: int = 30) -> dict:
     # 2. Find entry point
     entry = _find_entry(job_dir)
     if entry is None:
-        return {"passed": False, "error": "No entry point found (backend/main.py or app.py or main.py)", "health": None, "port": None, "command": ""}
+        return {
+            "passed": False,
+            "error": "No entry point found (backend/main.py or app.py or main.py)",
+            "health": None,
+            "port": None,
+            "command": "",
+        }
 
     # 3. Start the app
     cmd = [sys.executable, str(entry)]
-    env = {**{k: v for k, v in _parent_env().items() if k in {"PATH", "HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "SYSTEMROOT", "TEMP", "TMP", "PYTHONDONTWRITEBYTECODE"}}, "PORT": str(port), "HOST": "127.0.0.1"}
+    env = {
+        **{
+            k: v
+            for k, v in _parent_env().items()
+            if k
+            in {
+                "PATH",
+                "HOME",
+                "USERPROFILE",
+                "APPDATA",
+                "LOCALAPPDATA",
+                "SYSTEMROOT",
+                "TEMP",
+                "TMP",
+                "PYTHONDONTWRITEBYTECODE",
+            }
+        },
+        "PORT": str(port),
+        "HOST": "127.0.0.1",
+    }
     try:
         proc = subprocess.Popen(
-            cmd, cwd=str(job_dir), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            env=env, text=True,
+            cmd,
+            cwd=str(job_dir),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+            text=True,
         )
     except FileNotFoundError as exc:
         return {"passed": False, "error": f"Cannot start app: {exc}", "health": None, "port": port, "command": str(cmd)}
@@ -55,6 +84,7 @@ def validate(job_dir: Path, timeout: int = 30) -> dict:
             resp = urlopen(req, timeout=3)
             if resp.status == 200:
                 import json
+
                 health_result = json.loads(resp.read().decode())
                 started = True
                 break
@@ -72,7 +102,13 @@ def validate(job_dir: Path, timeout: int = 30) -> dict:
     if not started:
         stdout, stderr = proc.communicate(timeout=5)
         error_text = (stderr or "")[:2000] or (stdout or "")[:2000]
-        return {"passed": False, "error": f"App did not start within {timeout}s. Output: {error_text}", "health": None, "port": port, "command": str(cmd)}
+        return {
+            "passed": False,
+            "error": f"App did not start within {timeout}s. Output: {error_text}",
+            "health": None,
+            "port": port,
+            "command": str(cmd),
+        }
 
     return {"passed": True, "error": None, "health": health_result, "port": port, "command": str(cmd)}
 
@@ -85,7 +121,9 @@ def _install_deps(job_dir: Path) -> str | None:
     # Try batch install first
     result = subprocess.run(
         [sys.executable, "-m", "pip", "install", "-r", str(req_file)],
-        capture_output=True, text=True, timeout=120,
+        capture_output=True,
+        text=True,
+        timeout=120,
     )
     if result.returncode == 0:
         return None
@@ -99,7 +137,9 @@ def _install_deps(job_dir: Path) -> str | None:
             continue
         r = subprocess.run(
             [sys.executable, "-m", "pip", "install", dep],
-            capture_output=True, text=True, timeout=60,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
         if r.returncode != 0:
             failures.append(dep_name)
@@ -120,6 +160,7 @@ def _find_entry(job_dir: Path) -> Path | None:
 
 def _find_free_port() -> int:
     import socket
+
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
@@ -127,6 +168,7 @@ def _find_free_port() -> int:
 
 def _parent_env() -> dict:
     import os
+
     return dict(os.environ)
 
 

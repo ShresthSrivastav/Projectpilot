@@ -1,4 +1,5 @@
 """End-to-end verification script."""
+
 import requests
 
 BACKEND = "http://localhost:8000"
@@ -6,6 +7,7 @@ FRONTEND = "http://localhost:8501"
 
 checks = 0
 passed = 0
+
 
 def check(name, ok):
     global checks, passed
@@ -15,6 +17,7 @@ def check(name, ok):
         print(f"  OK {name}")
     else:
         print(f"  FAIL {name}")
+
 
 # 1. Analytics overview
 ov = requests.get(f"{BACKEND}/analytics/overview", timeout=5).json()
@@ -29,8 +32,10 @@ check(f"Jobs ({job_count} persisted)", job_count > 0)
 if job_count > 0:
     job_id = jobs["jobs"][0].get("job_id", "")
     s = requests.get(f"{BACKEND}/status/{job_id}", timeout=5).json()
-    check(f"Test details: {s.get('test_passed',0)}/{s.get('test_total',0)} passed, {len(s.get('test_details',[]))} items",
-          len(s.get("test_details", [])) > 0)
+    check(
+        f"Test details: {s.get('test_passed', 0)}/{s.get('test_total', 0)} passed, {len(s.get('test_details', []))} items",
+        len(s.get("test_details", [])) > 0,
+    )
 
 # 4. GitHub routes
 try:
@@ -41,11 +46,14 @@ except Exception:
     check("GitHub endpoints (openapi.json timed out, counting via direct check)", True)
     # fallback: just verify a few routes directly
     test_routes = [
-        "/github/connect", "/github/disconnect", "/github/connections",
-        "/github/agent/analyze-repo", "/github/agent/review-pr",
+        "/github/connect",
+        "/github/disconnect",
+        "/github/connections",
+        "/github/agent/analyze-repo",
+        "/github/agent/review-pr",
     ]
     for route in test_routes:
-        r = requests.post(f"{BACKEND}{route}", json={"full_name":"a/b","username":"x"}, timeout=5)
+        r = requests.post(f"{BACKEND}{route}", json={"full_name": "a/b", "username": "x"}, timeout=5)
         assert r.status_code in (200, 400, 404, 422), f"{route}: {r.status_code}"
 
 # 5. GitHub connect (no token -> 400)
@@ -66,8 +74,9 @@ check("GH search endpoint", r.status_code == 200 or r.status_code == 404)
 
 # 9. AI agent endpoint signature (expected to return 404 since test user doesn't exist)
 try:
-    r = requests.post(f"{BACKEND}/github/agent/analyze-repo",
-                      json={"full_name": "test/repo", "username": "test"}, timeout=5)
+    r = requests.post(
+        f"{BACKEND}/github/agent/analyze-repo", json={"full_name": "test/repo", "username": "test"}, timeout=5
+    )
     check("GH agent analyze endpoint", r.status_code in (200, 404, 400))
 except Exception:
     check("GH agent analyze endpoint (no connection = expected)", True)

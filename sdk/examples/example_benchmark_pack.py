@@ -1,6 +1,7 @@
 """Example Benchmark Pack — Flutter UI Benchmark.
 Shows how any developer can create a custom benchmark pack without modifying platform source code.
 """
+
 from typing import Any
 
 from sdk.benchmark_sdk.base_benchmark import BaseBenchmarkPack, BenchmarkCriteria, BenchmarkTest

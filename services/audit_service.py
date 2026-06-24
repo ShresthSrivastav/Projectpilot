@@ -24,6 +24,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_ts ON audit_logs(timestamp);
 
 def init_audit_db():
     from database.memory_store import _get_conn
+
     try:
         conn = _get_conn()
         conn.executescript(AUDIT_TABLE_DDL)
@@ -40,13 +41,21 @@ def log_audit_event(
     resource_id: str = "",
 ) -> None:
     from database.memory_store import _get_conn
+
     try:
         conn = _get_conn()
         conn.execute(
             "INSERT INTO audit_logs (id, workspace_id, user_id, action, resource_type, resource_id, timestamp) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (str(uuid.uuid4()), workspace_id, user_id, action, resource_type, resource_id,
-             datetime.now(UTC).isoformat()),
+            (
+                str(uuid.uuid4()),
+                workspace_id,
+                user_id,
+                action,
+                resource_type,
+                resource_id,
+                datetime.now(UTC).isoformat(),
+            ),
         )
         conn.commit()
     except Exception as exc:
@@ -55,6 +64,7 @@ def log_audit_event(
 
 def get_audit_logs(workspace_id: str, limit: int = 50) -> list[dict]:
     from database.memory_store import _get_conn
+
     try:
         conn = _get_conn()
         cur = conn.execute(

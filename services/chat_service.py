@@ -19,16 +19,31 @@ CONFIRM_WORDS = {"yes", "proceed", "sure", "yeah", "yep", "ok", "okay", "confirm
 CANCEL_WORDS = {"no", "cancel", "stop", "don't", "nah", "nope", "never mind"}
 
 PROJECT_KEYWORDS = [
-    "project", "app", "booking", "train", "railway", "library", "todo",
-    "blog", "ecommerce", "chat", "inventory", "student", "employee",
-    "crud", "api", "rest", "dashboard", "manage"
+    "project",
+    "app",
+    "booking",
+    "train",
+    "railway",
+    "library",
+    "todo",
+    "blog",
+    "ecommerce",
+    "chat",
+    "inventory",
+    "student",
+    "employee",
+    "crud",
+    "api",
+    "rest",
+    "dashboard",
+    "manage",
 ]
 
 
 def _find_project(query: str, workspace_id: str = "") -> list[dict]:
     """Search projects by name or prompt text matching."""
     q = query.lower().strip()
-    words = [w for w in re.sub(r'[^a-z0-9\s]', ' ', q).split() if len(w) > 2]
+    words = [w for w in re.sub(r"[^a-z0-9\s]", " ", q).split() if len(w) > 2]
     jobs = chroma_db.list_jobs(workspace_id=workspace_id, limit=50)
     scored = []
     for j in jobs:
@@ -63,10 +78,12 @@ def _get_project_context(job) -> str:
     lines.append(f"Status: {job.get('status', '?')}")
     lines.append(f"Prompt: {(job.get('prompt') or '')[:200]}")
     lines.append(f"Files: {job.get('file_count', 0)}")
-    lines.append(f"Tests: {job.get('test_total', 0)} total, "
-                 f"{job.get('test_passed', 0)} passed, "
-                 f"{job.get('test_failed', 0)} failed, "
-                 f"{job.get('test_skipped', 0)} skipped")
+    lines.append(
+        f"Tests: {job.get('test_total', 0)} total, "
+        f"{job.get('test_passed', 0)} passed, "
+        f"{job.get('test_failed', 0)} failed, "
+        f"{job.get('test_skipped', 0)} skipped"
+    )
     ts = job.get("test_summary", "")
     if ts:
         lines.append(f"Test summary: {ts[:300]}")
@@ -74,11 +91,12 @@ def _get_project_context(job) -> str:
     if td:
         lines.append(f"Test details: {td[:500]}")
     try:
-        memory_store.read_file if hasattr(memory_store, 'read_file') else None
+        memory_store.read_file if hasattr(memory_store, "read_file") else None
     except Exception:
         pass
     try:
         from services.file_service import read_file as rf
+
         try:
             cl = rf(jid, "CHANGELOG.md")
             if cl:
@@ -124,12 +142,20 @@ def process_message(message: str, conversation_id: str, context: dict = None, wo
     # Check if this is a confirmation or cancellation of a pending action
     if conversation_id in _pending_actions:
         first_word = msg_lower.split()[0] if msg_lower.split() else ""
-        if (msg_lower in CONFIRM_WORDS or msg_lower.startswith("yes ") or
-            msg_lower == "y" or first_word in {"yes", "yeah", "sure", "ok", "okay", "yep", "proceed", "do"}):
+        if (
+            msg_lower in CONFIRM_WORDS
+            or msg_lower.startswith("yes ")
+            or msg_lower == "y"
+            or first_word in {"yes", "yeah", "sure", "ok", "okay", "yep", "proceed", "do"}
+        ):
             pending = _pending_actions.pop(conversation_id)
             return execute_confirmed_action(conversation_id, pending["tool"], pending["args"])
-        elif (msg_lower in CANCEL_WORDS or msg_lower.startswith("no ") or
-              msg_lower == "n" or first_word in {"no", "nah", "nope", "cancel", "stop"}):
+        elif (
+            msg_lower in CANCEL_WORDS
+            or msg_lower.startswith("no ")
+            or msg_lower == "n"
+            or first_word in {"no", "nah", "nope", "cancel", "stop"}
+        ):
             _pending_actions.pop(conversation_id, None)
             reply = "Action cancelled."
             memory_store.add_chat_message(conversation_id, "assistant", reply)
@@ -156,10 +182,12 @@ def process_message(message: str, conversation_id: str, context: dict = None, wo
 
     try:
         summary = memory_store.get_analytics_summary()
-        context_parts.append(f"Overall stats: {summary.get('total_projects', 0)} projects, "
-                            f"{summary.get('total_tokens', 0)} tokens used, "
-                            f"{summary.get('total_files', 0)} files generated, "
-                            f"{summary.get('total_tests', 0)} tests written.")
+        context_parts.append(
+            f"Overall stats: {summary.get('total_projects', 0)} projects, "
+            f"{summary.get('total_tokens', 0)} tokens used, "
+            f"{summary.get('total_files', 0)} files generated, "
+            f"{summary.get('total_tests', 0)} tests written."
+        )
     except Exception:
         pass
 
@@ -203,9 +231,19 @@ def _detect_action(message: str, conversation_id: str = "", workspace_id: str = 
     jid = _extract_job_id(message, conversation_id, workspace_id=workspace_id)
 
     # Check for fix tests - even without a matched project, try harder
-    fix_keywords = ["fix test", "fix failing", "fix-test", "failing test", "test fail",
-                    "fix the test", "fix my test", "fix this test", "fix all test",
-                    "repair test", "correct test"]
+    fix_keywords = [
+        "fix test",
+        "fix failing",
+        "fix-test",
+        "failing test",
+        "test fail",
+        "fix the test",
+        "fix my test",
+        "fix this test",
+        "fix all test",
+        "repair test",
+        "correct test",
+    ]
     if any(x in m for x in fix_keywords):
         if not jid:
             # Try finding any project with failed tests
@@ -233,13 +271,17 @@ def _detect_action(message: str, conversation_id: str = "", workspace_id: str = 
     if any(x in m for x in ["regenerate", "rewrite file", "recreate file"]):
         fp = _extract_file_path(m)
         note = _extract_correction_note(m)
-        return {"tool": "regenerate_file", "args": {"job_id": jid, "file_path": fp or "backend/main.py", "correction_note": note}, "confirm": True}
+        return {
+            "tool": "regenerate_file",
+            "args": {"job_id": jid, "file_path": fp or "backend/main.py", "correction_note": note},
+            "confirm": True,
+        }
     return None
 
 
 def _extract_job_id(message: str, conversation_id: str = "", workspace_id: str = "") -> str:
     """Try to find a job_id from the message or match a project name."""
-    m = re.search(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', message.lower())
+    m = re.search(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", message.lower())
     if m:
         _last_project_id[conversation_id] = m.group(0)
         return m.group(0)
@@ -250,7 +292,7 @@ def _extract_job_id(message: str, conversation_id: str = "", workspace_id: str =
     if is_short_ref and conversation_id and conversation_id in _last_project_id:
         return _last_project_id.get(conversation_id, "")
 
-    q_words = [w for w in re.sub(r'[^a-z0-9\s]', ' ', msg_lower).split() if len(w) > 2]
+    q_words = [w for w in re.sub(r"[^a-z0-9\s]", " ", msg_lower).split() if len(w) > 2]
     jobs = chroma_db.list_jobs(workspace_id=workspace_id, limit=50)
     best = ("", 0)
     for j in jobs:
@@ -277,19 +319,19 @@ def _extract_instructions(msg: str, keywords: list[str]) -> str:
     for kw in keywords:
         idx = msg.find(kw)
         if idx >= 0:
-            after = msg[idx + len(kw):].strip()
+            after = msg[idx + len(kw) :].strip()
             if after:
                 return after
     return msg[:200]
 
 
 def _extract_file_path(msg: str) -> str:
-    m = re.search(r'file\s+([\w/.]+)', msg)
+    m = re.search(r"file\s+([\w/.]+)", msg)
     return m.group(1) if m else ""
 
 
 def _extract_correction_note(msg: str) -> str:
-    m = re.search(r'(?:to|with|note)\s*[:\s]+(.+)', msg)
+    m = re.search(r"(?:to|with|note)\s*[:\s]+(.+)", msg)
     return m.group(1) if m else ""
 
 
@@ -336,6 +378,7 @@ def _run_action(tool_name: str, args: dict) -> dict:
 
     if tool_name == "run_tests":
         from services.test_service import run_pytest
+
         result = run_pytest(args.get("job_id", ""))
         return {"message": f"Tests: {result.get('passed', 0)} passed, {result.get('failures', 0)} failed"}
 
@@ -350,8 +393,11 @@ def _run_action(tool_name: str, args: dict) -> dict:
         jid = args.get("job_id", "")
         fp = args.get("file_path", "backend/main.py")
         note = args.get("correction_note", "")
-        resp = httpx.post("http://localhost:8000/regenerate-file",
-                          json={"job_id": jid, "file_path": fp, "correction_note": note}, timeout=120)
+        resp = httpx.post(
+            "http://localhost:8000/regenerate-file",
+            json={"job_id": jid, "file_path": fp, "correction_note": note},
+            timeout=120,
+        )
         resp.raise_for_status()
         return {"message": f"File {fp} regenerated."}
 

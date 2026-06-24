@@ -1,4 +1,5 @@
 """Tests for v10.1 Benchmark Suite — autonomy score computation, leaderboard, trends, comparisons."""
+
 import json
 import sys
 import time
@@ -15,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 class TestBenchmarkMetrics:
     def test_metrics_defaults(self):
         from services.benchmark_service import BenchmarkMetrics
+
         m = BenchmarkMetrics()
         assert m.completion_rate == 0.0
         assert m.architecture_quality == 0.0
@@ -30,6 +32,7 @@ class TestBenchmarkMetrics:
 
     def test_metrics_to_dict(self):
         from services.benchmark_service import BenchmarkMetrics
+
         m = BenchmarkMetrics(completion_rate=85.0, token_usage=15000)
         d = m.to_dict()
         assert d["completion_rate"] == 85.0
@@ -39,10 +42,17 @@ class TestBenchmarkMetrics:
 class TestAutonomyScore:
     def test_perfect_score(self):
         from services.benchmark_service import BenchmarkMetrics, compute_autonomy_score
+
         m = BenchmarkMetrics(
-            completion_rate=100.0, architecture_quality=100.0, code_quality=100.0,
-            test_pass_rate=100.0, browser_validation_rate=100.0, deployment_success_rate=100.0,
-            self_healing_effectiveness=100.0, execution_time=1.0, token_usage=100,
+            completion_rate=100.0,
+            architecture_quality=100.0,
+            code_quality=100.0,
+            test_pass_rate=100.0,
+            browser_validation_rate=100.0,
+            deployment_success_rate=100.0,
+            self_healing_effectiveness=100.0,
+            execution_time=1.0,
+            token_usage=100,
             feature_completeness=100.0,
         )
         score = compute_autonomy_score(m)
@@ -51,16 +61,24 @@ class TestAutonomyScore:
 
     def test_zero_score(self):
         from services.benchmark_service import BenchmarkMetrics, compute_autonomy_score
+
         m = BenchmarkMetrics()
         score = compute_autonomy_score(m)
         assert 0.0 <= score <= 15.0, f"Default metrics should give low score, got {score}"
 
     def test_half_score(self):
         from services.benchmark_service import BenchmarkMetrics, compute_autonomy_score
+
         m = BenchmarkMetrics(
-            completion_rate=50.0, architecture_quality=50.0, code_quality=50.0,
-            test_pass_rate=50.0, browser_validation_rate=50.0, deployment_success_rate=50.0,
-            self_healing_effectiveness=50.0, execution_time=300.0, token_usage=50000,
+            completion_rate=50.0,
+            architecture_quality=50.0,
+            code_quality=50.0,
+            test_pass_rate=50.0,
+            browser_validation_rate=50.0,
+            deployment_success_rate=50.0,
+            self_healing_effectiveness=50.0,
+            execution_time=300.0,
+            token_usage=50000,
             feature_completeness=50.0,
         )
         score = compute_autonomy_score(m)
@@ -68,6 +86,7 @@ class TestAutonomyScore:
 
     def test_score_improves_with_better_metrics(self):
         from services.benchmark_service import BenchmarkMetrics, compute_autonomy_score
+
         low = BenchmarkMetrics(completion_rate=30.0)
         high = BenchmarkMetrics(completion_rate=90.0)
         assert compute_autonomy_score(high) > compute_autonomy_score(low)
@@ -76,6 +95,7 @@ class TestAutonomyScore:
 class TestBenchmarkResult:
     def test_result_creation(self):
         from services.benchmark_service import BenchmarkResult, BenchmarkStatus
+
         r = BenchmarkResult(domain="hotel_booking")
         assert r.id
         assert r.run_id
@@ -85,6 +105,7 @@ class TestBenchmarkResult:
 
     def test_result_to_dict(self):
         from services.benchmark_service import BenchmarkResult
+
         r = BenchmarkResult(domain="ecommerce")
         d = r.to_dict()
         assert d["domain"] == "ecommerce"
@@ -96,30 +117,35 @@ class TestBenchmarkResult:
 class TestBenchmarkService:
     def test_singleton(self):
         from services.benchmark_service import get_benchmark_service
+
         s1 = get_benchmark_service()
         s2 = get_benchmark_service()
         assert s1 is s2
 
     def test_list_domains(self):
         from services.benchmark_service import get_benchmark_service
+
         svc = get_benchmark_service()
         domains = svc.list_domains()
         assert isinstance(domains, list)
 
     def test_get_domain_info_unknown(self):
         from services.benchmark_service import get_benchmark_service
+
         svc = get_benchmark_service()
         info = svc.get_domain_info("nonexistent")
         assert info is None
 
     def test_run_unknown_domain(self):
         from services.benchmark_service import get_benchmark_service
+
         svc = get_benchmark_service()
         with pytest.raises(ValueError):
             svc.run_benchmark(domain="nonexistent")
 
     def test_run_benchmark(self):
         from services.benchmark_service import BenchmarkStatus, get_benchmark_service
+
         svc = get_benchmark_service()
         result = svc.run_benchmark(domain="hotel_booking", model="local", iteration=1)
         assert result.domain == "hotel_booking"
@@ -127,12 +153,14 @@ class TestBenchmarkService:
 
     def test_get_result_not_found(self):
         from services.benchmark_service import get_benchmark_service
+
         svc = get_benchmark_service()
         r = svc.get_result("nonexistent")
         assert r is None
 
     def test_get_result_found(self):
         from services.benchmark_service import get_benchmark_service
+
         svc = get_benchmark_service()
         result = svc.run_benchmark(domain="hotel_booking")
         found = svc.get_result(result.id)
@@ -141,6 +169,7 @@ class TestBenchmarkService:
 
     def test_get_result_by_run_id(self):
         from services.benchmark_service import get_benchmark_service
+
         svc = get_benchmark_service()
         result = svc.run_benchmark(domain="ecommerce")
         found = svc.get_result(result.run_id)
@@ -148,6 +177,7 @@ class TestBenchmarkService:
 
     def test_list_results(self):
         from services.benchmark_service import get_benchmark_service
+
         svc = get_benchmark_service()
         svc.run_benchmark(domain="hotel_booking")
         results = svc.list_results()
@@ -155,18 +185,21 @@ class TestBenchmarkService:
 
     def test_list_results_filtered(self):
         from services.benchmark_service import get_benchmark_service
+
         svc = get_benchmark_service()
         results = svc.list_results(domain="nonexistent_domain")
         assert len(results) == 0
 
     def test_leaderboard_empty(self):
         from services.benchmark_service import get_benchmark_service
+
         svc = get_benchmark_service()
         lb = svc.get_leaderboard()
         assert isinstance(lb, list)
 
     def test_leaderboard_sorted(self):
         from services.benchmark_service import BenchmarkResult, BenchmarkStatus, get_benchmark_service
+
         svc = get_benchmark_service()
         r1 = BenchmarkResult(domain="hotel_booking", run_id="aaaa0001")
         r1.autonomy_score = 50.0
@@ -182,6 +215,7 @@ class TestBenchmarkService:
 
     def test_compare_runs(self):
         from services.benchmark_service import BenchmarkResult, BenchmarkStatus, get_benchmark_service
+
         svc = get_benchmark_service()
         r1 = BenchmarkResult(domain="hotel_booking", run_id="cmp00001")
         r1.metrics.completion_rate = 50.0
@@ -202,12 +236,14 @@ class TestBenchmarkService:
 
     def test_compare_runs_not_found(self):
         from services.benchmark_service import get_benchmark_service
+
         svc = get_benchmark_service()
         with pytest.raises(ValueError):
             svc.compare_runs("nonexistent", "also_missing")
 
     def test_generate_report_json(self):
         from services.benchmark_service import BenchmarkResult, BenchmarkStatus, get_benchmark_service
+
         svc = get_benchmark_service()
         r = BenchmarkResult(domain="blog_cms", run_id="rpt00001")
         r.autonomy_score = 75.5
@@ -221,6 +257,7 @@ class TestBenchmarkService:
 
     def test_generate_report_markdown(self):
         from services.benchmark_service import BenchmarkResult, BenchmarkStatus, get_benchmark_service
+
         svc = get_benchmark_service()
         r = BenchmarkResult(domain="task_manager", run_id="rpt00002")
         r.autonomy_score = 65.0
@@ -234,12 +271,14 @@ class TestBenchmarkService:
 
     def test_generate_report_not_found(self):
         from services.benchmark_service import get_benchmark_service
+
         svc = get_benchmark_service()
         with pytest.raises(ValueError):
             svc.generate_report("nonexistent")
 
     def test_trend_data(self):
         from services.benchmark_service import BenchmarkResult, BenchmarkStatus, get_benchmark_service
+
         svc = get_benchmark_service()
         now = time.time()
         for i in range(3):
@@ -257,6 +296,7 @@ class TestBenchmarkService:
 
     def test_statistics_structure(self):
         from services.benchmark_service import get_benchmark_service
+
         svc = get_benchmark_service()
         stats = svc.get_statistics()
         assert "total_runs" in stats
@@ -267,6 +307,7 @@ class TestBenchmarkService:
 
     def test_statistics_with_data(self):
         from services.benchmark_service import BenchmarkResult, BenchmarkStatus, get_benchmark_service
+
         svc = get_benchmark_service()
         for i, domain in enumerate(["hotel_booking", "ecommerce", "blog_cms"]):
             r = BenchmarkResult(domain=domain, run_id=f"st{i:04d}")
@@ -286,24 +327,28 @@ class TestBenchmarkService:
 
     def test_improvement_rate_no_data(self):
         from services.benchmark_service import BenchmarkService
+
         svc = BenchmarkService()
         rate = svc._calculate_improvement_rate([])
         assert rate == 0.0
 
     def test_improvement_rate_single(self):
         from services.benchmark_service import BenchmarkResult, BenchmarkService
+
         svc = BenchmarkService()
         rate = svc._calculate_improvement_rate([BenchmarkResult()])
         assert rate == 0.0
 
     def test_normalize_invert(self):
         from services.benchmark_service import _normalize
+
         assert _normalize(5.0, 10.0, invert=True) == 0.5
         assert _normalize(10.0, 10.0, invert=True) == 0.0
         assert _normalize(0.0, 10.0, invert=True) == 1.0
 
     def test_normalize_zero_max(self):
         from services.benchmark_service import _normalize
+
         assert _normalize(5.0, 0.0) == 0.0
         assert _normalize(5.0, 0.0, invert=True) == 0.0
 
@@ -311,6 +356,7 @@ class TestBenchmarkService:
 class TestBenchmarkDB:
     def test_save_and_get_benchmark_result(self):
         from database.memory_store import delete_benchmark_result, get_benchmark_results, init_db, save_benchmark_result
+
         init_db()
         data = {
             "id": "test-bm-001",
@@ -345,6 +391,7 @@ class TestBenchmarkAPI:
         from fastapi.testclient import TestClient
 
         from backend.main import app
+
         return TestClient(app)
 
     def test_health_version(self, client):

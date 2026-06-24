@@ -1,4 +1,5 @@
 """Benchmark Dashboard — run, compare, and track autonomy scores."""
+
 import os
 from typing import Any
 
@@ -37,9 +38,14 @@ def show_benchmarks_tab():
     st.markdown("## Benchmark Suite")
     st.caption("Evaluate autonomous software generation across 8 domains")
 
-    tab_run, tab_results, tab_leaderboard, tab_trends = st.tabs([
-        " Run", " Results", " Leaderboard", " Trends",
-    ])
+    tab_run, tab_results, tab_leaderboard, tab_trends = st.tabs(
+        [
+            " Run",
+            " Results",
+            " Leaderboard",
+            " Trends",
+        ]
+    )
 
     with tab_run:
         _show_run_tab()
@@ -152,7 +158,11 @@ def _show_results_tab():
 def _show_leaderboard_tab():
     st.markdown("### Leaderboard")
 
-    domain_filter = st.selectbox("Filter by domain", ["All"] + [d["domain"] for d in (_get("/benchmarks/domains") or {}).get("domains", [])], key="bm_lb_domain")
+    domain_filter = st.selectbox(
+        "Filter by domain",
+        ["All"] + [d["domain"] for d in (_get("/benchmarks/domains") or {}).get("domains", [])],
+        key="bm_lb_domain",
+    )
     params = ""
     if domain_filter != "All":
         params = f"?domain={domain_filter}"
@@ -174,6 +184,7 @@ def _show_leaderboard_tab():
         created = ""
         if entry.get("created_at"):
             from datetime import datetime
+
             created = datetime.fromtimestamp(entry["created_at"]).strftime("%m-%d %H:%M")
         st.markdown(f"| #{rank} | {domain} | **{score:.1f}** | {model} | {created} |")
 
@@ -205,7 +216,11 @@ def _show_leaderboard_tab():
 def _show_trends_tab():
     st.markdown("### Autonomy Score Trends")
 
-    domain_filter = st.selectbox("Filter by domain", ["All"] + [d["domain"] for d in (_get("/benchmarks/domains") or {}).get("domains", [])], key="bm_tr_domain")
+    domain_filter = st.selectbox(
+        "Filter by domain",
+        ["All"] + [d["domain"] for d in (_get("/benchmarks/domains") or {}).get("domains", [])],
+        key="bm_tr_domain",
+    )
     params = ""
     if domain_filter != "All":
         params = f"?domain={domain_filter}"
@@ -228,20 +243,28 @@ def _show_trends_tab():
     try:
         import altair as alt
         import pandas as pd
+
         df = pd.DataFrame(data)
         if not df.empty:
-            chart = alt.Chart(df).mark_line(point=True).encode(
-                x="Date:T",
-                y=alt.Y("Autonomy Score:Q", scale=alt.Scale(zero=False)),
-                tooltip=["Date:T", "Autonomy Score:Q", "Completion Rate:Q", "Test Pass Rate:Q"],
-            ).properties(height=400)
+            chart = (
+                alt.Chart(df)
+                .mark_line(point=True)
+                .encode(
+                    x="Date:T",
+                    y=alt.Y("Autonomy Score:Q", scale=alt.Scale(zero=False)),
+                    tooltip=["Date:T", "Autonomy Score:Q", "Completion Rate:Q", "Test Pass Rate:Q"],
+                )
+                .properties(height=400)
+            )
             st.altair_chart(chart, use_container_width=True)
     except ImportError:
         st.info("Install pandas and altair for chart visualization: pip install pandas altair")
 
     st.markdown("#### Recent Scores")
-    for i, (date, score) in enumerate(zip(
-        trends.get("dates", [])[-10:],
-        trends.get("autonomy_scores", [])[-10:],
-    )):
+    for i, (date, score) in enumerate(
+        zip(
+            trends.get("dates", [])[-10:],
+            trends.get("autonomy_scores", [])[-10:],
+        )
+    ):
         st.text(f"{date[:10]} — {score:.1f}")

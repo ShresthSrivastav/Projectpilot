@@ -25,14 +25,14 @@ from services.file_service import BASE_DIR, write_file
 
 logger = logging.getLogger(__name__)
 
-#  Hardcoded required-file rules 
+#  Hardcoded required-file rules
 # Each entry: (glob_pattern, description)
 # At least one file matching the pattern must exist.
 REQUIRED_FILES: list[tuple[str, str]] = [
-    ("requirements.txt",         "Python dependencies"),
-    ("README.md",                "Project documentation"),
-    ("backend/main.py",          "FastAPI/Flask entry point"),
-    ("**/__init__.py",           "Package init files"),
+    ("requirements.txt", "Python dependencies"),
+    ("README.md", "Project documentation"),
+    ("backend/main.py", "FastAPI/Flask entry point"),
+    ("**/__init__.py", "Package init files"),
 ]
 
 # Directories that, if present, must contain at least one test file
@@ -57,49 +57,49 @@ def run(
         log_to_db(job_id, "ValidationAgent", msg, "ERROR")
         return {"passed": False, "error": msg}
 
-    #  Run each check 
+    #  Run each check
     structural = _check_structure(job_dir, requirements, blueprint)
-    syntax     = _check_syntax(job_dir)
-    tests      = _run_tests(job_dir, job_id)
+    syntax = _check_syntax(job_dir)
+    tests = _run_tests(job_dir, job_id)
 
     elapsed_ms = int((time.monotonic() - t_start) * 1000)
 
-    #  Compute overall pass/fail 
-    syntax_ok     = all(r["valid"] for r in syntax.values())
-    structure_ok  = all(r["found"] for r in structural.values())
-    tests_ok      = tests.get("passed", False)
+    #  Compute overall pass/fail
+    syntax_ok = all(r["valid"] for r in syntax.values())
+    structure_ok = all(r["found"] for r in structural.values())
+    tests_ok = tests.get("passed", False)
     tests_skipped = tests.get("skipped", False)
 
     # Overall: pass if structure + syntax are clean; test failures are warnings
     overall_passed = structure_ok and syntax_ok
 
     summary = {
-        "passed":          overall_passed,
-        "structure_ok":    structure_ok,
-        "syntax_ok":       syntax_ok,
-        "tests_ok":        tests_ok,
-        "tests_skipped":   tests_skipped,
-        "total_py_files":  len(syntax),
-        "syntax_errors":   [k for k, v in syntax.items() if not v["valid"]],
-        "missing_files":   [k for k, v in structural.items() if not v["found"]],
-        "elapsed_ms":      elapsed_ms,
+        "passed": overall_passed,
+        "structure_ok": structure_ok,
+        "syntax_ok": syntax_ok,
+        "tests_ok": tests_ok,
+        "tests_skipped": tests_skipped,
+        "total_py_files": len(syntax),
+        "syntax_errors": [k for k, v in syntax.items() if not v["valid"]],
+        "missing_files": [k for k, v in structural.items() if not v["found"]],
+        "elapsed_ms": elapsed_ms,
     }
 
-    #  Write the markdown report 
+    #  Write the markdown report
     report_md = _build_report(summary, structural, syntax, tests, requirements)
     write_file(job_id, "VALIDATION_REPORT.md", report_md)
 
     status_icon = " PASSED" if overall_passed else " FAILED"
     log_to_db(
-        job_id, "ValidationAgent",
-        f"Validation {status_icon} — "
-        f"syntax:{syntax_ok} structure:{structure_ok} tests:{tests_ok} "
-        f"({elapsed_ms}ms)"
+        job_id,
+        "ValidationAgent",
+        f"Validation {status_icon} — syntax:{syntax_ok} structure:{structure_ok} tests:{tests_ok} ({elapsed_ms}ms)",
     )
     return summary
 
 
-#  Check helpers 
+#  Check helpers
+
 
 def _check_structure(
     job_dir: Path,
@@ -119,7 +119,7 @@ def _check_structure(
         module = route.get("module", "")
         if module and module.endswith(".py"):
             found = (job_dir / module).exists()
-            results[module] = {"description": f"Route module for {route.get('path','?')}", "found": found}
+            results[module] = {"description": f"Route module for {route.get('path', '?')}", "found": found}
 
     return results
 
@@ -167,9 +167,9 @@ def _run_tests(job_dir: Path, job_id: str) -> dict[str, Any]:
         passed = result.returncode == 0
         failures = _parse_failures(output)
         return {
-            "passed":   passed,
-            "skipped":  False,
-            "output":   output[:4000],   # cap to 4k chars for storage
+            "passed": passed,
+            "skipped": False,
+            "output": output[:4000],  # cap to 4k chars for storage
             "failures": failures,
         }
     except subprocess.TimeoutExpired:
@@ -182,13 +182,15 @@ def _run_tests(job_dir: Path, job_id: str) -> dict[str, Any]:
 
 def _parse_failures(output: str) -> list[dict[str, Any]]:
     import re
+
     failures = []
     for m in re.finditer(r"FAILED (.+?) - (.+)", output):
         failures.append({"test": m.group(1).strip(), "reason": m.group(2).strip()})
     return failures
 
 
-#  Report builder 
+#  Report builder
+
 
 def _build_report(
     summary: dict[str, Any],
@@ -201,8 +203,8 @@ def _build_report(
     project_name = requirements.get("project_name", "Project")
 
     overall = " PASSED" if summary["passed"] else " FAILED"
-    test_icon  = "" if summary["tests_ok"] else (" skipped" if summary["tests_skipped"] else "")
-    syn_icon   = "" if summary["syntax_ok"] else ""
+    test_icon = "" if summary["tests_ok"] else (" skipped" if summary["tests_skipped"] else "")
+    syn_icon = "" if summary["syntax_ok"] else ""
     struct_icon = "" if summary["structure_ok"] else ""
 
     lines = [
@@ -221,7 +223,7 @@ def _build_report(
         "",
     ]
 
-    #  Structure section 
+    #  Structure section
     lines += ["##  Structure Checks", ""]
     lines += ["| File / Pattern | Description | Status |", "|---|---|---|"]
     for pattern, info in structural.items():
@@ -229,7 +231,7 @@ def _build_report(
         lines.append(f"| `{pattern}` | {info['description']} | {icon} |")
     lines.append("")
 
-    #  Syntax section 
+    #  Syntax section
     lines += ["##  Syntax Validation", ""]
     errors = {k: v for k, v in syntax.items() if not v["valid"]}
     if not errors:
@@ -241,7 +243,7 @@ def _build_report(
             lines += [f"### `{path}`", "```", f"{info['error']}", "```", ""]
     lines.append("")
 
-    #  Test section 
+    #  Test section
     lines += ["##  Test Results", ""]
     if tests.get("skipped"):
         lines.append(f">  Tests skipped: {tests.get('output', '')}")
@@ -258,7 +260,7 @@ def _build_report(
             lines += ["", "<details><summary>pytest output</summary>", "", "```", output_snippet, "```", "</details>"]
     lines.append("")
 
-    #  Footer 
+    #  Footer
     missing = summary.get("missing_files", [])
     syn_errs = summary.get("syntax_errors", [])
     if missing or syn_errs:

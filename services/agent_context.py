@@ -3,6 +3,7 @@
 Replaces hidden ContextVar dependency. Every agent and storage
 operation receives workspace_id explicitly through this context object.
 """
+
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -19,6 +20,7 @@ class AgentContext:
         request_id:   Unique id for this request (for log correlation).
         extra:        Additional metadata (model, stack, etc.).
     """
+
     workspace_id: str = ""
     user_id: str = ""
     job_id: str = ""

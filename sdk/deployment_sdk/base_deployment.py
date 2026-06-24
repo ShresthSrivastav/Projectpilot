@@ -1,4 +1,5 @@
 """Base Deployment SDK — interface for creating custom deployment targets."""
+
 import logging
 import uuid
 from abc import ABC, abstractmethod
@@ -37,16 +38,13 @@ class BaseDeploymentTarget(ABC):
         self._logger = logging.getLogger(f"deploy.{self.__class__.__name__}")
 
     @abstractmethod
-    def deploy(self) -> DeploymentResult:
-        ...
+    def deploy(self) -> DeploymentResult: ...
 
     @abstractmethod
-    def verify(self, result: DeploymentResult) -> bool:
-        ...
+    def verify(self, result: DeploymentResult) -> bool: ...
 
     @abstractmethod
-    def rollback(self, result: DeploymentResult) -> bool:
-        ...
+    def rollback(self, result: DeploymentResult) -> bool: ...
 
     def get_config(self) -> DeploymentConfig:
         return self.config

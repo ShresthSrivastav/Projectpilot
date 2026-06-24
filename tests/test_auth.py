@@ -29,6 +29,7 @@ def override_get_db():
 
 def _cleanup():
     import gc
+
     _test_engine.dispose()
     engine.dispose()
     gc.collect()
@@ -93,10 +94,13 @@ class TestAuth:
 
     def test_login_success(self):
         client.post("/api/auth/register", json=self.REGISTER_PAYLOAD)
-        resp = client.post("/api/auth/login", json={
-            "email": self.REGISTER_PAYLOAD["email"],
-            "password": self.REGISTER_PAYLOAD["password"],
-        })
+        resp = client.post(
+            "/api/auth/login",
+            json={
+                "email": self.REGISTER_PAYLOAD["email"],
+                "password": self.REGISTER_PAYLOAD["password"],
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert "access_token" in data
@@ -104,10 +108,13 @@ class TestAuth:
         assert data["user"]["email"] == "test@example.com"
 
     def test_login_invalid_credentials(self):
-        resp = client.post("/api/auth/login", json={
-            "email": "nonexistent@example.com",
-            "password": "wrongpass",
-        })
+        resp = client.post(
+            "/api/auth/login",
+            json={
+                "email": "nonexistent@example.com",
+                "password": "wrongpass",
+            },
+        )
         assert resp.status_code == 401
         assert "invalid" in resp.json()["detail"].lower()
 
@@ -162,12 +169,15 @@ class TestAuth:
 
     def test_workspace_isolation(self):
         reg1 = client.post("/api/auth/register", json=self.REGISTER_PAYLOAD).json()
-        reg2 = client.post("/api/auth/register", json={
-            "name": "User Two",
-            "email": "user2@example.com",
-            "password": "password123",
-            "confirm_password": "password123",
-        }).json()
+        reg2 = client.post(
+            "/api/auth/register",
+            json={
+                "name": "User Two",
+                "email": "user2@example.com",
+                "password": "password123",
+                "confirm_password": "password123",
+            },
+        ).json()
         ws1 = client.get("/api/workspace/current", headers={"Authorization": f"Bearer {reg1['access_token']}"}).json()
         ws2 = client.get("/api/workspace/current", headers={"Authorization": f"Bearer {reg2['access_token']}"}).json()
         assert ws1["id"] != ws2["id"]

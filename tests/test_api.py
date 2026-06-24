@@ -8,6 +8,7 @@ Covers:
   - StackConfig validation tests
   - LLM retry/backoff (mocked)
 """
+
 import json
 import os
 import shutil
@@ -18,14 +19,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-os.environ["CHROMA_PATH"]            = "./test_chroma_data_v4"
+os.environ["CHROMA_PATH"] = "./test_chroma_data_v4"
 os.environ["GENERATED_PROJECTS_DIR"] = "./test_generated_projects_v4"
-os.environ["OLLAMA_BASE_URL"]        = "http://localhost:11434"
-os.environ["ZIP_RETENTION_HOURS"]    = "1"
-os.environ["ADMIN_API_KEY"]          = "test-admin-key-123"
-os.environ["USER_API_KEY"]           = "test-user-key-456"
-os.environ["RATE_LIMIT_ENABLED"]     = "false"
-os.environ["SKIP_AUTH"]              = "true"
+os.environ["OLLAMA_BASE_URL"] = "http://localhost:11434"
+os.environ["ZIP_RETENTION_HOURS"] = "1"
+os.environ["ADMIN_API_KEY"] = "test-admin-key-123"
+os.environ["USER_API_KEY"] = "test-user-key-456"
+os.environ["RATE_LIMIT_ENABLED"] = "false"
+os.environ["SKIP_AUTH"] = "true"
 
 from backend.main import app
 from database.chroma_db import (
@@ -42,6 +43,7 @@ from database.chroma_db import (
 )
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture(scope="module", autouse=True)
 def setup_and_teardown():
@@ -61,16 +63,20 @@ def client():
 
 def _make_job(client, prompt="Build a task manager with CRUD and SQLite database."):
     with patch("backend.main.run_pipeline"):
-        r = client.post("/generate-project", json={
-            "prompt": prompt,
-            "project_name": "TestApp",
-            "model": "local",
-        })
+        r = client.post(
+            "/generate-project",
+            json={
+                "prompt": prompt,
+                "project_name": "TestApp",
+                "model": "local",
+            },
+        )
     assert r.status_code == 200
     return r.json()["job_id"]
 
 
 # ── Health
+
 
 def test_health_200(client):
     assert client.get("/health").status_code == 200
@@ -85,13 +91,17 @@ def test_health_fields(client):
 
 # ── Generate
 
+
 @patch("backend.main.run_pipeline")
 def test_generate_valid(mock_p, client):
-    r = client.post("/generate-project", json={
-        "prompt": "Build a task manager with CRUD and SQLite database.",
-        "project_name": "TaskApp",
-        "model": "local",
-    })
+    r = client.post(
+        "/generate-project",
+        json={
+            "prompt": "Build a task manager with CRUD and SQLite database.",
+            "project_name": "TaskApp",
+            "model": "local",
+        },
+    )
     assert r.status_code == 200
     d = r.json()
     assert "job_id" in d
@@ -100,33 +110,42 @@ def test_generate_valid(mock_p, client):
 
 @patch("backend.main.run_pipeline")
 def test_generate_with_stack(mock_p, client):
-    r = client.post("/generate-project", json={
-        "prompt": "Build an inventory system with product CRUD.",
-        "project_name": "InvApp",
-        "model": "local",
-        "stack": {"backend": "fastapi", "frontend": "streamlit", "db": "sqlite"},
-    })
+    r = client.post(
+        "/generate-project",
+        json={
+            "prompt": "Build an inventory system with product CRUD.",
+            "project_name": "InvApp",
+            "model": "local",
+            "stack": {"backend": "fastapi", "frontend": "streamlit", "db": "sqlite"},
+        },
+    )
     assert r.status_code == 200
     assert "job_id" in r.json()
 
 
 @patch("backend.main.run_pipeline")
 def test_generate_with_clarification(mock_p, client):
-    r = client.post("/generate-project", json={
-        "prompt": "Build a student system.",
-        "project_name": "StudentApp",
-        "model": "local",
-        "clarification": "Include attendance tracking and grades.",
-    })
+    r = client.post(
+        "/generate-project",
+        json={
+            "prompt": "Build a student system.",
+            "project_name": "StudentApp",
+            "model": "local",
+            "clarification": "Include attendance tracking and grades.",
+        },
+    )
     assert r.status_code == 200
 
 
 def test_generate_invalid_stack(client):
-    r = client.post("/generate-project", json={
-        "prompt": "Build a task manager with CRUD.",
-        "project_name": "App",
-        "stack": {"backend": "django", "frontend": "streamlit", "db": "sqlite"},
-    })
+    r = client.post(
+        "/generate-project",
+        json={
+            "prompt": "Build a task manager with CRUD.",
+            "project_name": "App",
+            "stack": {"backend": "django", "frontend": "streamlit", "db": "sqlite"},
+        },
+    )
     assert r.status_code == 422
 
 
@@ -143,6 +162,7 @@ def test_generate_missing_prompt(client):
 
 
 # ── Clarify ───────────────────────────────────────────────────────────────────
+
 
 def test_clarify_returns_question_or_null(client):
     with patch("agents.requirement_agent.call_model", return_value="CLEAR"):
@@ -169,6 +189,7 @@ def test_clarify_short_prompt(client):
 
 # ── Status ────────────────────────────────────────────────────────────────────
 
+
 def test_status_valid(client):
     jid = _make_job(client)
     r = client.get(f"/status/{jid}")
@@ -188,6 +209,7 @@ def test_status_has_required_fields(client):
 
 
 # ── Cancel ────────────────────────────────────────────────────────────────────
+
 
 def test_cancel_queued_job(client):
     jid = _make_job(client)
@@ -209,6 +231,7 @@ def test_cancel_already_complete(client):
 
 # ── Files endpoint ────────────────────────────────────────────────────────────
 
+
 def test_files_nonexistent_job(client):
     assert client.get("/files/00000000-0000-0000-0000-000000000000").status_code == 404
 
@@ -226,6 +249,7 @@ def test_files_zipped_job(client, tmp_path):
 def test_files_live_job(client, tmp_path):
     # Simulate live job dir with some files
     import os
+
     base = Path(os.environ["GENERATED_PROJECTS_DIR"])
     jid = _make_job(client)
     job_dir = base / jid
@@ -243,12 +267,14 @@ def test_files_live_job(client, tmp_path):
 
 # ── Validate endpoint ─────────────────────────────────────────────────────────
 
+
 def test_validate_nonexistent_job(client):
     assert client.get("/validate/00000000-0000-0000-0000-000000000000").status_code == 404
 
 
 def test_validate_with_valid_python(client, tmp_path):
     import os
+
     base = Path(os.environ["GENERATED_PROJECTS_DIR"])
     jid = _make_job(client)
     job_dir = base / jid
@@ -265,6 +291,7 @@ def test_validate_with_valid_python(client, tmp_path):
 
 def test_validate_with_invalid_python(client, tmp_path):
     import os
+
     base = Path(os.environ["GENERATED_PROJECTS_DIR"])
     jid = _make_job(client)
     job_dir = base / jid
@@ -281,11 +308,15 @@ def test_validate_with_invalid_python(client, tmp_path):
 
 # ── Regenerate file ───────────────────────────────────────────────────────────
 
+
 def test_regenerate_nonexistent_job(client):
-    r = client.post("/regenerate-file", json={
-        "job_id": "00000000-0000-0000-0000-000000000000",
-        "file_path": "backend/main.py",
-    })
+    r = client.post(
+        "/regenerate-file",
+        json={
+            "job_id": "00000000-0000-0000-0000-000000000000",
+            "file_path": "backend/main.py",
+        },
+    )
     assert r.status_code == 404
 
 
@@ -298,6 +329,7 @@ def test_regenerate_running_job_rejected(client):
 
 def test_regenerate_file_success(client, tmp_path):
     import os
+
     base = Path(os.environ["GENERATED_PROJECTS_DIR"])
     jid = _make_job(client)
     update_job_status(jid, "complete", progress_pct=100)
@@ -306,14 +338,19 @@ def test_regenerate_file_success(client, tmp_path):
     (job_dir / "backend").mkdir(exist_ok=True)
     (job_dir / "backend" / "main.py").write_text("# old content\n")
 
-    new_code = "from fastapi import FastAPI\napp = FastAPI()\n\n@app.get('/health')\ndef health(): return {'status': 'ok'}\n"
+    new_code = (
+        "from fastapi import FastAPI\napp = FastAPI()\n\n@app.get('/health')\ndef health(): return {'status': 'ok'}\n"
+    )
     with patch("backend.main.call_model", return_value=new_code):
-        r = client.post("/regenerate-file", json={
-            "job_id": jid,
-            "file_path": "backend/main.py",
-            "correction_note": "Add health endpoint",
-            "model": "local",
-        })
+        r = client.post(
+            "/regenerate-file",
+            json={
+                "job_id": jid,
+                "file_path": "backend/main.py",
+                "correction_note": "Add health endpoint",
+                "model": "local",
+            },
+        )
     assert r.status_code == 200
     d = r.json()
     assert d["syntax_ok"] is True
@@ -321,6 +358,7 @@ def test_regenerate_file_success(client, tmp_path):
 
 
 # ── Jobs list ─────────────────────────────────────────────────────────────────
+
 
 def test_list_jobs(client):
     _make_job(client)
@@ -331,6 +369,7 @@ def test_list_jobs(client):
 
 
 # ── ChromaDB ──────────────────────────────────────────────────────────────────
+
 
 def test_chroma_job_lifecycle():
     jid = "chroma-v4-001"
@@ -360,9 +399,9 @@ def test_chroma_cancelled_status():
 def test_chroma_logs():
     jid = "chroma-v4-logs"
     create_job(jid)
-    log_to_db(jid, "TestAgent", "Info message",    "INFO")
+    log_to_db(jid, "TestAgent", "Info message", "INFO")
     log_to_db(jid, "TestAgent", "Warning message", "WARNING")
-    log_to_db(jid, "TestAgent", "Error message",   "ERROR")
+    log_to_db(jid, "TestAgent", "Error message", "ERROR")
     logs = get_logs(jid)
     assert len(logs) == 3
     assert {l["log_level"] for l in logs} == {"INFO", "WARNING", "ERROR"}
@@ -389,17 +428,26 @@ def test_chroma_blueprint():
 
 # ── RequirementAgent ──────────────────────────────────────────────────────────
 
+
 def test_req_agent_parses():
-    mock_resp = json.dumps({
-        "project_name": "Task", "project_type": "task_manager",
-        "features": ["create task", "list tasks", "delete task"],
-        "modules": ["tasks"], "complexity": "simple",
-        "auth_required": False, "db_entities": ["Task"],
-    })
+    mock_resp = json.dumps(
+        {
+            "project_name": "Task",
+            "project_type": "task_manager",
+            "features": ["create task", "list tasks", "delete task"],
+            "modules": ["tasks"],
+            "complexity": "simple",
+            "auth_required": False,
+            "db_entities": ["Task"],
+        }
+    )
     with patch("agents.requirement_agent.call_model", return_value=mock_resp):
         from agents import requirement_agent
+
         r = requirement_agent.run(
-            "Build a task manager with CRUD and database.", "Task", "req-v4-001",
+            "Build a task manager with CRUD and database.",
+            "Task",
+            "req-v4-001",
             model="local",
             stack={"backend": "fastapi", "frontend": "streamlit", "db": "sqlite"},
         )
@@ -409,15 +457,25 @@ def test_req_agent_parses():
 
 
 def test_req_agent_stack_attached():
-    mock_resp = json.dumps({
-        "project_name": "Inv", "project_type": "inventory_system",
-        "features": ["list products"], "modules": ["products"],
-        "complexity": "simple", "auth_required": False, "db_entities": ["Product"],
-    })
+    mock_resp = json.dumps(
+        {
+            "project_name": "Inv",
+            "project_type": "inventory_system",
+            "features": ["list products"],
+            "modules": ["products"],
+            "complexity": "simple",
+            "auth_required": False,
+            "db_entities": ["Product"],
+        }
+    )
     with patch("agents.requirement_agent.call_model", return_value=mock_resp):
         from agents import requirement_agent
+
         r = requirement_agent.run(
-            "Build an inventory system.", "Inv", "req-v4-002", model="local",
+            "Build an inventory system.",
+            "Inv",
+            "req-v4-002",
+            model="local",
             stack={"backend": "fastapi", "frontend": "streamlit", "db": "postgresql"},
         )
     assert r["stack"]["db"] == "postgresql"
@@ -425,18 +483,21 @@ def test_req_agent_stack_attached():
 
 def test_req_agent_empty_raises():
     from agents import requirement_agent
+
     with pytest.raises(ValueError, match="empty"):
         requirement_agent.run("", "T", "req-v4-003")
 
 
 def test_req_agent_unsupported_raises():
     from agents import requirement_agent
+
     with pytest.raises(ValueError, match="Unsupported"):
         requirement_agent.run("Build a deep learning neural network.", "AI", "req-v4-004")
 
 
 def test_req_agent_too_long_raises():
     from agents import requirement_agent
+
     with pytest.raises(ValueError, match="500"):
         requirement_agent.run("Build a task manager. " * 30, "T", "req-v4-005")
 
@@ -444,6 +505,7 @@ def test_req_agent_too_long_raises():
 def test_req_agent_clarify_clear():
     with patch("agents.requirement_agent.call_model", return_value="CLEAR"):
         from agents.requirement_agent import clarify
+
         result = clarify("Build a task manager with CRUD.", model="local")
     assert result is None
 
@@ -451,6 +513,7 @@ def test_req_agent_clarify_clear():
 def test_req_agent_clarify_question():
     with patch("agents.requirement_agent.call_model", return_value="Do you need user authentication?"):
         from agents.requirement_agent import clarify
+
         result = clarify("Build a system.", model="local")
     assert result is not None
     assert result.endswith("?")
@@ -458,12 +521,15 @@ def test_req_agent_clarify_question():
 
 # ── TestGenAgent ──────────────────────────────────────────────────────────────
 
+
 def test_testgen_agent_writes_file(tmp_path):
     import os
+
     os.environ["GENERATED_PROJECTS_DIR"] = str(tmp_path)
     import importlib
 
     import services.file_service as fs
+
     importlib.reload(fs)
 
     jid = "testgen-v4-001"
@@ -471,11 +537,11 @@ def test_testgen_agent_writes_file(tmp_path):
     job_dir.mkdir()
 
     req = {"project_name": "App", "features": ["CRUD"]}
-    bp  = {
+    bp = {
         "routes": [
-            {"method": "GET",  "path": "/items",     "description": "List"},
-            {"method": "POST", "path": "/items",     "description": "Create"},
-            {"method": "GET",  "path": "/health",    "description": "Health"},
+            {"method": "GET", "path": "/items", "description": "List"},
+            {"method": "POST", "path": "/items", "description": "Create"},
+            {"method": "GET", "path": "/health", "description": "Health"},
         ],
         "db_tables": [{"name": "items"}],
     }
@@ -493,6 +559,7 @@ def test_testgen_agent_writes_file(tmp_path):
     )
     with patch("agents.test_gen_agent.call_model", return_value=mock_test):
         from agents import test_gen_agent
+
         files = test_gen_agent.run(req, bp, [], jid, model="local")
 
     assert any("test_app.py" in f for f in files)
@@ -502,20 +569,23 @@ def test_testgen_agent_writes_file(tmp_path):
 
 def test_testgen_agent_fallback_writes_minimal_tests(tmp_path):
     import os
+
     os.environ["GENERATED_PROJECTS_DIR"] = str(tmp_path)
     import importlib
 
     import services.file_service as fs
+
     importlib.reload(fs)
 
     jid = "testgen-v4-002"
     (tmp_path / jid).mkdir()
 
     req = {"project_name": "App", "features": []}
-    bp  = {"routes": [{"method": "GET", "path": "/health", "description": "Health"}], "db_tables": []}
+    bp = {"routes": [{"method": "GET", "path": "/health", "description": "Health"}], "db_tables": []}
 
     with patch("agents.test_gen_agent.call_model", return_value="x"):  # too short → fallback
         from agents import test_gen_agent
+
         files = test_gen_agent.run(req, bp, [], jid, model="local")
 
     assert len(files) >= 2  # __init__.py + test_app.py written as fallback
@@ -525,12 +595,15 @@ def test_testgen_agent_fallback_writes_minimal_tests(tmp_path):
 
 # ── CleanupService ────────────────────────────────────────────────────────────
 
+
 def test_cleanup_deletes_old_zips(tmp_path):
     import os
+
     os.environ["GENERATED_PROJECTS_DIR"] = str(tmp_path)
     import importlib
 
     import services.cleanup_service as cs
+
     importlib.reload(cs)
 
     # Create two ZIPs: one old (mtime in past), one recent
@@ -553,10 +626,12 @@ def test_cleanup_deletes_old_zips(tmp_path):
 
 def test_cleanup_skips_fresh_zips(tmp_path):
     import os
+
     os.environ["GENERATED_PROJECTS_DIR"] = str(tmp_path)
     import importlib
 
     import services.cleanup_service as cs
+
     importlib.reload(cs)
 
     fresh = tmp_path / "fresh.zip"
@@ -571,11 +646,14 @@ def test_cleanup_skips_fresh_zips(tmp_path):
 
 # ── ZIP Service ───────────────────────────────────────────────────────────────
 
+
 def test_zip_creates_valid(tmp_path):
     import importlib
     import zipfile
+
     os.environ["GENERATED_PROJECTS_DIR"] = str(tmp_path)
     import services.zip_service as zm
+
     importlib.reload(zm)
 
     jid = "zip-v4-001"
@@ -592,8 +670,10 @@ def test_zip_creates_valid(tmp_path):
 
 def test_zip_missing_raises(tmp_path):
     import importlib
+
     os.environ["GENERATED_PROJECTS_DIR"] = str(tmp_path)
     import services.zip_service as zm
+
     importlib.reload(zm)
 
     with pytest.raises(FileNotFoundError):
@@ -603,20 +683,24 @@ def test_zip_missing_raises(tmp_path):
 
 # ── LLM Service ───────────────────────────────────────────────────────────────
 
+
 def test_resolve_model_presets():
     from services.llm_service import resolve_model
-    assert resolve_model("local")     == os.getenv("MODEL_LOCAL",     "gemma4:12b")
-    assert resolve_model("cloud")     == os.getenv("CLOUD_MODEL", "gemma-4-31b-it")
-    assert resolve_model("unknown")   == "unknown"
+
+    assert resolve_model("local") == os.getenv("MODEL_LOCAL", "gemma4:12b")
+    assert resolve_model("cloud") == os.getenv("CLOUD_MODEL", "gemma-4-31b-it")
+    assert resolve_model("unknown") == "unknown"
 
 
 def test_clean_code_response_strips_fences():
     from services.llm_service import clean_code_response
+
     assert clean_code_response("```python\nprint('hi')\n```") == "print('hi')"
 
 
 def test_clean_code_response_no_fences():
     from services.llm_service import clean_code_response
+
     assert clean_code_response("print('hello')") == "print('hello')"
 
 
@@ -643,6 +727,7 @@ def test_llm_retry_on_timeout():
 
 def test_singleton_client_is_same_object():
     from services.llm_service import _client
+
     c1 = _client()
     c2 = _client()
     assert c1 is c2
@@ -650,8 +735,10 @@ def test_singleton_client_is_same_object():
 
 # ── Multi-Provider ──────────────────────────────────────────────────────────
 
+
 def test_get_available_providers():
     from services.llm_service import get_available_providers
+
     providers = get_available_providers()
     names = {p["name"] for p in providers}
     assert "local" in names
@@ -676,13 +763,14 @@ def test_providers_endpoint(client):
 
 # ── Workspace CRUD ──────────────────────────────────────────────────────────
 
+
 def test_workspace_create_file(client, tmp_path):
     import os
+
     base = Path(os.environ["GENERATED_PROJECTS_DIR"])
     jid = "wksp-test-001"
     (base / jid).mkdir(parents=True, exist_ok=True)
-    r = client.post(f"/workspace/{jid}/files/newfile.py",
-                     json={"content": "x = 1\n"})
+    r = client.post(f"/workspace/{jid}/files/newfile.py", json={"content": "x = 1\n"})
     assert r.status_code == 200
     assert r.json()["action"] == "created"
     assert (base / jid / "newfile.py").exists()
@@ -691,12 +779,12 @@ def test_workspace_create_file(client, tmp_path):
 
 def test_workspace_update_file(client, tmp_path):
     import os
+
     base = Path(os.environ["GENERATED_PROJECTS_DIR"])
     jid = "wksp-test-002"
     (base / jid).mkdir(parents=True, exist_ok=True)
     (base / jid / "main.py").write_text("old content")
-    r = client.put(f"/workspace/{jid}/files/main.py",
-                    json={"content": "new content"})
+    r = client.put(f"/workspace/{jid}/files/main.py", json={"content": "new content"})
     assert r.status_code == 200
     assert r.json()["action"] == "updated"
     assert (base / jid / "main.py").read_text() == "new content"
@@ -705,6 +793,7 @@ def test_workspace_update_file(client, tmp_path):
 
 def test_workspace_delete_file(client, tmp_path):
     import os
+
     base = Path(os.environ["GENERATED_PROJECTS_DIR"])
     jid = "wksp-test-003"
     (base / jid).mkdir(parents=True, exist_ok=True)
@@ -721,22 +810,24 @@ def test_workspace_path_traversal_denied(client):
     import urllib.parse
 
     from services.file_service import BASE_DIR as BD
+
     base_path = os.environ["GENERATED_PROJECTS_DIR"]
     jid = "wksp-test-004"
     (Path(base_path) / jid).mkdir(parents=True, exist_ok=True)
     assert (Path(base_path) / jid).exists(), f"Dir should exist: {Path(base_path) / jid}"
     assert BD.exists(), f"BASE_DIR should exist: {BD}"
     trav_path = urllib.parse.quote("../../etc/passwd", safe="")
-    r = client.post(f"/workspace/{jid}/files/{trav_path}",
-                     json={"content": "hack"})
+    r = client.post(f"/workspace/{jid}/files/{trav_path}", json={"content": "hack"})
     assert r.status_code == 403, f"Expected 403, got {r.status_code}: {r.json()}"
     shutil.rmtree(Path(base_path) / jid, ignore_errors=True)
 
 
 # ── Memory / Insights ───────────────────────────────────────────────────────
 
+
 def test_coding_preferences():
     from database.memory_store import get_coding_preferences, set_coding_preference
+
     set_coding_preference("framework:fastapi", "True", source="test", confidence=0.9)
     prefs = get_coding_preferences()
     assert any(p["pref_key"] == "framework:fastapi" for p in prefs)
@@ -744,6 +835,7 @@ def test_coding_preferences():
 
 def test_project_insights():
     from database.memory_store import get_project_insights, save_project_insight
+
     save_project_insight("test-job", "successful_generation", "All tests passed")
     insights = get_project_insights(insight_type="successful_generation")
     assert len(insights) >= 1
@@ -752,24 +844,27 @@ def test_project_insights():
 
 # ── Auto-Fix Service ────────────────────────────────────────────────────────
 
+
 def test_autofix_no_project(client):
-    r = client.post("/autofix/00000000-0000-0000-0000-000000000000",
-                     json={"model": "local"})
+    r = client.post("/autofix/00000000-0000-0000-0000-000000000000", json={"model": "local"})
     assert r.status_code == 404
 
 
 def test_autofix_no_project_dir(client, tmp_path):
     # Job exists in DB but no dir — autofix returns error
     from database.chroma_db import create_job
+
     jid = "autofix-test-001"
     create_job(jid)
     with patch("services.autofix_service.BASE_DIR", tmp_path):
         from services.autofix_service import run_autofix
+
         result = run_autofix(jid, model="local", max_attempts=1)
         assert result["status"] == "error"
 
 
 # ── Sandbox Service ─────────────────────────────────────────────────────────
+
 
 def test_sandbox_status(client):
     r = client.get("/sandbox/status")
@@ -779,15 +874,16 @@ def test_sandbox_status(client):
 
 def test_sandbox_run_subprocess():
     from services.sandbox_service import _run_subprocess
+
     result = _run_subprocess("print('hello')", None, 10)
     assert "hello" in result.get("stdout", "")
 
 
 # ── Deployment Service ──────────────────────────────────────────────────────
 
+
 def test_deploy_unregistered_job(client):
-    r = client.post("/deploy/00000000-0000-0000-0000-000000000000",
-                     json={"target": "docker"})
+    r = client.post("/deploy/00000000-0000-0000-0000-000000000000", json={"target": "docker"})
     assert r.status_code == 404
 
 
@@ -810,6 +906,7 @@ def test_deploy_generates_docker(tmp_path):
 
 # ── Metrics ─────────────────────────────────────────────────────────────────
 
+
 def test_metrics_endpoint(client):
     r = client.get("/metrics")
     assert r.status_code == 200
@@ -820,8 +917,10 @@ def test_metrics_endpoint(client):
 
 # ── Fix patterns ────────────────────────────────────────────────────────────
 
+
 def test_fix_patterns():
     from database.memory_store import get_fix_patterns, record_fix_pattern
+
     record_fix_pattern("import_error", "ModuleNotFoundError", "tests/*.py", "Add missing import")
     patterns = get_fix_patterns()
     assert len(patterns) >= 1
@@ -830,8 +929,10 @@ def test_fix_patterns():
 
 # ── Reusable components ─────────────────────────────────────────────────────
 
+
 def test_reusable_components():
     from database.memory_store import get_reusable_components, save_reusable_component
+
     save_reusable_component("FastAPICRUD", "route", "def create(): pass", "CRUD route template", "fastapi,crud")
     comps = get_reusable_components(component_type="route")
     assert len(comps) >= 1
@@ -840,17 +941,19 @@ def test_reusable_components():
 
 # ── Memory service ──────────────────────────────────────────────────────────
 
+
 def test_memory_context():
     from services.memory_service import get_context_for_prompt
+
     ctx = get_context_for_prompt("build an app", job_id="test-job")
     assert isinstance(ctx, dict)
 
 
 def test_learn_from_project():
     from services.memory_service import learn_from_project
+
     req = {"project_name": "Test", "features": ["login"]}
-    bp = {"tech_stack": {"backend": "fastapi", "frontend": "react", "db": "postgresql"},
-          "file_count": 5}
+    bp = {"tech_stack": {"backend": "fastapi", "frontend": "react", "db": "postgresql"}, "file_count": 5}
     tr = {"passed": True, "collected": 3, "failures": []}
     result = learn_from_project("test-learn-001", req, bp, tr)
     assert result["learned"] is True
@@ -858,14 +961,13 @@ def test_learn_from_project():
 
 # ── Error classification ────────────────────────────────────────────────────
 
+
 def test_classify_errors():
     from services.memory_service import _classify_error
+
     assert _classify_error("ImportError: No module named x") == "import_error"
     assert _classify_error("SyntaxError: invalid syntax") == "syntax_error"
     assert _classify_error("NameError: x not defined") == "name_error"
     assert _classify_error("TypeError: unsupported operand") == "type_error"
     assert _classify_error("AssertionError: expected 200") == "assertion_error"
     assert _classify_error("some random error") == "unknown"
-
-
-

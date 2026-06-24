@@ -146,7 +146,9 @@ def list_workspaces(current_user: User = Depends(require_auth), db: Session = De
 
 
 @router_workspace.post("", response_model=WorkspaceResponse)
-def create_new_workspace(req: CreateWorkspaceRequest, current_user: User = Depends(require_auth), db: Session = Depends(get_db)):
+def create_new_workspace(
+    req: CreateWorkspaceRequest, current_user: User = Depends(require_auth), db: Session = Depends(get_db)
+):
     ws = create_workspace(db, req.name, current_user.id)
     return WorkspaceResponse(
         id=ws.id,
@@ -158,7 +160,9 @@ def create_new_workspace(req: CreateWorkspaceRequest, current_user: User = Depen
 
 
 @router_workspace.post("/switch", response_model=SwitchWorkspaceResponse)
-def switch_workspace_endpoint(req: SwitchWorkspaceRequest, current_user: User = Depends(require_auth), db: Session = Depends(get_db)):
+def switch_workspace_endpoint(
+    req: SwitchWorkspaceRequest, current_user: User = Depends(require_auth), db: Session = Depends(get_db)
+):
     result = switch_workspace(db, req.workspace_id, current_user.id)
     return SwitchWorkspaceResponse(
         access_token=result["access_token"],
@@ -176,7 +180,9 @@ def workspace_members(current_user: User = Depends(require_auth), db: Session = 
 
 
 @router_workspace.get("/members/{workspace_id}", response_model=list[MemberResponse])
-def workspace_members_by_id(workspace_id: str, current_user: User = Depends(require_auth), db: Session = Depends(get_db)):
+def workspace_members_by_id(
+    workspace_id: str, current_user: User = Depends(require_auth), db: Session = Depends(get_db)
+):
     role = get_workspace_role(db, workspace_id, current_user.id)
     if role is None:
         raise HTTPException(status_code=403, detail="Not a member of this workspace")
@@ -184,31 +190,41 @@ def workspace_members_by_id(workspace_id: str, current_user: User = Depends(requ
 
 
 @router_workspace.get("/current/members", response_model=list[MemberResponse])
-def current_workspace_members(request: Request, current_user: User = Depends(require_auth), db: Session = Depends(get_db)):
+def current_workspace_members(
+    request: Request, current_user: User = Depends(require_auth), db: Session = Depends(get_db)
+):
     ws_id = get_current_workspace_id(request)
     return get_workspace_members(db, ws_id)
 
 
 @router_workspace.delete("/current/members/{member_id}")
-def remove_current_workspace_member(member_id: str, request: Request, current_user: User = Depends(require_auth), db: Session = Depends(get_db)):
+def remove_current_workspace_member(
+    member_id: str, request: Request, current_user: User = Depends(require_auth), db: Session = Depends(get_db)
+):
     ws_id = get_current_workspace_id(request)
     remove_member(db, ws_id, member_id, current_user.id)
     return {"message": "Member removed"}
 
 
 @router_workspace.post("/current/invite")
-def invite_current_workspace_member(req: InviteRequest, request: Request, current_user: User = Depends(require_auth), db: Session = Depends(get_db)):
+def invite_current_workspace_member(
+    req: InviteRequest, request: Request, current_user: User = Depends(require_auth), db: Session = Depends(get_db)
+):
     ws_id = get_current_workspace_id(request)
     return invite_to_workspace(db, ws_id, req.email, req.role, current_user.id)
 
 
 @router_workspace.post("/accept")
-def accept_workspace_invite(req: AcceptInviteRequest, current_user: User = Depends(require_auth), db: Session = Depends(get_db)):
+def accept_workspace_invite(
+    req: AcceptInviteRequest, current_user: User = Depends(require_auth), db: Session = Depends(get_db)
+):
     return accept_invite(db, req.token, current_user.id)
 
 
 @router_workspace.get("/current/invites", response_model=list[dict])
-def current_workspace_pending_invites(request: Request, current_user: User = Depends(require_auth), db: Session = Depends(get_db)):
+def current_workspace_pending_invites(
+    request: Request, current_user: User = Depends(require_auth), db: Session = Depends(get_db)
+):
     ws_id = get_current_workspace_id(request)
     return get_pending_invites(db, ws_id, current_user.id)
 
@@ -253,7 +269,9 @@ class MarkReadRequest(BaseModel):
 
 
 @router_workspace.get("/notifications", response_model=list[NotificationResponse])
-def list_notifications(request: Request, current_user: User = Depends(require_auth), unread_only: bool = False, limit: int = 20):
+def list_notifications(
+    request: Request, current_user: User = Depends(require_auth), unread_only: bool = False, limit: int = 20
+):
     ws_id = get_current_workspace_id(request)
     return get_notifications(current_user.id, ws_id, limit, unread_only)
 

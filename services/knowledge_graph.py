@@ -1,4 +1,5 @@
 """Repository Knowledge Graph — file/API/dependency relationships, impact analysis, graph queries."""
+
 import ast
 import logging
 import re
@@ -119,7 +120,9 @@ class KnowledgeGraph:
                     if isinstance(base, ast.Name):
                         node.exports.append(base.id)
                     elif isinstance(base, ast.Attribute):
-                        node.exports.append(f"{base.value.id}.{base.attr}" if isinstance(base.value, ast.Name) else base.attr)
+                        node.exports.append(
+                            f"{base.value.id}.{base.attr}" if isinstance(base.value, ast.Name) else base.attr
+                        )
             elif isinstance(item, ast.FunctionDef):
                 node.functions.append(item.name)
                 for dec in item.decorator_list:
@@ -135,12 +138,14 @@ class KnowledgeGraph:
                             for a in dec.args:
                                 if isinstance(a, ast.Constant) and isinstance(a.value, str):
                                     path = a.value
-                            node.apis.append({
-                                "method": method.upper(),
-                                "path": path,
-                                "handler": item.name,
-                                "line": item.lineno,
-                            })
+                            node.apis.append(
+                                {
+                                    "method": method.upper(),
+                                    "path": path,
+                                    "handler": item.name,
+                                    "line": item.lineno,
+                                }
+                            )
             elif isinstance(item, ast.Call):
                 if isinstance(item.func, ast.Attribute) and item.func.attr in ("add_route", "include_router", "mount"):
                     for a in item.args:
@@ -154,9 +159,11 @@ class KnowledgeGraph:
         import_re = re.findall(r"""from\s+['"]([^'"]+)['"]|require\s*\(\s*['"]([^'"]+)['"]""", content)
         for m in import_re:
             node.imports.append(m[0] or m[1])
-        export_re = re.findall(r'(?:export\s+(?:default\s+)?)?(?:function|const|let|var|class)\s+(\w+)', content)
+        export_re = re.findall(r"(?:export\s+(?:default\s+)?)?(?:function|const|let|var|class)\s+(\w+)", content)
         node.exports.extend(export_re)
-        api_re = re.findall(r'(?:app|router|server)\s*\.\s*(get|post|put|delete|patch)\s*\(\s*[\'"]([^\'"]+)[\'"]', content)
+        api_re = re.findall(
+            r'(?:app|router|server)\s*\.\s*(get|post|put|delete|patch)\s*\(\s*[\'"]([^\'"]+)[\'"]', content
+        )
         for method, path in api_re:
             node.apis.append({"method": method.upper(), "path": f"/{path.lstrip('/')}", "handler": ""})
 
@@ -177,16 +184,21 @@ class KnowledgeGraph:
             for cls_name in node.classes:
                 for other_path, other_node in self.files.items():
                     if other_path != path and cls_name in other_node.imports:
-                        rel = Relationship(source=path, target=other_path, rel_type="implements", metadata={"class": cls_name})
+                        rel = Relationship(
+                            source=path, target=other_path, rel_type="implements", metadata={"class": cls_name}
+                        )
                         self.relationships.append(rel)
             for api in node.apis:
                 for other_path, other_node in self.files.items():
                     if other_path != path and any(
-                        t.get("method") == api["method"] and t.get("path") == api["path"]
-                        for t in other_node.apis
+                        t.get("method") == api["method"] and t.get("path") == api["path"] for t in other_node.apis
                     ):
-                        rel = Relationship(source=path, target=other_path, rel_type="api_depends",
-                                           metadata={"method": api["method"], "path": api["path"]})
+                        rel = Relationship(
+                            source=path,
+                            target=other_path,
+                            rel_type="api_depends",
+                            metadata={"method": api["method"], "path": api["path"]},
+                        )
                         self.relationships.append(rel)
 
     def _resolve_import(self, current_path: str, imp: str) -> str | None:
@@ -301,12 +313,14 @@ class KnowledgeGraph:
         apis = []
         for path, node in self.files.items():
             for api in node.apis:
-                apis.append({
-                    "file": path,
-                    "method": api["method"],
-                    "path": api["path"],
-                    "handler": api.get("handler", ""),
-                })
+                apis.append(
+                    {
+                        "file": path,
+                        "method": api["method"],
+                        "path": api["path"],
+                        "handler": api.get("handler", ""),
+                    }
+                )
         return sorted(apis, key=lambda x: (x["path"], x["method"]))
 
     def query_dependency_graph(self, module: str | None = None) -> dict[str, Any]:
@@ -314,9 +328,15 @@ class KnowledgeGraph:
             sub_graph = {k: v for k, v in self.files.items() if module in k}
         else:
             sub_graph = self.files
-        nodes = [{"id": p, "file_type": n.file_type, "classes": n.classes[:3], "functions": n.functions[:3]} for p, n in sub_graph.items()]
-        edges = [{"source": r.source, "target": r.target, "type": r.rel_type} for r in self.relationships
-                 if r.source in sub_graph or r.target in sub_graph]
+        nodes = [
+            {"id": p, "file_type": n.file_type, "classes": n.classes[:3], "functions": n.functions[:3]}
+            for p, n in sub_graph.items()
+        ]
+        edges = [
+            {"source": r.source, "target": r.target, "type": r.rel_type}
+            for r in self.relationships
+            if r.source in sub_graph or r.target in sub_graph
+        ]
         return {"nodes": nodes, "edges": edges, "node_count": len(nodes), "edge_count": len(edges)}
 
     def query_service_dependencies(self) -> dict[str, list[str]]:

@@ -83,6 +83,7 @@ def calculate_route_coverage(
         method = route.get("method", "GET").lower()
         path = route.get("path", "/")
         import re
+
         pattern = re.compile(
             rf'@(?:app|router)\.{method}\s*\(\s*["\'].*?{re.escape(path)}["\']',
             re.IGNORECASE,
@@ -116,6 +117,7 @@ def calculate_table_coverage(
         }
     """
     import re
+
     missing = []
     for table in planned_tables:
         name = table.get("name", "")
@@ -179,10 +181,13 @@ def enforce_coverage(
         table_cov = calculate_table_coverage(models_text, blueprint.get("db_tables", []))
 
         combined = min(file_cov["coverage"], route_cov["coverage"], table_cov["coverage"])
-        log_to_db(job_id, "BlueprintCoverage",
-                  f"Coverage: files={file_cov['coverage']:.0%}, "
-                  f"routes={route_cov['coverage']:.0%}, "
-                  f"tables={table_cov['coverage']:.0%}")
+        log_to_db(
+            job_id,
+            "BlueprintCoverage",
+            f"Coverage: files={file_cov['coverage']:.0%}, "
+            f"routes={route_cov['coverage']:.0%}, "
+            f"tables={table_cov['coverage']:.0%}",
+        )
 
         if combined >= MIN_COVERAGE:
             log_to_db(job_id, "BlueprintCoverage", f"Coverage threshold met ({combined:.0%} >= {MIN_COVERAGE:.0%})")
@@ -206,13 +211,17 @@ def enforce_coverage(
         # Generate missing routes
         for missing_route in route_cov["missing_routes"]:
             issues_remaining.append(f"Missing route: {missing_route}")
-            if _regenerate_backend_for_routes(job_id, route_cov["missing_routes"], blueprint, requirements, model, job_dir):
+            if _regenerate_backend_for_routes(
+                job_id, route_cov["missing_routes"], blueprint, requirements, model, job_dir
+            ):
                 issues_resolved.append(f"Regenerated backend for route: {missing_route}")
 
         # Generate missing tables
         for missing_table in table_cov["missing_tables"]:
             issues_remaining.append(f"Missing table: {missing_table}")
-            if _regenerate_models_for_tables(job_id, table_cov["missing_tables"], blueprint, requirements, model, job_dir):
+            if _regenerate_models_for_tables(
+                job_id, table_cov["missing_tables"], blueprint, requirements, model, job_dir
+            ):
                 issues_resolved.append(f"Regenerated models for table: {missing_table}")
 
         if not file_cov["missing_files"] and not route_cov["missing_routes"] and not table_cov["missing_tables"]:
@@ -229,9 +238,12 @@ def enforce_coverage(
     table_cov = calculate_table_coverage(models_text, blueprint.get("db_tables", []))
     final_coverage = min(file_cov["coverage"], route_cov["coverage"], table_cov["coverage"])
 
-    log_to_db(job_id, "BlueprintCoverage",
-              f"Coverage enforcement complete: {final_coverage:.0%} "
-              f"({'PASSED' if final_coverage >= MIN_COVERAGE else 'FAILED'})")
+    log_to_db(
+        job_id,
+        "BlueprintCoverage",
+        f"Coverage enforcement complete: {final_coverage:.0%} "
+        f"({'PASSED' if final_coverage >= MIN_COVERAGE else 'FAILED'})",
+    )
 
     return {
         "success": final_coverage >= MIN_COVERAGE,
@@ -266,9 +278,9 @@ def _generate_missing_file(
 
     prompt = f"""Generate the complete file: {file_path}
 
-Project: {requirements.get('project_name', 'App')}
+Project: {requirements.get("project_name", "App")}
 Features: {feats}
-Type: {requirements.get('project_type')}
+Type: {requirements.get("project_type")}
 
 Routes: {routes_json}
 DB Tables: {tables_json}
@@ -277,8 +289,7 @@ Output ONLY the complete file content — no markdown, no explanations."""
 
     try:
         content = clean_code_response(
-            call_model(prompt, system_prompt=_COVERAGE_SYS, model=model,
-                       job_id=job_id, agent="BlueprintCoverage")
+            call_model(prompt, system_prompt=_COVERAGE_SYS, model=model, job_id=job_id, agent="BlueprintCoverage")
         )
         if len(content.strip()) < 20:
             logger.warning("Generated content too short for %s", file_path)
@@ -314,16 +325,14 @@ def _regenerate_backend_for_routes(
 EXISTING CODE (update it — do not rewrite from scratch):
 {existing[:5000]}
 
-Project: {requirements.get('project_name', 'App')}
-Features: {', '.join(requirements.get('features', []))}
+Project: {requirements.get("project_name", "App")}
+Features: {", ".join(requirements.get("features", []))}
 
 Add the missing route implementations while preserving ALL existing code.
 Output ONLY the updated main.py content — complete file."""
 
     try:
-        content = clean_code_response(
-            call_model(prompt, model=model, job_id=job_id, agent="BlueprintCoverage")
-        )
+        content = clean_code_response(call_model(prompt, model=model, job_id=job_id, agent="BlueprintCoverage"))
         if len(content.strip()) < 100:
             return False
         write_file(job_id, "backend/main.py", content)
@@ -364,9 +373,7 @@ Add new model classes for the missing tables. Rules:
 Output ONLY the complete updated models.py content."""
 
     try:
-        content = clean_code_response(
-            call_model(prompt, model=model, job_id=job_id, agent="BlueprintCoverage")
-        )
+        content = clean_code_response(call_model(prompt, model=model, job_id=job_id, agent="BlueprintCoverage"))
         if len(content.strip()) < 100:
             return False
         write_file(job_id, "database/models.py", content)

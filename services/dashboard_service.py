@@ -8,6 +8,7 @@ Provides:
   - Cost analytics
   - Memory and CPU usage tracking
 """
+
 import logging
 import os
 import threading
@@ -96,10 +97,16 @@ def update_agent_status(
             agent.failure_count += 1
         agent.last_heartbeat = datetime.utcnow().isoformat()
         agent.queue_size = len(_get_running_agents())
-        _publish_event("agent_status", {
-            "agent": name, "status": status, "task": task,
-            "tokens": agent.tokens_used, "cost": agent.estimated_cost,
-        })
+        _publish_event(
+            "agent_status",
+            {
+                "agent": name,
+                "status": status,
+                "task": task,
+                "tokens": agent.tokens_used,
+                "cost": agent.estimated_cost,
+            },
+        )
         return agent
 
 
@@ -131,18 +138,21 @@ def get_agent(name: str) -> dict | None:
 
 def get_all_agents() -> list[dict]:
     with _agent_lock:
-        return [{
-            "name": a.agent_name,
-            "status": a.status,
-            "current_task": a.current_task,
-            "current_file": a.current_file,
-            "tokens_used": a.tokens_used,
-            "estimated_cost": round(a.estimated_cost, 4),
-            "runtime_ms": a.runtime_ms,
-            "success_count": a.success_count,
-            "failure_count": a.failure_count,
-            "last_heartbeat": a.last_heartbeat,
-        } for a in sorted(_agents.values(), key=lambda x: x.last_heartbeat or "", reverse=True)]
+        return [
+            {
+                "name": a.agent_name,
+                "status": a.status,
+                "current_task": a.current_task,
+                "current_file": a.current_file,
+                "tokens_used": a.tokens_used,
+                "estimated_cost": round(a.estimated_cost, 4),
+                "runtime_ms": a.runtime_ms,
+                "success_count": a.success_count,
+                "failure_count": a.failure_count,
+                "last_heartbeat": a.last_heartbeat,
+            }
+            for a in sorted(_agents.values(), key=lambda x: x.last_heartbeat or "", reverse=True)
+        ]
 
 
 def get_dashboard_status() -> dict[str, Any]:
@@ -178,10 +188,7 @@ def get_timeline(limit: int = 100, job_id: str | None = None) -> list[dict]:
         events = list(_timeline[-limit:])
         if job_id:
             events = [e for e in events if isinstance(e.data, dict) and e.data.get("job_id") == job_id]
-        return [
-            {"type": e.event_type, "data": e.data, "timestamp": e.timestamp}
-            for e in events
-        ]
+        return [{"type": e.event_type, "data": e.data, "timestamp": e.timestamp} for e in events]
 
 
 def _publish_event(event_type: str, data: dict[str, Any]):
@@ -242,19 +249,23 @@ def record_task_completion(agent_name: str, task_name: str, duration_ms: int, to
                 agent.success_count += 1
             else:
                 agent.failure_count += 1
-    _publish_event("task_completed", {
-        "agent": agent_name,
-        "task": task_name,
-        "duration_ms": duration_ms,
-        "tokens": tokens,
-        "cost": round(cost, 6),
-        "success": success,
-    })
+    _publish_event(
+        "task_completed",
+        {
+            "agent": agent_name,
+            "task": task_name,
+            "duration_ms": duration_ms,
+            "tokens": tokens,
+            "cost": round(cost, 6),
+            "success": success,
+        },
+    )
 
 
 def track_memory_usage() -> dict[str, float]:
     try:
         import psutil
+
         process = psutil.Process(os.getpid())
         mem = process.memory_info()
         cpu = process.cpu_percent(interval=0.1)

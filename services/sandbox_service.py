@@ -6,6 +6,7 @@ Supports:
 - Capturing stdout/stderr
 - Cleanup after execution
 """
+
 import logging
 import os
 import subprocess
@@ -31,7 +32,9 @@ def _check_docker() -> bool:
     try:
         result = subprocess.run(
             ["docker", "info"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         DOCKER_AVAILABLE = result.returncode == 0
     except Exception:
@@ -77,17 +80,20 @@ def _run_docker(
             dockerfile_lines.append("COPY requirements.txt .")
             dockerfile_lines.append("RUN pip install --no-cache-dir -r requirements.txt")
         dockerfile_lines.append("COPY script.py .")
-        dockerfile_lines.append("CMD [\"python\", \"script.py\"]")
+        dockerfile_lines.append('CMD ["python", "script.py"]')
         dockerfile_path = tmp_path / "Dockerfile"
         dockerfile_path.write_text("\n".join(dockerfile_lines), encoding="utf-8")
 
         import uuid
+
         container_tag = f"sandbox_{uuid.uuid4().hex[:12]}"
 
         try:
             build = subprocess.run(
                 ["docker", "build", "-t", container_tag, "."],
-                capture_output=True, text=True, timeout=timeout + 30,
+                capture_output=True,
+                text=True,
+                timeout=timeout + 30,
                 cwd=tmpdir,
             )
             if build.returncode != 0:
@@ -100,14 +106,20 @@ def _run_docker(
                 }
 
             run = subprocess.run(
-                ["docker", "run", "--rm",
-                 f"--memory={memory}",
-                 f"--cpus={cpus}",
-                 "--network=none",
-                 "--pids-limit=50",
-                 "--read-only",
-                 container_tag],
-                capture_output=True, text=True, timeout=timeout,
+                [
+                    "docker",
+                    "run",
+                    "--rm",
+                    f"--memory={memory}",
+                    f"--cpus={cpus}",
+                    "--network=none",
+                    "--pids-limit=50",
+                    "--read-only",
+                    container_tag,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
             )
 
             return {
@@ -141,7 +153,9 @@ def _run_docker(
             try:
                 subprocess.run(
                     ["docker", "rmi", "-f", container_tag],
-                    capture_output=True, text=True, timeout=30,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
                 )
             except Exception:
                 pass
@@ -164,7 +178,9 @@ def _run_subprocess(
             try:
                 subprocess.run(
                     [sys.executable, "-m", "pip", "install", "-r", str(req_path)],
-                    capture_output=True, text=True, timeout=timeout,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
                     cwd=tmpdir,
                 )
             except Exception as exc:
@@ -173,7 +189,9 @@ def _run_subprocess(
         try:
             run = subprocess.run(
                 [sys.executable, str(script_path)],
-                capture_output=True, text=True, timeout=timeout,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
                 cwd=tmpdir,
                 env={**os.environ, "PYTHONPATH": tmpdir},
             )

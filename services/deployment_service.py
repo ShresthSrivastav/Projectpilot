@@ -5,6 +5,7 @@ Supports:
   - render       : render.yaml for Render.com
   - railway      : railway.json for Railway.app
 """
+
 import json
 import logging
 from pathlib import Path
@@ -84,10 +85,10 @@ def _generate_docker(job_id: str, job_dir: Path, deploy_path: Path, model: str) 
         dockerfile_parts.append("RUN pip install --no-cache-dir -r requirements.txt")
     else:
         dockerfile_parts.append("RUN pip install --no-cache-dir fastapi uvicorn")
-    start_cmd = stack['start'].split()
+    start_cmd = stack["start"].split()
     start_0 = start_cmd[0] if len(start_cmd) > 0 else "python"
     start_1 = start_cmd[1] if len(start_cmd) > 1 else "main.py"
-    port_val = stack['port']
+    port_val = stack["port"]
     dockerfile_parts.append(f"EXPOSE {port_val}")
     dockerfile_parts.append(f'CMD ["{start_0}", "{start_1}", "--host", "0.0.0.0", "--port", "{port_val}"]')
 
@@ -121,17 +122,20 @@ def _generate_render(job_id: str, job_dir: Path, deploy_path: Path, model: str) 
     files = _read_project_files(job_dir)
     stack = _detect_stack(files)
     render = {
-        "services": [{
-            "type": "web",
-            "name": job_id[:20],
-            "env": "python",
-            "buildCommand": stack["build"] or "pip install -r requirements.txt",
-            "startCommand": stack["start"] or "python main.py",
-            "healthCheckPath": "/health",
-        }]
+        "services": [
+            {
+                "type": "web",
+                "name": job_id[:20],
+                "env": "python",
+                "buildCommand": stack["build"] or "pip install -r requirements.txt",
+                "startCommand": stack["start"] or "python main.py",
+                "healthCheckPath": "/health",
+            }
+        ]
     }
     render_path = deploy_path / "render.yaml"
     import yaml
+
     render_path.write_text(yaml.dump(render), encoding="utf-8")
     return {
         "job_id": job_id,
@@ -146,13 +150,15 @@ def _generate_railway(job_id: str, job_dir: Path, deploy_path: Path, model: str)
     railway = {
         "build": {
             "builder": "NIXPACKS",
-            "buildCommand": "pip install -r requirements.txt" if (job_dir / "requirements.txt").exists() else "echo 'no deps'"
+            "buildCommand": "pip install -r requirements.txt"
+            if (job_dir / "requirements.txt").exists()
+            else "echo 'no deps'",
         },
         "deploy": {
             "startCommand": "python main.py",
             "healthcheckPath": "/health",
             "restartPolicyType": "ON_FAILURE",
-        }
+        },
     }
     railway_path = deploy_path / "railway.json"
     railway_path.write_text(json.dumps(railway, indent=2), encoding="utf-8")

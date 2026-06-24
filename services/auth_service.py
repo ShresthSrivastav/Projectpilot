@@ -47,12 +47,14 @@ class Role(str, Enum):
 
 _API_KEYS: dict[str, Role] = {}
 
+
 def _init_keys():
     _API_KEYS.clear()
     if ADMIN_KEY:
         _API_KEYS[ADMIN_KEY] = Role.ADMIN
     if USER_KEY:
         _API_KEYS[USER_KEY] = Role.USER
+
 
 _init_keys()
 
@@ -80,6 +82,7 @@ def require_user(role: Role = Depends(get_api_key_role)) -> None:
 
 
 # ── Pydantic schemas ────────────────────────────────────────────────────
+
 
 class RegisterRequest(BaseModel):
     name: str
@@ -125,7 +128,10 @@ class SwitchWorkspaceResponse(BaseModel):
 
 # ── JWT auth dependencies ───────────────────────────────────────────────
 
-def get_current_user(db: Session = Depends(get_db), credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=True))) -> User:
+
+def get_current_user(
+    db: Session = Depends(get_db), credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=True))
+) -> User:
     payload = decode_access_token(credentials.credentials)
     if payload is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired access token")
@@ -142,7 +148,9 @@ def require_auth(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
-def get_current_user_optional(db: Session = Depends(get_db), credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme)) -> Optional[User]:
+def get_current_user_optional(
+    db: Session = Depends(get_db), credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme)
+) -> Optional[User]:
     if credentials is None:
         return None
     payload = decode_access_token(credentials.credentials)
@@ -155,6 +163,7 @@ def get_current_user_optional(db: Session = Depends(get_db), credentials: Option
 
 
 # ── Auth service methods ────────────────────────────────────────────────
+
 
 def register_user(db: Session, req: RegisterRequest) -> AuthResponse:
     if req.password != req.confirm_password:
@@ -217,10 +226,14 @@ def refresh_access_token(db: Session, refresh_token_str: str) -> AuthResponse:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
 
     token_hash = hashlib.sha256(refresh_token_str.encode()).hexdigest()
-    stored = db.query(RefreshToken).filter(
-        RefreshToken.token_hash == token_hash,
-        RefreshToken.expires_at > datetime.now(UTC),
-    ).first()
+    stored = (
+        db.query(RefreshToken)
+        .filter(
+            RefreshToken.token_hash == token_hash,
+            RefreshToken.expires_at > datetime.now(UTC),
+        )
+        .first()
+    )
 
     if not stored:
         raise HTTPException(status_code=401, detail="Refresh token revoked or expired")
@@ -264,9 +277,11 @@ def get_me(db: Session, user_id: str) -> UserResponse:
 
 # ── Helpers ─────────────────────────────────────────────────────────────
 
+
 def _store_refresh_token(db: Session, user_id: str, token_str: str) -> None:
     import hashlib
     from datetime import UTC, datetime, timedelta
+
     token_hash = hashlib.sha256(token_str.encode()).hexdigest()
     rt = RefreshToken(
         user_id=user_id,

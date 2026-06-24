@@ -12,6 +12,7 @@ Usage:
     python scripts/reset_platform.py --artifacts   # only clear build artifacts
     python scripts/reset_platform.py --logs        # only clear log files
 """
+
 import argparse
 import logging
 import shutil
@@ -24,29 +25,33 @@ logger = logging.getLogger("reset_platform")
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 DATA_DIRS = {
-    "chroma_data":         BASE_DIR / "chroma_data",
-    "chroma_db_v4":        BASE_DIR / "chroma_db_v4",
+    "chroma_data": BASE_DIR / "chroma_data",
+    "chroma_db_v4": BASE_DIR / "chroma_db_v4",
     "test_chroma_data_v4": BASE_DIR / "test_chroma_data_v4",
-    "evaluation_data":     BASE_DIR / "evaluation_data",
-    "benchmark_campaign":  BASE_DIR / "benchmark_campaign",
-    "benchmark_history":   BASE_DIR / "benchmark_history",
+    "evaluation_data": BASE_DIR / "evaluation_data",
+    "benchmark_campaign": BASE_DIR / "benchmark_campaign",
+    "benchmark_history": BASE_DIR / "benchmark_history",
     "validation_artifacts": BASE_DIR / "validation_artifacts",
-    "memory_store":        BASE_DIR / "memory_store",
-    "generated_projects":  BASE_DIR / "generated_projects",
-    "graph_checkpoints":   BASE_DIR / "graph_checkpoints",
-    "healing_data":        BASE_DIR / "healing_data",
-    "marketplace_data":    BASE_DIR / "marketplace_data",
-    "org_data":            BASE_DIR / "org_data",
-    "plugin_data":         BASE_DIR / "plugin_data",
-    "process_logs":        BASE_DIR / "process_logs",
-    "runtime_data":        BASE_DIR / "runtime_data",
-    "autonomous_data":     BASE_DIR / "autonomous_data",
+    "memory_store": BASE_DIR / "memory_store",
+    "generated_projects": BASE_DIR / "generated_projects",
+    "graph_checkpoints": BASE_DIR / "graph_checkpoints",
+    "healing_data": BASE_DIR / "healing_data",
+    "marketplace_data": BASE_DIR / "marketplace_data",
+    "org_data": BASE_DIR / "org_data",
+    "plugin_data": BASE_DIR / "plugin_data",
+    "process_logs": BASE_DIR / "process_logs",
+    "runtime_data": BASE_DIR / "runtime_data",
+    "autonomous_data": BASE_DIR / "autonomous_data",
 }
 
 LOG_FILES = [
-    "backend_err.log", "backend_out.log",
-    "frontend_err.log", "frontend_out.log",
-    "stderr.log", "v5_stderr.log", "v5_stdout.log",
+    "backend_err.log",
+    "backend_out.log",
+    "frontend_err.log",
+    "frontend_out.log",
+    "stderr.log",
+    "v5_stderr.log",
+    "v5_stdout.log",
     "test_output.log",
 ]
 
@@ -75,17 +80,31 @@ def clear_jobs() -> None:
         conn = sqlite3.connect(str(mem_db))
         cur = conn.cursor()
         tables = [
-            "projects", "project_analytics", "insights",
-            "chat_conversations", "chat_messages",
-            "organizations", "repositories", "repository_relationships",
-            "cross_repo_changes", "impact_reports",
-            "plugins", "marketplace_packages",
-            "custom_agents", "custom_workflows",
-            "evaluation_runs", "evaluation_reports",
-            "regressions", "version_comparisons",
-            "learning_feedback", "learning_patterns",
-            "learning_recommendations", "iteration_history",
-            "cost_logs", "graph_sessions", "schedule_metadata",
+            "projects",
+            "project_analytics",
+            "insights",
+            "chat_conversations",
+            "chat_messages",
+            "organizations",
+            "repositories",
+            "repository_relationships",
+            "cross_repo_changes",
+            "impact_reports",
+            "plugins",
+            "marketplace_packages",
+            "custom_agents",
+            "custom_workflows",
+            "evaluation_runs",
+            "evaluation_reports",
+            "regressions",
+            "version_comparisons",
+            "learning_feedback",
+            "learning_patterns",
+            "learning_recommendations",
+            "iteration_history",
+            "cost_logs",
+            "graph_sessions",
+            "schedule_metadata",
         ]
         for table in tables:
             try:
@@ -216,12 +235,23 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    has_specific = any([args.jobs, args.evaluations, args.benchmarks,
-                        args.learning, args.campaigns, args.projects,
-                        args.artifacts, args.logs])
+    has_specific = any(
+        [
+            args.jobs,
+            args.evaluations,
+            args.benchmarks,
+            args.learning,
+            args.campaigns,
+            args.projects,
+            args.artifacts,
+            args.logs,
+        ]
+    )
 
     if not has_specific:
-        logger.info("This will clear ALL platform history data (jobs, evaluations, benchmarks, learning, campaigns, projects, artifacts, logs).")
+        logger.info(
+            "This will clear ALL platform history data (jobs, evaluations, benchmarks, learning, campaigns, projects, artifacts, logs)."
+        )
         logger.info("The following will be PRESERVED: source code, tests, configuration, schemas.")
         if not args.force and not confirm("Proceed?"):
             logger.info("Aborted.")
@@ -238,14 +268,22 @@ def main() -> None:
         if not args.force and not confirm("Proceed with selected reset operations?"):
             logger.info("Aborted.")
             return
-        if args.jobs: clear_jobs()
-        if args.evaluations: clear_evaluations()
-        if args.benchmarks: clear_benchmarks()
-        if args.learning: clear_learning()
-        if args.campaigns: clear_campaigns()
-        if args.projects: clear_generated_projects()
-        if args.artifacts: clear_artifacts()
-        if args.logs: clear_logs()
+        if args.jobs:
+            clear_jobs()
+        if args.evaluations:
+            clear_evaluations()
+        if args.benchmarks:
+            clear_benchmarks()
+        if args.learning:
+            clear_learning()
+        if args.campaigns:
+            clear_campaigns()
+        if args.projects:
+            clear_generated_projects()
+        if args.artifacts:
+            clear_artifacts()
+        if args.logs:
+            clear_logs()
 
     logger.info("Reset complete.")
 

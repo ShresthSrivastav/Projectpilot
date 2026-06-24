@@ -63,15 +63,22 @@ def validate(job_dir: Path) -> dict:
 
 def _extract_file_refs(line: str) -> list[str]:
     import re
+
     refs = []
-    for m in re.finditer(r'(?:COPY|ADD)\s+(\S+)', line, re.IGNORECASE):
+    for m in re.finditer(r"(?:COPY|ADD)\s+(\S+)", line, re.IGNORECASE):
         refs.append(m.group(1))
-    for m in re.finditer(r'python\s+(\S+\.py)', line):
+    for m in re.finditer(r"python\s+(\S+\.py)", line):
         refs.append(m.group(1))
-    for m in re.finditer(r'(?:run|cmd)\s+(\S+\.py)', line, re.IGNORECASE):
+    for m in re.finditer(r"(?:run|cmd)\s+(\S+\.py)", line, re.IGNORECASE):
         refs.append(m.group(1))
     return refs
 
 
 def _is_system_path(ref: str) -> bool:
-    return ref.startswith("/") or ref.startswith("apt") or ref.startswith("pip") or ref.startswith("git") or ref in {".", ".."}
+    return (
+        ref.startswith("/")
+        or ref.startswith("apt")
+        or ref.startswith("pip")
+        or ref.startswith("git")
+        or ref in {".", ".."}
+    )

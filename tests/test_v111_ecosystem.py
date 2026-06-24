@@ -1,4 +1,5 @@
 """v11.1 Plugin & Agent SDK Ecosystem — 85 tests covering SDK, registry, marketplace, APIs, DB, security."""
+
 import os
 import sys
 import tempfile
@@ -45,9 +46,11 @@ from services.plugin_registry import PluginEntry, PluginRegistry
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="module")
 def client():
     from backend.main import app
+
     with TestClient(app) as c:
         yield c
 
@@ -108,6 +111,7 @@ def clean_marketplace():
 # SDK Base Class Unit Tests
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class TestPluginSDK:
     def test_plugin_manifest_defaults(self):
         m = PluginManifest()
@@ -139,10 +143,18 @@ class TestPluginSDK:
 
     def test_base_plugin_install_uninstall(self):
         class TestPlugin(BasePlugin):
-            def install(self) -> bool: return True
-            def uninstall(self) -> bool: return True
-            def configure(self, config) -> bool: return True
-            def validate(self) -> bool: return True
+            def install(self) -> bool:
+                return True
+
+            def uninstall(self) -> bool:
+                return True
+
+            def configure(self, config) -> bool:
+                return True
+
+            def validate(self) -> bool:
+                return True
+
         p = TestPlugin()
         assert p.install()
         assert p.uninstall()
@@ -181,11 +193,21 @@ class TestAgentSDK:
 
     def test_base_agent_interface(self):
         class TestAgent(BaseAgent):
-            def initialize(self) -> bool: return True
-            def plan(self, ctx) -> dict: return {"steps": []}
-            def execute(self, plan) -> dict: return {"status": "done"}
-            def validate(self, result) -> bool: return True
-            def cleanup(self) -> None: pass
+            def initialize(self) -> bool:
+                return True
+
+            def plan(self, ctx) -> dict:
+                return {"steps": []}
+
+            def execute(self, plan) -> dict:
+                return {"status": "done"}
+
+            def validate(self, result) -> bool:
+                return True
+
+            def cleanup(self) -> None:
+                pass
+
         a = TestAgent(config={"key": "val"})
         assert a.initialize()
         assert a.plan({}) == {"steps": []}
@@ -344,16 +366,7 @@ class TestValidationSDK:
 
     def test_validator_warns_missing_schema(self):
         v = APISchemaValidator()
-        doc = {
-            "openapi": "3.0.0",
-            "paths": {
-                "/api/test": {
-                    "get": {
-                        "responses": {"200": {"description": "ok"}}
-                    }
-                }
-            }
-        }
+        doc = {"openapi": "3.0.0", "paths": {"/api/test": {"get": {"responses": {"200": {"description": "ok"}}}}}}
         report = v.validate(doc)
         assert len(report.warnings) > 0
 
@@ -361,6 +374,7 @@ class TestValidationSDK:
 # ═══════════════════════════════════════════════════════════════════════════
 # Plugin Registry Tests
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestPluginRegistry:
     def test_registry_singleton(self):
@@ -455,6 +469,7 @@ class TestPluginRegistry:
 # ═══════════════════════════════════════════════════════════════════════════
 # Marketplace Service Tests
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestMarketplaceService:
     def test_marketplace_singleton(self):
@@ -605,14 +620,23 @@ class TestMarketplaceService:
 # Database CRUD Tests
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class TestDatabaseCRUD:
     def test_save_and_get_plugin(self):
         pid = str(uuid.uuid4())
-        mem_save_plugin({
-            "id": pid, "name": "db-plugin", "version": "1.0", "author": "test",
-            "plugin_type": "tool", "source": "/tmp/p.py", "enabled": True,
-            "installed_at": "now", "updated_at": "now",
-        })
+        mem_save_plugin(
+            {
+                "id": pid,
+                "name": "db-plugin",
+                "version": "1.0",
+                "author": "test",
+                "plugin_type": "tool",
+                "source": "/tmp/p.py",
+                "enabled": True,
+                "installed_at": "now",
+                "updated_at": "now",
+            }
+        )
         p = mem_get_plugin(pid)
         assert p is not None
         assert p["name"] == "db-plugin"
@@ -620,19 +644,29 @@ class TestDatabaseCRUD:
 
     def test_list_plugins(self):
         for i in range(3):
-            mem_save_plugin({
-                "id": str(uuid.uuid4()), "name": f"p{i}", "version": "1.0",
-                "plugin_type": "tool", "source": "/tmp/p.py",
-            })
+            mem_save_plugin(
+                {
+                    "id": str(uuid.uuid4()),
+                    "name": f"p{i}",
+                    "version": "1.0",
+                    "plugin_type": "tool",
+                    "source": "/tmp/p.py",
+                }
+            )
         plugins = mem_list_plugins()
         assert len(plugins) >= 3
 
     def test_list_plugins_by_type(self):
         vid = str(uuid.uuid4())
-        mem_save_plugin({
-            "id": vid, "name": "v1", "version": "1.0",
-            "plugin_type": "validator", "source": "/tmp/v.py",
-        })
+        mem_save_plugin(
+            {
+                "id": vid,
+                "name": "v1",
+                "version": "1.0",
+                "plugin_type": "validator",
+                "source": "/tmp/v.py",
+            }
+        )
         mem_list_plugins(plugin_type="tool")
         validators = mem_list_plugins(plugin_type="validator")
         assert any(p["name"] == "v1" for p in validators)
@@ -645,10 +679,19 @@ class TestDatabaseCRUD:
 
     def test_save_and_get_marketplace_package(self):
         pid = str(uuid.uuid4())
-        mem_save_marketplace_package({
-            "id": pid, "name": "mkt-pkg", "version": "1.0", "author": "a",
-            "description": "d", "package_type": "plugin", "downloads": 10, "rating": 4.5, "rating_count": 2,
-        })
+        mem_save_marketplace_package(
+            {
+                "id": pid,
+                "name": "mkt-pkg",
+                "version": "1.0",
+                "author": "a",
+                "description": "d",
+                "package_type": "plugin",
+                "downloads": 10,
+                "rating": 4.5,
+                "rating_count": 2,
+            }
+        )
         p = mem_get_marketplace_package(pid)
         assert p is not None
         assert p["name"] == "mkt-pkg"
@@ -656,30 +699,53 @@ class TestDatabaseCRUD:
 
     def test_search_marketplace(self):
         for i in range(3):
-            mem_save_marketplace_package({
-                "id": str(uuid.uuid4()), "name": f"search-pkg-{i}", "version": "1.0",
-                "author": "author", "description": f"Description {i}", "package_type": "plugin",
-            })
+            mem_save_marketplace_package(
+                {
+                    "id": str(uuid.uuid4()),
+                    "name": f"search-pkg-{i}",
+                    "version": "1.0",
+                    "author": "author",
+                    "description": f"Description {i}",
+                    "package_type": "plugin",
+                }
+            )
         results = mem_search_marketplace_packages(query="search-pkg-1")
         assert len(results) >= 1
 
     def test_search_by_type(self):
-        mem_save_marketplace_package({
-            "id": str(uuid.uuid4()), "name": "bench-pkg", "version": "1.0",
-            "author": "a", "description": "d", "package_type": "benchmark",
-        })
+        mem_save_marketplace_package(
+            {
+                "id": str(uuid.uuid4()),
+                "name": "bench-pkg",
+                "version": "1.0",
+                "author": "a",
+                "description": "d",
+                "package_type": "benchmark",
+            }
+        )
         results = mem_search_marketplace_packages(package_type="benchmark")
         assert len(results) >= 1
 
     def test_delete_marketplace_package(self):
         pid = str(uuid.uuid4())
-        mem_save_marketplace_package({"id": pid, "name": "del-mkt", "version": "1.0", "author": "a", "description": "d", "package_type": "plugin"})
+        mem_save_marketplace_package(
+            {
+                "id": pid,
+                "name": "del-mkt",
+                "version": "1.0",
+                "author": "a",
+                "description": "d",
+                "package_type": "plugin",
+            }
+        )
         assert mem_delete_marketplace_package(pid)
         assert mem_get_marketplace_package(pid) is None
 
     def test_save_and_list_custom_agents(self):
         aid = str(uuid.uuid4())
-        mem_save_custom_agent({"id": aid, "name": "agent-1", "version": "1.0", "description": "test", "source": "/tmp/a.py"})
+        mem_save_custom_agent(
+            {"id": aid, "name": "agent-1", "version": "1.0", "description": "test", "source": "/tmp/a.py"}
+        )
         agents = mem_list_custom_agents()
         assert any(a["name"] == "agent-1" for a in agents)
 
@@ -705,6 +771,7 @@ class TestDatabaseCRUD:
 # ═══════════════════════════════════════════════════════════════════════════
 # HTTP API Tests
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestPluginAPI:
     def test_plugins_list_empty(self, client):
@@ -801,11 +868,17 @@ class TestMarketplaceAPI:
         with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w", encoding="utf-8") as f:
             f.write("# test package content")
             path = f.name
-        r = client.post("/plugins/marketplace/publish", json={
-            "name": "api-test-pkg", "version": "1.0.0",
-            "author": "tester", "description": "API test",
-            "source_path": path, "package_type": "plugin",
-        })
+        r = client.post(
+            "/plugins/marketplace/publish",
+            json={
+                "name": "api-test-pkg",
+                "version": "1.0.0",
+                "author": "tester",
+                "description": "API test",
+                "source_path": path,
+                "package_type": "plugin",
+            },
+        )
         assert r.status_code == 200
         r2 = client.get("/plugins/marketplace", params={"query": "api-test-pkg"})
         assert r2.status_code == 200
@@ -816,10 +889,16 @@ class TestMarketplaceAPI:
         with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w", encoding="utf-8") as f:
             f.write("# rate test")
             path = f.name
-        r = client.post("/plugins/marketplace/publish", json={
-            "name": "rate-test", "version": "1.0", "author": "a",
-            "description": "d", "source_path": path,
-        })
+        r = client.post(
+            "/plugins/marketplace/publish",
+            json={
+                "name": "rate-test",
+                "version": "1.0",
+                "author": "a",
+                "description": "d",
+                "source_path": path,
+            },
+        )
         pkg_id = r.json()["id"]
         r2 = client.post("/plugins/marketplace/rate", json={"package_id": pkg_id, "rating": 4.0})
         assert r2.status_code == 200
@@ -829,11 +908,16 @@ class TestMarketplaceAPI:
 
 class TestAgentAPI:
     def test_agent_register_and_list(self, client):
-        r = client.post("/agents/register", json={
-            "name": "api-agent", "version": "1.0.0", "source": "/tmp/agent.py",
-            "description": "Test agent",
-            "capabilities": [{"name": "cap1", "description": "test"}],
-        })
+        r = client.post(
+            "/agents/register",
+            json={
+                "name": "api-agent",
+                "version": "1.0.0",
+                "source": "/tmp/agent.py",
+                "description": "Test agent",
+                "capabilities": [{"name": "cap1", "description": "test"}],
+            },
+        )
         assert r.status_code == 200
         assert r.json()["name"] == "api-agent"
         r2 = client.get("/agents/custom")
@@ -842,9 +926,15 @@ class TestAgentAPI:
         assert any(a["name"] == "api-agent" for a in agents)
 
     def test_agent_delete(self, client):
-        r = client.post("/agents/register", json={
-            "name": "del-agent", "version": "1.0", "source": "/tmp/a.py", "description": "d",
-        })
+        r = client.post(
+            "/agents/register",
+            json={
+                "name": "del-agent",
+                "version": "1.0",
+                "source": "/tmp/a.py",
+                "description": "d",
+            },
+        )
         aid = r.json()["id"]
         r2 = client.post("/agents/delete", json={"agent_id": aid})
         assert r2.status_code == 200
@@ -853,11 +943,16 @@ class TestAgentAPI:
 
 class TestWorkflowAPI:
     def test_workflow_register_and_list(self, client):
-        r = client.post("/workflows/register", json={
-            "name": "api-workflow", "version": "1.0.0", "source": "/tmp/wf.py",
-            "description": "Test workflow",
-            "steps": [{"name": "step1", "deps": []}],
-        })
+        r = client.post(
+            "/workflows/register",
+            json={
+                "name": "api-workflow",
+                "version": "1.0.0",
+                "source": "/tmp/wf.py",
+                "description": "Test workflow",
+                "steps": [{"name": "step1", "deps": []}],
+            },
+        )
         assert r.status_code == 200
         assert r.json()["name"] == "api-workflow"
         r2 = client.get("/workflows")
@@ -866,9 +961,15 @@ class TestWorkflowAPI:
         assert any(w["name"] == "api-workflow" for w in wfs)
 
     def test_workflow_delete(self, client):
-        r = client.post("/workflows/register", json={
-            "name": "del-wf", "version": "1.0", "source": "/tmp/w.py", "description": "d",
-        })
+        r = client.post(
+            "/workflows/register",
+            json={
+                "name": "del-wf",
+                "version": "1.0",
+                "source": "/tmp/w.py",
+                "description": "d",
+            },
+        )
         wid = r.json()["id"]
         r2 = client.post("/workflows/delete", json={"workflow_id": wid})
         assert r2.status_code == 200
@@ -878,6 +979,7 @@ class TestWorkflowAPI:
 # ═══════════════════════════════════════════════════════════════════════════
 # Security & Sandbox Tests
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestSecurityModel:
     def test_permission_system(self):

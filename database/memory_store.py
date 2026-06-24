@@ -3,6 +3,7 @@
 Stores agent decisions, fix patterns, user preferences, and project analytics
 for long-term memory across multiple generation sessions.
 """
+
 import json
 import logging
 import os
@@ -731,6 +732,7 @@ def init_db() -> None:
     conn.commit()
     # Initialize audit table
     from services.audit_service import init_audit_db
+
     init_audit_db()
     logger.info("Memory store ready at %s", MEMORY_DB)
 
@@ -769,6 +771,7 @@ def get_agent_memory(agent_name: str, key: str | None = None, workspace_id: str 
 def record_fix_pattern(error_type: str, error_text: str, file_pattern: str, fix_desc: str) -> None:
     try:
         import hashlib
+
         sig = hashlib.md5(error_text[:200].encode()).hexdigest()
         conn = _get_conn()
         existing = conn.execute(
@@ -859,8 +862,20 @@ def record_project_analytics(
                 token_usage=excluded.token_usage, total_duration_ms=excluded.total_duration_ms,
                 model_used=excluded.model_used, status=excluded.status,
                 workspace_id=excluded.workspace_id, user_id=excluded.user_id""",
-            (job_id, project_name, agent_count, file_count, test_count, test_passed,
-             token_usage, total_duration_ms, model_used, status, workspace_id, user_id),
+            (
+                job_id,
+                project_name,
+                agent_count,
+                file_count,
+                test_count,
+                test_passed,
+                token_usage,
+                total_duration_ms,
+                model_used,
+                status,
+                workspace_id,
+                user_id,
+            ),
         )
         conn.commit()
     except Exception as exc:
@@ -921,9 +936,15 @@ def get_analytics_summary(workspace_id: str = "") -> dict[str, Any]:
         ws_clause = " WHERE workspace_id=? " if workspace_id else " "
         ws_param = (workspace_id,) if workspace_id else ()
         projects = conn.execute(f"SELECT COUNT(*) as c FROM project_analytics{ws_clause}", ws_param).fetchone()
-        total_tokens = conn.execute(f"SELECT COALESCE(SUM(token_usage),0) as t FROM project_analytics{ws_clause}", ws_param).fetchone()
-        total_files = conn.execute(f"SELECT COALESCE(SUM(file_count),0) as f FROM project_analytics{ws_clause}", ws_param).fetchone()
-        total_tests = conn.execute(f"SELECT COALESCE(SUM(test_count),0) as t FROM project_analytics{ws_clause}", ws_param).fetchone()
+        total_tokens = conn.execute(
+            f"SELECT COALESCE(SUM(token_usage),0) as t FROM project_analytics{ws_clause}", ws_param
+        ).fetchone()
+        total_files = conn.execute(
+            f"SELECT COALESCE(SUM(file_count),0) as f FROM project_analytics{ws_clause}", ws_param
+        ).fetchone()
+        total_tests = conn.execute(
+            f"SELECT COALESCE(SUM(test_count),0) as t FROM project_analytics{ws_clause}", ws_param
+        ).fetchone()
         avg_duration_ws = f" AND workspace_id=? " if workspace_id else " "
         avg_duration = conn.execute(
             f"SELECT COALESCE(AVG(total_duration_ms),0) as a FROM project_analytics WHERE total_duration_ms>0{avg_duration_ws}",
@@ -941,6 +962,7 @@ def get_analytics_summary(workspace_id: str = "") -> dict[str, Any]:
 
 
 # ── Coding Preferences ───────────────────────────────────────────────────
+
 
 def set_coding_preference(pref_key: str, pref_value: str, source: str = "", confidence: float = 1.0) -> None:
     try:
@@ -964,7 +986,9 @@ def set_coding_preference(pref_key: str, pref_value: str, source: str = "", conf
 def get_coding_preferences(limit: int = 50) -> list[dict]:
     try:
         conn = _get_conn()
-        cur = conn.execute("SELECT * FROM coding_preferences ORDER BY confidence DESC, updated_at DESC LIMIT ?", (limit,))
+        cur = conn.execute(
+            "SELECT * FROM coding_preferences ORDER BY confidence DESC, updated_at DESC LIMIT ?", (limit,)
+        )
         return [dict(r) for r in cur.fetchall()]
     except Exception:
         return []
@@ -972,10 +996,13 @@ def get_coding_preferences(limit: int = 50) -> list[dict]:
 
 # ── Reusable Components ───────────────────────────────────────────────────
 
+
 def save_reusable_component(name: str, component_type: str, code: str, description: str = "", tags: str = "") -> None:
     try:
         conn = _get_conn()
-        existing = conn.execute("SELECT id, usage_count FROM reusable_components WHERE name=? AND component_type=?", (name, component_type)).fetchone()
+        existing = conn.execute(
+            "SELECT id, usage_count FROM reusable_components WHERE name=? AND component_type=?", (name, component_type)
+        ).fetchone()
         if existing:
             conn.execute(
                 "UPDATE reusable_components SET usage_count=usage_count+1, updated_at=datetime('now') WHERE id=?",
@@ -1011,7 +1038,10 @@ def get_reusable_components(component_type: str | None = None, limit: int = 20) 
 
 # ── Project Insights ─────────────────────────────────────────────────────
 
-def save_project_insight(job_id: str, insight_type: str, summary: str, details: str = "", workspace_id: str = "") -> None:
+
+def save_project_insight(
+    job_id: str, insight_type: str, summary: str, details: str = "", workspace_id: str = ""
+) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1043,6 +1073,7 @@ def get_project_insights(insight_type: str | None = None, workspace_id: str = ""
 
 # ── GitHub Connection CRUD ───────────────────────────────────────────────
 
+
 def save_github_connection(username: str, data: dict) -> None:
     try:
         conn = _get_conn()
@@ -1053,8 +1084,15 @@ def save_github_connection(username: str, data: dict) -> None:
                token=excluded.token, avatar_url=excluded.avatar_url, name=excluded.name,
                email=excluded.email, public_repos=excluded.public_repos,
                connected_at=excluded.connected_at""",
-            (data["username"], data["token"], data.get("avatar_url", ""), data.get("name", ""),
-             data.get("email", ""), data.get("public_repos", 0), data.get("connected_at", "")),
+            (
+                data["username"],
+                data["token"],
+                data.get("avatar_url", ""),
+                data.get("name", ""),
+                data.get("email", ""),
+                data.get("public_repos", 0),
+                data.get("connected_at", ""),
+            ),
         )
         conn.commit()
     except Exception as exc:
@@ -1085,6 +1123,7 @@ def delete_github_connection(username: str) -> None:
 
 # ── GitHub Repo CRUD ─────────────────────────────────────────────────────
 
+
 def save_github_repo(username: str, full_name: str, repo_data: dict) -> None:
     try:
         conn = _get_conn()
@@ -1104,9 +1143,7 @@ def get_github_repos(username: str = "") -> list[dict]:
     try:
         conn = _get_conn()
         if username:
-            cur = conn.execute(
-                "SELECT * FROM github_repos WHERE username=? ORDER BY synced_at DESC", (username,)
-            )
+            cur = conn.execute("SELECT * FROM github_repos WHERE username=? ORDER BY synced_at DESC", (username,))
         else:
             cur = conn.execute("SELECT * FROM github_repos ORDER BY synced_at DESC")
         results = []
@@ -1134,7 +1171,9 @@ def delete_github_repo(full_name: str) -> None:
 # ── Chat Conversations CRUD ───────────────────────────────────────────────
 
 
-def create_chat_conversation(title: str = "New Chat", conversation_id: str | None = None, workspace_id: str = "", user_id: str = "") -> str:
+def create_chat_conversation(
+    title: str = "New Chat", conversation_id: str | None = None, workspace_id: str = "", user_id: str = ""
+) -> str:
     try:
         conn = _get_conn()
         cid = conversation_id or str(uuid.uuid4())
@@ -1248,8 +1287,15 @@ def delete_chat_conversation(conversation_id: str) -> bool:
 # ── v9: Cost Tracking ─────────────────────────────────────────────────────
 
 
-def record_cost(job_id: str, session_type: str, tokens_used: int, cost: float,
-                duration_ms: int = 0, provider: str = "", workspace_id: str = "") -> None:
+def record_cost(
+    job_id: str,
+    session_type: str,
+    tokens_used: int,
+    cost: float,
+    duration_ms: int = 0,
+    provider: str = "",
+    workspace_id: str = "",
+) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1268,12 +1314,14 @@ def get_cost_summary(job_id: str | None = None, workspace_id: str = "") -> dict[
         if job_id:
             cur = conn.execute(
                 "SELECT COUNT(*) as sessions, COALESCE(SUM(tokens_used),0) as tokens, "
-                "COALESCE(SUM(cost),0) as cost FROM cost_tracking WHERE job_id=?", (job_id,)
+                "COALESCE(SUM(cost),0) as cost FROM cost_tracking WHERE job_id=?",
+                (job_id,),
             )
         elif workspace_id:
             cur = conn.execute(
                 "SELECT COUNT(*) as sessions, COALESCE(SUM(tokens_used),0) as tokens, "
-                "COALESCE(SUM(cost),0) as cost FROM cost_tracking WHERE workspace_id=?", (workspace_id,)
+                "COALESCE(SUM(cost),0) as cost FROM cost_tracking WHERE workspace_id=?",
+                (workspace_id,),
             )
         else:
             cur = conn.execute(
@@ -1289,9 +1337,7 @@ def get_cost_summary(job_id: str | None = None, workspace_id: str = "") -> dict[
 def save_iteration_history(job_id: str, session_id: str, iteration_data: str, workspace_id: str = "") -> None:
     try:
         conn = _get_conn()
-        existing = conn.execute(
-            "SELECT id, iterations FROM autonomous_sessions WHERE id=?", (session_id,)
-        ).fetchone()
+        existing = conn.execute("SELECT id, iterations FROM autonomous_sessions WHERE id=?", (session_id,)).fetchone()
         if existing:
             conn.execute(
                 "UPDATE autonomous_sessions SET iterations=? WHERE id=?",
@@ -1327,7 +1373,9 @@ def get_iteration_history(job_id: str, workspace_id: str = "", limit: int = 10) 
         return []
 
 
-def save_graph_session(graph_id: str, job_id: str, graph_data: str, status: str = "pending", workspace_id: str = "") -> None:
+def save_graph_session(
+    graph_id: str, job_id: str, graph_data: str, status: str = "pending", workspace_id: str = ""
+) -> None:
     try:
         conn = _get_conn()
         conn.execute(
@@ -1354,7 +1402,10 @@ def list_graph_sessions(workspace_id: str = "", limit: int = 20) -> list[dict]:
     try:
         conn = _get_conn()
         if workspace_id:
-            cur = conn.execute("SELECT * FROM graph_sessions WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?", (workspace_id, limit))
+            cur = conn.execute(
+                "SELECT * FROM graph_sessions WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?",
+                (workspace_id, limit),
+            )
         else:
             cur = conn.execute("SELECT * FROM graph_sessions ORDER BY created_at DESC LIMIT ?", (limit,))
         return [dict(r) for r in cur.fetchall()]
@@ -1363,6 +1414,7 @@ def list_graph_sessions(workspace_id: str = "", limit: int = 20) -> list[dict]:
 
 
 # ── Benchmark Results ──────────────────────────────────────────────────────────
+
 
 def save_benchmark_result(result_data: dict) -> None:
     try:
@@ -1375,16 +1427,21 @@ def save_benchmark_result(result_data: dict) -> None:
                status=excluded.status, autonomy_score=excluded.autonomy_score,
                metrics=excluded.metrics, completed_at=excluded.completed_at""",
             (
-                result_data["id"], result_data.get("run_id", ""),
-                result_data.get("domain", ""), result_data.get("status", "pending"),
+                result_data["id"],
+                result_data.get("run_id", ""),
+                result_data.get("domain", ""),
+                result_data.get("status", "pending"),
                 result_data.get("autonomy_score", 0.0),
                 json.dumps(result_data.get("metrics", {})),
                 json.dumps(result_data.get("features_passed", [])),
                 json.dumps(result_data.get("features_failed", [])),
-                result_data.get("feature_total", 0), result_data.get("error"),
-                result_data.get("model", "local"), result_data.get("iteration", 1),
+                result_data.get("feature_total", 0),
+                result_data.get("error"),
+                result_data.get("model", "local"),
+                result_data.get("iteration", 1),
                 json.dumps(result_data.get("logs", [])),
-                result_data.get("created_at"), result_data.get("completed_at"),
+                result_data.get("created_at"),
+                result_data.get("completed_at"),
             ),
         )
         conn.commit()
@@ -1431,10 +1488,16 @@ def save_organization(org_data: dict) -> None:
                name=excluded.name, description=excluded.description,
                repo_count=excluded.repo_count, entity_count=excluded.entity_count,
                metadata=excluded.metadata, updated_at=excluded.updated_at""",
-            (org_data["id"], org_data.get("name", ""), org_data.get("description", ""),
-             org_data.get("repo_count", 0), org_data.get("entity_count", 0),
-             json.dumps(org_data.get("metadata", {})),
-             org_data.get("created_at", time.time()), org_data.get("updated_at", time.time())),
+            (
+                org_data["id"],
+                org_data.get("name", ""),
+                org_data.get("description", ""),
+                org_data.get("repo_count", 0),
+                org_data.get("entity_count", 0),
+                json.dumps(org_data.get("metadata", {})),
+                org_data.get("created_at", time.time()),
+                org_data.get("updated_at", time.time()),
+            ),
         )
         conn.commit()
     except Exception as exc:
@@ -1492,11 +1555,19 @@ def save_repository(repo_data: dict) -> None:
                language=excluded.language, url=excluded.url, description=excluded.description,
                file_count=excluded.file_count, indexed_at=excluded.indexed_at,
                metadata=excluded.metadata""",
-            (repo_data["id"], repo_data.get("org_id", ""), repo_data.get("name", ""),
-             repo_data.get("path", ""), repo_data.get("category", "other"),
-             repo_data.get("language", ""), repo_data.get("url", ""),
-             repo_data.get("description", ""), repo_data.get("file_count", 0),
-             repo_data.get("indexed_at"), json.dumps(repo_data.get("metadata", {}))),
+            (
+                repo_data["id"],
+                repo_data.get("org_id", ""),
+                repo_data.get("name", ""),
+                repo_data.get("path", ""),
+                repo_data.get("category", "other"),
+                repo_data.get("language", ""),
+                repo_data.get("url", ""),
+                repo_data.get("description", ""),
+                repo_data.get("file_count", 0),
+                repo_data.get("indexed_at"),
+                json.dumps(repo_data.get("metadata", {})),
+            ),
         )
         conn.commit()
     except Exception as exc:
@@ -1538,10 +1609,17 @@ def save_repository_relationship(rel_data: dict) -> None:
                ON CONFLICT(id) DO UPDATE SET
                source_repo=excluded.source_repo, target_repo=excluded.target_repo,
                relationship=excluded.relationship, weight=excluded.weight""",
-            (rel_data["id"], rel_data.get("org_id", ""), rel_data.get("source_repo", ""),
-             rel_data.get("target_repo", ""), rel_data.get("source_file", ""),
-             rel_data.get("target_file", ""), rel_data.get("relationship", "depends_on"),
-             rel_data.get("weight", 1.0), 1 if rel_data.get("verified", False) else 0),
+            (
+                rel_data["id"],
+                rel_data.get("org_id", ""),
+                rel_data.get("source_repo", ""),
+                rel_data.get("target_repo", ""),
+                rel_data.get("source_file", ""),
+                rel_data.get("target_file", ""),
+                rel_data.get("relationship", "depends_on"),
+                rel_data.get("weight", 1.0),
+                1 if rel_data.get("verified", False) else 0,
+            ),
         )
         conn.commit()
     except Exception as exc:
@@ -1566,11 +1644,18 @@ def save_cross_repo_change(change_data: dict) -> None:
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(id) DO UPDATE SET
                status=excluded.status, pr_urls=excluded.pr_urls, completed_at=excluded.completed_at""",
-            (change_data["id"], change_data.get("org_id", ""), change_data.get("branch_name", ""),
-             change_data.get("description", ""), json.dumps(change_data.get("repos_affected", [])),
-             json.dumps(change_data.get("files_changed", [])), change_data.get("status", "pending"),
-             json.dumps(change_data.get("pr_urls", [])), change_data.get("created_at", time.time()),
-             change_data.get("completed_at")),
+            (
+                change_data["id"],
+                change_data.get("org_id", ""),
+                change_data.get("branch_name", ""),
+                change_data.get("description", ""),
+                json.dumps(change_data.get("repos_affected", [])),
+                json.dumps(change_data.get("files_changed", [])),
+                change_data.get("status", "pending"),
+                json.dumps(change_data.get("pr_urls", [])),
+                change_data.get("created_at", time.time()),
+                change_data.get("completed_at"),
+            ),
         )
         conn.commit()
     except Exception as exc:
@@ -1606,12 +1691,18 @@ def save_impact_report(report_data: dict) -> None:
                ON CONFLICT(id) DO UPDATE SET
                query=excluded.query, affected_repos=excluded.affected_repos,
                impact_score=excluded.impact_score, risk_level=excluded.risk_level""",
-            (report_data["id"], report_data.get("org_id", ""), report_data.get("query", ""),
-             json.dumps(report_data.get("affected_repos", [])),
-             json.dumps(report_data.get("affected_files", [])),
-             report_data.get("impact_score", 0.0), report_data.get("risk_level", "low"),
-             json.dumps(report_data.get("recommendations", [])),
-             report_data.get("report_markdown", ""), report_data.get("created_at", time.time())),
+            (
+                report_data["id"],
+                report_data.get("org_id", ""),
+                report_data.get("query", ""),
+                json.dumps(report_data.get("affected_repos", [])),
+                json.dumps(report_data.get("affected_files", [])),
+                report_data.get("impact_score", 0.0),
+                report_data.get("risk_level", "low"),
+                json.dumps(report_data.get("recommendations", [])),
+                report_data.get("report_markdown", ""),
+                report_data.get("created_at", time.time()),
+            ),
         )
         conn.commit()
     except Exception as exc:
@@ -1776,15 +1867,22 @@ def mem_save_plugin(plugin_data: dict) -> None:
                permissions_json=excluded.permissions_json,
                resource_limits_json=excluded.resource_limits_json,
                checksum=excluded.checksum, updated_at=excluded.updated_at""",
-            (plugin_data["id"], plugin_data.get("name", ""),
-             plugin_data.get("version", "1.0.0"), plugin_data.get("author", ""),
-             plugin_data.get("description", ""), plugin_data.get("plugin_type", "tool"),
-             plugin_data.get("source", ""), 1 if plugin_data.get("enabled") else 0,
-             json.dumps(plugin_data.get("manifest_json", {})),
-             json.dumps(plugin_data.get("permissions", [])),
-             json.dumps(plugin_data.get("resource_limits", {})),
-             plugin_data.get("checksum", ""), plugin_data.get("installed_at", ""),
-             plugin_data.get("updated_at", "")),
+            (
+                plugin_data["id"],
+                plugin_data.get("name", ""),
+                plugin_data.get("version", "1.0.0"),
+                plugin_data.get("author", ""),
+                plugin_data.get("description", ""),
+                plugin_data.get("plugin_type", "tool"),
+                plugin_data.get("source", ""),
+                1 if plugin_data.get("enabled") else 0,
+                json.dumps(plugin_data.get("manifest_json", {})),
+                json.dumps(plugin_data.get("permissions", [])),
+                json.dumps(plugin_data.get("resource_limits", {})),
+                plugin_data.get("checksum", ""),
+                plugin_data.get("installed_at", ""),
+                plugin_data.get("updated_at", ""),
+            ),
         )
         conn.commit()
     except Exception as exc:
@@ -1862,17 +1960,25 @@ def mem_save_marketplace_package(pkg_data: dict) -> None:
                tags_json=excluded.tags_json, updated_at=excluded.updated_at,
                source_url=excluded.source_url, readme=excluded.readme,
                compatibility=excluded.compatibility, verified=excluded.verified""",
-            (pkg_data["id"], pkg_data.get("name", ""),
-             pkg_data.get("version", "1.0.0"), pkg_data.get("author", ""),
-             pkg_data.get("description", ""), pkg_data.get("package_type", "plugin"),
-             json.dumps(pkg_data.get("manifest_json", {})),
-             pkg_data.get("downloads", 0), pkg_data.get("rating", 0.0),
-             pkg_data.get("rating_count", 0),
-             json.dumps(pkg_data.get("tags", [])),
-             pkg_data.get("published_at", ""), pkg_data.get("updated_at", ""),
-             pkg_data.get("source_url", ""), pkg_data.get("readme", ""),
-             pkg_data.get("compatibility", ">=11.0.0"),
-             1 if pkg_data.get("verified") else 0),
+            (
+                pkg_data["id"],
+                pkg_data.get("name", ""),
+                pkg_data.get("version", "1.0.0"),
+                pkg_data.get("author", ""),
+                pkg_data.get("description", ""),
+                pkg_data.get("package_type", "plugin"),
+                json.dumps(pkg_data.get("manifest_json", {})),
+                pkg_data.get("downloads", 0),
+                pkg_data.get("rating", 0.0),
+                pkg_data.get("rating_count", 0),
+                json.dumps(pkg_data.get("tags", [])),
+                pkg_data.get("published_at", ""),
+                pkg_data.get("updated_at", ""),
+                pkg_data.get("source_url", ""),
+                pkg_data.get("readme", ""),
+                pkg_data.get("compatibility", ">=11.0.0"),
+                1 if pkg_data.get("verified") else 0,
+            ),
         )
         conn.commit()
     except Exception as exc:
@@ -1894,9 +2000,7 @@ def mem_get_marketplace_package(package_id: str) -> dict | None:
         return None
 
 
-def mem_search_marketplace_packages(
-    query: str = "", package_type: str | None = None, limit: int = 50
-) -> list[dict]:
+def mem_search_marketplace_packages(query: str = "", package_type: str | None = None, limit: int = 50) -> list[dict]:
     try:
         conn = _get_conn()
         sql = "SELECT * FROM marketplace_packages WHERE 1=1"
@@ -1945,14 +2049,19 @@ def mem_save_custom_agent(agent_data: dict) -> None:
                source=excluded.source, capabilities_json=excluded.capabilities_json,
                hooks_json=excluded.hooks_json, config_json=excluded.config_json,
                enabled=excluded.enabled, updated_at=excluded.updated_at""",
-            (agent_data["id"], agent_data.get("name", ""),
-             agent_data.get("version", "1.0.0"), agent_data.get("description", ""),
-             agent_data.get("source", ""),
-             json.dumps(agent_data.get("capabilities", [])),
-             json.dumps(agent_data.get("hooks", {})),
-             json.dumps(agent_data.get("config", {})),
-             1 if agent_data.get("enabled") else 0,
-             agent_data.get("created_at", ""), agent_data.get("updated_at", "")),
+            (
+                agent_data["id"],
+                agent_data.get("name", ""),
+                agent_data.get("version", "1.0.0"),
+                agent_data.get("description", ""),
+                agent_data.get("source", ""),
+                json.dumps(agent_data.get("capabilities", [])),
+                json.dumps(agent_data.get("hooks", {})),
+                json.dumps(agent_data.get("config", {})),
+                1 if agent_data.get("enabled") else 0,
+                agent_data.get("created_at", ""),
+                agent_data.get("updated_at", ""),
+            ),
         )
         conn.commit()
     except Exception as exc:
@@ -2004,14 +2113,19 @@ def mem_save_custom_workflow(workflow_data: dict) -> None:
                source=excluded.source, steps_json=excluded.steps_json,
                status=excluded.status, config_json=excluded.config_json,
                enabled=excluded.enabled, updated_at=excluded.updated_at""",
-            (workflow_data["id"], workflow_data.get("name", ""),
-             workflow_data.get("version", "1.0.0"), workflow_data.get("description", ""),
-             workflow_data.get("source", ""),
-             json.dumps(workflow_data.get("steps", [])),
-             workflow_data.get("status", "pending"),
-             json.dumps(workflow_data.get("config", {})),
-             1 if workflow_data.get("enabled") else 0,
-             workflow_data.get("created_at", ""), workflow_data.get("updated_at", "")),
+            (
+                workflow_data["id"],
+                workflow_data.get("name", ""),
+                workflow_data.get("version", "1.0.0"),
+                workflow_data.get("description", ""),
+                workflow_data.get("source", ""),
+                json.dumps(workflow_data.get("steps", [])),
+                workflow_data.get("status", "pending"),
+                json.dumps(workflow_data.get("config", {})),
+                1 if workflow_data.get("enabled") else 0,
+                workflow_data.get("created_at", ""),
+                workflow_data.get("updated_at", ""),
+            ),
         )
         conn.commit()
     except Exception as exc:
@@ -2052,6 +2166,7 @@ def mem_delete_custom_workflow(workflow_id: str) -> bool:
 
 # ===== v12.0 Autonomous Evaluation CRUD =====
 
+
 def mem_save_evaluation_run(run: dict) -> None:
     try:
         conn = _get_conn()
@@ -2062,15 +2177,24 @@ def mem_save_evaluation_run(run: dict) -> None:
                 benchmark_score, tasks_completed, tasks_failed, error_log,
                 started_at, completed_at, created_at)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (run["id"], run.get("trigger_type", "on_demand"),
-             run.get("status", "pending"), run.get("autonomy_score", 0.0),
-             run.get("success_rate", 0.0), run.get("total_cost", 0.0),
-             run.get("total_runtime", 0.0), run.get("healing_rate", 0.0),
-             run.get("deployment_success_rate", 0.0),
-             run.get("benchmark_score", 0.0),
-             run.get("tasks_completed", 0), run.get("tasks_failed", 0),
-             run.get("error_log", ""), run.get("started_at"),
-             run.get("completed_at"), run.get("created_at")),
+            (
+                run["id"],
+                run.get("trigger_type", "on_demand"),
+                run.get("status", "pending"),
+                run.get("autonomy_score", 0.0),
+                run.get("success_rate", 0.0),
+                run.get("total_cost", 0.0),
+                run.get("total_runtime", 0.0),
+                run.get("healing_rate", 0.0),
+                run.get("deployment_success_rate", 0.0),
+                run.get("benchmark_score", 0.0),
+                run.get("tasks_completed", 0),
+                run.get("tasks_failed", 0),
+                run.get("error_log", ""),
+                run.get("started_at"),
+                run.get("completed_at"),
+                run.get("created_at"),
+            ),
         )
         conn.commit()
     except Exception as exc:
@@ -2087,8 +2211,7 @@ def mem_get_evaluation_run(run_id: str) -> dict | None:
         return None
 
 
-def mem_list_evaluation_runs(limit: int = 50, trigger_type: str | None = None,
-                             status: str | None = None) -> list[dict]:
+def mem_list_evaluation_runs(limit: int = 50, trigger_type: str | None = None, status: str | None = None) -> list[dict]:
     try:
         conn = _get_conn()
         conditions = []
@@ -2119,16 +2242,21 @@ def mem_save_evaluation_report(report: dict) -> None:
                 regressions_found, improvements_found, recommendations,
                 report_markdown, period_start, period_end, created_at)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (report["id"], report.get("report_type", "daily"),
-             report.get("title", ""), report.get("summary", ""),
-             json.dumps(report.get("metrics", {})),
-             json.dumps(report.get("trends", {})),
-             json.dumps(report.get("regressions_found", [])),
-             json.dumps(report.get("improvements_found", [])),
-             json.dumps(report.get("recommendations", [])),
-             report.get("report_markdown", ""),
-             report.get("period_start"), report.get("period_end"),
-             report.get("created_at")),
+            (
+                report["id"],
+                report.get("report_type", "daily"),
+                report.get("title", ""),
+                report.get("summary", ""),
+                json.dumps(report.get("metrics", {})),
+                json.dumps(report.get("trends", {})),
+                json.dumps(report.get("regressions_found", [])),
+                json.dumps(report.get("improvements_found", [])),
+                json.dumps(report.get("recommendations", [])),
+                report.get("report_markdown", ""),
+                report.get("period_start"),
+                report.get("period_end"),
+                report.get("created_at"),
+            ),
         )
         conn.commit()
     except Exception as exc:
@@ -2153,18 +2281,16 @@ def mem_get_evaluation_report(report_id: str) -> dict | None:
         return None
 
 
-def mem_list_evaluation_reports(report_type: str | None = None,
-                                limit: int = 20) -> list[dict]:
+def mem_list_evaluation_reports(report_type: str | None = None, limit: int = 20) -> list[dict]:
     try:
         conn = _get_conn()
         if report_type:
             cur = conn.execute(
                 "SELECT * FROM evaluation_reports WHERE report_type=? ORDER BY created_at DESC LIMIT ?",
-                (report_type, limit))
+                (report_type, limit),
+            )
         else:
-            cur = conn.execute(
-                "SELECT * FROM evaluation_reports ORDER BY created_at DESC LIMIT ?",
-                (limit,))
+            cur = conn.execute("SELECT * FROM evaluation_reports ORDER BY created_at DESC LIMIT ?", (limit,))
         results = []
         for r in cur.fetchall():
             d = dict(r)
@@ -2187,24 +2313,29 @@ def mem_save_regression(regression: dict) -> None:
                (id, category, severity, metric, previous_value, current_value,
                 change_pct, title, description, dismissed, run_id, created_at)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (regression["id"], regression.get("category", "general"),
-             regression.get("severity", "low"), regression.get("metric", ""),
-             regression.get("previous_value", 0.0),
-             regression.get("current_value", 0.0),
-             regression.get("change_pct", 0.0),
-             regression.get("title", ""), regression.get("description", ""),
-             1 if regression.get("dismissed") else 0,
-             regression.get("run_id", ""), regression.get("created_at")),
+            (
+                regression["id"],
+                regression.get("category", "general"),
+                regression.get("severity", "low"),
+                regression.get("metric", ""),
+                regression.get("previous_value", 0.0),
+                regression.get("current_value", 0.0),
+                regression.get("change_pct", 0.0),
+                regression.get("title", ""),
+                regression.get("description", ""),
+                1 if regression.get("dismissed") else 0,
+                regression.get("run_id", ""),
+                regression.get("created_at"),
+            ),
         )
         conn.commit()
     except Exception as exc:
         logger.warning("mem_save_regression failed: %s", exc)
 
 
-def mem_list_regressions(category: str | None = None,
-                         severity: str | None = None,
-                         dismissed: bool | None = None,
-                         limit: int = 100) -> list[dict]:
+def mem_list_regressions(
+    category: str | None = None, severity: str | None = None, dismissed: bool | None = None, limit: int = 100
+) -> list[dict]:
     try:
         conn = _get_conn()
         conditions = []
@@ -2255,8 +2386,7 @@ def mem_update_regression(regression_id: str, updates: dict) -> bool:
         if not fields:
             return False
         params.append(regression_id)
-        conn.execute(
-            f"UPDATE regressions SET {', '.join(fields)} WHERE id=?", params)
+        conn.execute(f"UPDATE regressions SET {', '.join(fields)} WHERE id=?", params)
         conn.commit()
         return True
     except Exception as exc:
@@ -2273,37 +2403,36 @@ def mem_save_leaderboard_entry(entry: dict) -> None:
                 reliability_score, cost_efficiency, run_count,
                 metadata_json, last_updated)
                VALUES (?,?,?,?,?,?,?,?,?,?)""",
-            (entry["id"], entry.get("category", "general"),
-             entry.get("entry_name", ""), entry.get("score", 0.0),
-             entry.get("autonomy_score", 0.0),
-             entry.get("reliability_score", 0.0),
-             entry.get("cost_efficiency", 0.0),
-             entry.get("run_count", 1),
-             json.dumps(entry.get("metadata", {})),
-             entry.get("last_updated")),
+            (
+                entry["id"],
+                entry.get("category", "general"),
+                entry.get("entry_name", ""),
+                entry.get("score", 0.0),
+                entry.get("autonomy_score", 0.0),
+                entry.get("reliability_score", 0.0),
+                entry.get("cost_efficiency", 0.0),
+                entry.get("run_count", 1),
+                json.dumps(entry.get("metadata", {})),
+                entry.get("last_updated"),
+            ),
         )
         conn.commit()
     except Exception as exc:
         logger.warning("mem_save_leaderboard_entry failed: %s", exc)
 
 
-def mem_get_leaderboard(category: str | None = None,
-                        sort_by: str = "score",
-                        limit: int = 20) -> list[dict]:
+def mem_get_leaderboard(category: str | None = None, sort_by: str = "score", limit: int = 20) -> list[dict]:
     try:
         conn = _get_conn()
-        valid_sorts = {"score", "autonomy_score", "reliability_score",
-                       "cost_efficiency", "run_count"}
+        valid_sorts = {"score", "autonomy_score", "reliability_score", "cost_efficiency", "run_count"}
         if sort_by not in valid_sorts:
             sort_by = "score"
         if category:
             cur = conn.execute(
-                f"SELECT * FROM leaderboards WHERE category=? ORDER BY {sort_by} DESC LIMIT ?",
-                (category, limit))
+                f"SELECT * FROM leaderboards WHERE category=? ORDER BY {sort_by} DESC LIMIT ?", (category, limit)
+            )
         else:
-            cur = conn.execute(
-                f"SELECT * FROM leaderboards ORDER BY {sort_by} DESC LIMIT ?",
-                (limit,))
+            cur = conn.execute(f"SELECT * FROM leaderboards ORDER BY {sort_by} DESC LIMIT ?", (limit,))
         results = []
         for r in cur.fetchall():
             d = dict(r)
@@ -2355,28 +2484,28 @@ def mem_save_version_snapshot(snapshot: dict) -> None:
             """INSERT OR REPLACE INTO version_history
                (id, version, snapshot_data, snapshot_type, created_at)
                VALUES (?,?,?,?,?)""",
-            (snapshot["id"], snapshot.get("version", ""),
-             json.dumps(snapshot.get("data", {})),
-             snapshot.get("snapshot_type", "full"),
-             snapshot.get("created_at")),
+            (
+                snapshot["id"],
+                snapshot.get("version", ""),
+                json.dumps(snapshot.get("data", {})),
+                snapshot.get("snapshot_type", "full"),
+                snapshot.get("created_at"),
+            ),
         )
         conn.commit()
     except Exception as exc:
         logger.warning("mem_save_version_snapshot failed: %s", exc)
 
 
-def mem_get_version_snapshots(version: str | None = None,
-                              limit: int = 50) -> list[dict]:
+def mem_get_version_snapshots(version: str | None = None, limit: int = 50) -> list[dict]:
     try:
         conn = _get_conn()
         if version:
             cur = conn.execute(
-                "SELECT * FROM version_history WHERE version=? ORDER BY created_at DESC LIMIT ?",
-                (version, limit))
+                "SELECT * FROM version_history WHERE version=? ORDER BY created_at DESC LIMIT ?", (version, limit)
+            )
         else:
-            cur = conn.execute(
-                "SELECT * FROM version_history ORDER BY created_at DESC LIMIT ?",
-                (limit,))
+            cur = conn.execute("SELECT * FROM version_history ORDER BY created_at DESC LIMIT ?", (limit,))
         results = []
         for r in cur.fetchall():
             d = dict(r)
@@ -2394,11 +2523,14 @@ def mem_save_version_comparison(comparison: dict) -> None:
             """INSERT OR REPLACE INTO version_comparisons
                (id, from_version, to_version, deltas, summary, created_at)
                VALUES (?,?,?,?,?,?)""",
-            (comparison["id"], comparison.get("from_version", ""),
-             comparison.get("to_version", ""),
-             json.dumps(comparison.get("deltas", {})),
-             comparison.get("summary", ""),
-             comparison.get("created_at")),
+            (
+                comparison["id"],
+                comparison.get("from_version", ""),
+                comparison.get("to_version", ""),
+                json.dumps(comparison.get("deltas", {})),
+                comparison.get("summary", ""),
+                comparison.get("created_at"),
+            ),
         )
         conn.commit()
     except Exception as exc:
@@ -2406,9 +2538,9 @@ def mem_save_version_comparison(comparison: dict) -> None:
         return None
 
 
-def mem_get_version_comparisons(from_version: str | None = None,
-                                to_version: str | None = None,
-                                limit: int = 20) -> list[dict]:
+def mem_get_version_comparisons(
+    from_version: str | None = None, to_version: str | None = None, limit: int = 20
+) -> list[dict]:
     try:
         conn = _get_conn()
         conditions = []
@@ -2450,16 +2582,22 @@ def mem_save_scheduler_metadata(meta: dict) -> bool:
                 parallel_execution, last_run_at, next_run_at,
                 recovery_window_hours, created_at, updated_at)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (meta["id"], meta.get("schedule_type", "nightly"),
-             meta.get("enabled", 1), meta.get("interval_hours", 24.0),
-             meta.get("window_start_utc", "02:00"),
-             meta.get("day_of_week", 0),
-             meta.get("execution_time_utc", "02:00"),
-             meta.get("domain_timeout_seconds", 300.0),
-             1 if meta.get("parallel_execution") else 0,
-             meta.get("last_run_at"), meta.get("next_run_at"),
-             meta.get("recovery_window_hours", 6.0),
-             meta.get("created_at"), meta.get("updated_at")),
+            (
+                meta["id"],
+                meta.get("schedule_type", "nightly"),
+                meta.get("enabled", 1),
+                meta.get("interval_hours", 24.0),
+                meta.get("window_start_utc", "02:00"),
+                meta.get("day_of_week", 0),
+                meta.get("execution_time_utc", "02:00"),
+                meta.get("domain_timeout_seconds", 300.0),
+                1 if meta.get("parallel_execution") else 0,
+                meta.get("last_run_at"),
+                meta.get("next_run_at"),
+                meta.get("recovery_window_hours", 6.0),
+                meta.get("created_at"),
+                meta.get("updated_at"),
+            ),
         )
         conn.commit()
         return True
@@ -2471,8 +2609,7 @@ def mem_save_scheduler_metadata(meta: dict) -> bool:
 def mem_get_scheduler_metadata(schedule_type: str) -> dict | None:
     try:
         conn = _get_conn()
-        cur = conn.execute(
-            "SELECT * FROM scheduler_metadata WHERE schedule_type=?", (schedule_type,))
+        cur = conn.execute("SELECT * FROM scheduler_metadata WHERE schedule_type=?", (schedule_type,))
         r = cur.fetchone()
         return dict(r) if r else None
     except Exception:
@@ -2483,11 +2620,9 @@ def mem_list_scheduler_metadata(enabled_only: bool = False) -> list[dict]:
     try:
         conn = _get_conn()
         if enabled_only:
-            cur = conn.execute(
-                "SELECT * FROM scheduler_metadata WHERE enabled=1 ORDER BY schedule_type")
+            cur = conn.execute("SELECT * FROM scheduler_metadata WHERE enabled=1 ORDER BY schedule_type")
         else:
-            cur = conn.execute(
-                "SELECT * FROM scheduler_metadata ORDER BY schedule_type")
+            cur = conn.execute("SELECT * FROM scheduler_metadata ORDER BY schedule_type")
         return [dict(r) for r in cur.fetchall()]
     except Exception:
         return []
@@ -2507,9 +2642,18 @@ def mem_delete_scheduler_metadata(schedule_type: str) -> bool:
 def mem_update_evaluation_run(run_id: str, updates: dict) -> bool:
     try:
         conn = _get_conn()
-        allowed = {"status", "autonomy_score", "success_rate", "total_cost",
-                   "total_runtime", "healing_rate", "deployment_success_rate",
-                   "benchmark_score", "error_log", "completed_at"}
+        allowed = {
+            "status",
+            "autonomy_score",
+            "success_rate",
+            "total_cost",
+            "total_runtime",
+            "healing_rate",
+            "deployment_success_rate",
+            "benchmark_score",
+            "error_log",
+            "completed_at",
+        }
         fields = []
         params = []
         for key, val in updates.items():
@@ -2519,8 +2663,7 @@ def mem_update_evaluation_run(run_id: str, updates: dict) -> bool:
         if not fields:
             return False
         params.append(run_id)
-        conn.execute(
-            f"UPDATE evaluation_runs SET {', '.join(fields)} WHERE id=?", params)
+        conn.execute(f"UPDATE evaluation_runs SET {', '.join(fields)} WHERE id=?", params)
         conn.commit()
         return True
     except Exception as exc:
@@ -2542,9 +2685,9 @@ def mem_count_missed_runs(schedule_type: str, since_timestamp: float) -> int:
     try:
         conn = _get_conn()
         cur = conn.execute(
-            "SELECT COUNT(*) AS cnt FROM evaluation_runs "
-            "WHERE trigger_type=? AND created_at >= ?",
-            (schedule_type, since_timestamp))
+            "SELECT COUNT(*) AS cnt FROM evaluation_runs WHERE trigger_type=? AND created_at >= ?",
+            (schedule_type, since_timestamp),
+        )
         r = cur.fetchone()
         return r["cnt"] if r else 0
     except Exception:
@@ -2562,13 +2705,19 @@ def mem_save_learning_feedback(fb: dict) -> bool:
                (id, feedback_type, source, category, score, metric_name,
                 metric_value, context_json, run_id, version, created_at)
                VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-            (fb["id"], fb.get("feedback_type", "evaluation"),
-             fb.get("source", ""), fb.get("category", "general"),
-             fb.get("score", 0.0), fb.get("metric_name", ""),
-             fb.get("metric_value", 0.0),
-             json.dumps(fb.get("context", {})),
-             fb.get("run_id", ""), fb.get("version", ""),
-             fb.get("created_at")),
+            (
+                fb["id"],
+                fb.get("feedback_type", "evaluation"),
+                fb.get("source", ""),
+                fb.get("category", "general"),
+                fb.get("score", 0.0),
+                fb.get("metric_name", ""),
+                fb.get("metric_value", 0.0),
+                json.dumps(fb.get("context", {})),
+                fb.get("run_id", ""),
+                fb.get("version", ""),
+                fb.get("created_at"),
+            ),
         )
         conn.commit()
         return True
@@ -2612,14 +2761,22 @@ def mem_save_learning_pattern(pattern: dict) -> bool:
                 outcome, success_count, failure_count, confidence, tags,
                 source_run_ids, created_at, updated_at)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (pattern["id"], pattern.get("pattern_type", "strategy"),
-             pattern.get("category", "general"), pattern.get("title", ""),
-             pattern.get("description", ""), pattern.get("strategy", ""),
-             pattern.get("outcome", ""), pattern.get("success_count", 0),
-             pattern.get("failure_count", 0), pattern.get("confidence", 0.0),
-             json.dumps(pattern.get("tags", [])),
-             json.dumps(pattern.get("source_run_ids", [])),
-             pattern.get("created_at"), pattern.get("updated_at")),
+            (
+                pattern["id"],
+                pattern.get("pattern_type", "strategy"),
+                pattern.get("category", "general"),
+                pattern.get("title", ""),
+                pattern.get("description", ""),
+                pattern.get("strategy", ""),
+                pattern.get("outcome", ""),
+                pattern.get("success_count", 0),
+                pattern.get("failure_count", 0),
+                pattern.get("confidence", 0.0),
+                json.dumps(pattern.get("tags", [])),
+                json.dumps(pattern.get("source_run_ids", [])),
+                pattern.get("created_at"),
+                pattern.get("updated_at"),
+            ),
         )
         conn.commit()
         return True
@@ -2689,14 +2846,21 @@ def mem_save_learning_recommendation(rec: dict) -> bool:
                 implementation_suggestions, status,
                 source_pattern_ids, created_at, updated_at)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (rec["id"], rec.get("recommendation_type", "architecture"),
-             rec.get("category", "general"), rec.get("title", ""),
-             rec.get("description", ""), rec.get("priority", "medium"),
-             rec.get("rationale", ""), rec.get("expected_impact", ""),
-             rec.get("implementation_suggestions", ""),
-             rec.get("status", "active"),
-             json.dumps(rec.get("source_pattern_ids", [])),
-             rec.get("created_at"), rec.get("updated_at")),
+            (
+                rec["id"],
+                rec.get("recommendation_type", "architecture"),
+                rec.get("category", "general"),
+                rec.get("title", ""),
+                rec.get("description", ""),
+                rec.get("priority", "medium"),
+                rec.get("rationale", ""),
+                rec.get("expected_impact", ""),
+                rec.get("implementation_suggestions", ""),
+                rec.get("status", "active"),
+                json.dumps(rec.get("source_pattern_ids", [])),
+                rec.get("created_at"),
+                rec.get("updated_at"),
+            ),
         )
         conn.commit()
         return True
@@ -2708,8 +2872,7 @@ def mem_save_learning_recommendation(rec: dict) -> bool:
 def mem_get_learning_recommendation(rec_id: str) -> dict | None:
     try:
         conn = _get_conn()
-        cur = conn.execute(
-            "SELECT * FROM learning_feedback_recommendations WHERE id=?", (rec_id,))
+        cur = conn.execute("SELECT * FROM learning_feedback_recommendations WHERE id=?", (rec_id,))
         r = cur.fetchone()
         if r:
             d = dict(r)
@@ -2807,12 +2970,14 @@ def mem_get_learning_insights(
             fb_query += " WHERE " + " AND ".join(fb_conditions)
         fb_query += " GROUP BY category ORDER BY avg_score DESC"
         for r in conn.execute(fb_query, fb_params).fetchall():
-            insights.append({
-                "insight_type": "feedback_summary",
-                "category": r["category"],
-                "feedback_count": r["count"],
-                "average_score": r["avg_score"],
-            })
+            insights.append(
+                {
+                    "insight_type": "feedback_summary",
+                    "category": r["category"],
+                    "feedback_count": r["count"],
+                    "average_score": r["avg_score"],
+                }
+            )
 
         insights.sort(key=lambda x: x.get("confidence", 0) if x.get("insight_type") == "pattern" else 0, reverse=True)
         return insights[:limit]
@@ -2823,6 +2988,7 @@ def mem_get_learning_insights(
 # ═══════════════════════════════════════════════════════════════════════════
 # Campaign CRUD
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def mem_save_campaign(campaign: dict) -> bool:
     try:
@@ -2900,8 +3066,14 @@ def mem_update_campaign(campaign_id: str, updates: dict) -> bool:
     try:
         conn = _get_conn()
         allowed = {
-            "status", "total_runs", "completed_runs", "failed_runs",
-            "started_at", "completed_at", "error", "domains",
+            "status",
+            "total_runs",
+            "completed_runs",
+            "failed_runs",
+            "started_at",
+            "completed_at",
+            "error",
+            "domains",
         }
         fields = []
         params = []
@@ -2935,6 +3107,7 @@ def mem_delete_campaign(campaign_id: str) -> bool:
 
 
 # ── Campaign Runs ────────────────────────────────────────────────────────────
+
 
 def mem_save_campaign_run(run: dict) -> bool:
     try:
@@ -3030,9 +3203,17 @@ def mem_update_campaign_run(run_id: str, updates: dict) -> bool:
     try:
         conn = _get_conn()
         allowed = {
-            "status", "autonomy_score", "execution_time", "cost",
-            "tests_generated", "tests_passed", "healing_iterations",
-            "deployment_success", "benchmark_success", "error", "completed_at",
+            "status",
+            "autonomy_score",
+            "execution_time",
+            "cost",
+            "tests_generated",
+            "tests_passed",
+            "healing_iterations",
+            "deployment_success",
+            "benchmark_success",
+            "error",
+            "completed_at",
         }
         fields = []
         params = []

@@ -1,4 +1,5 @@
 """Runtime Monitor — metrics collection, aggregation, trend analysis, anomaly detection."""
+
 import logging
 import os
 import statistics
@@ -81,6 +82,7 @@ class RuntimeMonitor:
         point = MetricPoint()
         try:
             from services.runtime_orchestrator import get_orchestrator
+
             orch = get_orchestrator()
             session = orch.get_runtime(runtime_id)
             if session:
@@ -88,12 +90,14 @@ class RuntimeMonitor:
                     point.uptime = time.time() - session.started_at
                 if session.container_id:
                     from services.container_manager import get_container_manager
+
                     stats = get_container_manager().get_stats(session.container_id)
                     point.cpu_percent = stats.get("cpu_percent", 0.0)
                     point.memory_mb = stats.get("memory_mb", 0.0)
                 elif session.pid:
                     try:
                         import psutil
+
                         proc = psutil.Process(session.pid)
                         point.cpu_percent = proc.cpu_percent()
                         point.memory_mb = proc.memory_info().rss / 1024 / 1024
@@ -151,20 +155,30 @@ class RuntimeMonitor:
         std_cpu = statistics.stdev(cpus) if len(cpus) > 1 else 0
         latest_cpu = cpus[-1]
         if std_cpu > 0 and abs(latest_cpu - mean_cpu) / std_cpu > 3:
-            self.anomalies.append(Anomaly(
-                metric="cpu_percent", value=latest_cpu, mean=mean_cpu,
-                stddev=std_cpu, z_score=abs(latest_cpu - mean_cpu) / std_cpu,
-                severity="warning",
-            ))
+            self.anomalies.append(
+                Anomaly(
+                    metric="cpu_percent",
+                    value=latest_cpu,
+                    mean=mean_cpu,
+                    stddev=std_cpu,
+                    z_score=abs(latest_cpu - mean_cpu) / std_cpu,
+                    severity="warning",
+                )
+            )
         mean_mem = statistics.mean(mems)
         std_mem = statistics.stdev(mems) if len(mems) > 1 else 0
         latest_mem = mems[-1]
         if std_mem > 0 and abs(latest_mem - mean_mem) / std_mem > 3:
-            self.anomalies.append(Anomaly(
-                metric="memory_mb", value=latest_mem, mean=mean_mem,
-                stddev=std_mem, z_score=abs(latest_mem - mean_mem) / std_mem,
-                severity="warning",
-            ))
+            self.anomalies.append(
+                Anomaly(
+                    metric="memory_mb",
+                    value=latest_mem,
+                    mean=mean_mem,
+                    stddev=std_mem,
+                    z_score=abs(latest_mem - mean_mem) / std_mem,
+                    severity="warning",
+                )
+            )
 
     def get_anomalies(self, runtime_id: str | None = None, limit: int = 50) -> list[dict]:
         return [asdict(a) for a in self.anomalies[-limit:]]

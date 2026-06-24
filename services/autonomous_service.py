@@ -1,4 +1,5 @@
 """Autonomous Iteration Mode — generate-evaluate-improve-retest loop with metrics tracking and cost per iteration."""
+
 import logging
 import os
 import threading
@@ -120,8 +121,13 @@ class AutonomousEngine:
 
         thread = threading.Thread(target=self._run_autonomous_loop, args=(session,), daemon=True)
         thread.start()
-        logger.info("Autonomous session %s started for job %s (max %d iterations, threshold %.2f)",
-                     session.id[:8], job_id, config.max_iterations, config.quality_threshold)
+        logger.info(
+            "Autonomous session %s started for job %s (max %d iterations, threshold %.2f)",
+            session.id[:8],
+            job_id,
+            config.max_iterations,
+            config.quality_threshold,
+        )
         return session
 
     def _run_autonomous_loop(self, session: AutonomousSession) -> None:
@@ -175,13 +181,23 @@ class AutonomousEngine:
                 session.total_cost += metrics.cost_estimate
                 session.iterations.append(metrics)
 
-                logger.info("Iteration %d: score=%.3f (delta=%.3f), tokens=%d, tests=%d/%d",
-                            iteration, score, metrics.improvement_delta, tokens_used,
-                            metrics.test_passed, metrics.test_total)
+                logger.info(
+                    "Iteration %d: score=%.3f (delta=%.3f), tokens=%d, tests=%d/%d",
+                    iteration,
+                    score,
+                    metrics.improvement_delta,
+                    tokens_used,
+                    metrics.test_passed,
+                    metrics.test_total,
+                )
 
                 if score >= session.config.quality_threshold:
-                    logger.info("Quality threshold reached at iteration %d (%.3f >= %.3f)",
-                                iteration, score, session.config.quality_threshold)
+                    logger.info(
+                        "Quality threshold reached at iteration %d (%.3f >= %.3f)",
+                        iteration,
+                        score,
+                        session.config.quality_threshold,
+                    )
                     break
 
                 if metrics.improvement_delta < session.config.improvement_threshold:
@@ -195,7 +211,9 @@ class AutonomousEngine:
                 prev_score = score
 
             session.final_score = self._evaluate_project(session.job_id, session.config.model)
-            session.improvement_pct = ((session.final_score - session.initial_score) / (session.initial_score or 1)) * 100
+            session.improvement_pct = (
+                (session.final_score - session.initial_score) / (session.initial_score or 1)
+            ) * 100
             session.status = "completed"
             session.stage = IterationStage.COMPLETE
 
@@ -208,6 +226,7 @@ class AutonomousEngine:
 
     def _generate_iteration(self, session: AutonomousSession, iteration: int) -> None:
         from services.llm_service import call_model
+
         job_id = session.job_id
         job_dir = Path(os.getenv("BASE_DIR", "./generated_projects")) / job_id
         if not job_dir.exists():
@@ -266,6 +285,7 @@ class AutonomousEngine:
             score += 0.05
 
         from services.test_service import run_pytest
+
         pr = run_pytest(job_id)
         if pr.get("passed", False):
             score += 0.2
@@ -311,6 +331,7 @@ class AutonomousEngine:
 
     def _apply_changes(self, llm_result: str, job_dir: Path) -> None:
         import re
+
         blocks = re.split(r"---\s*FILE\s*:\s*", llm_result)
         for block in blocks:
             block = block.strip()
@@ -338,6 +359,7 @@ class AutonomousEngine:
 
     def _collect_test_results(self, job_id: str) -> dict[str, Any]:
         from services.test_service import run_pytest
+
         pr = run_pytest(job_id)
         return {
             "passed": pr.get("collected", 0) - len(pr.get("failures", [])),
@@ -362,6 +384,7 @@ class AutonomousEngine:
                 docstring_count += content.count('"""') // 2
                 type_hint_count += content.count(": ") + content.count(" -> ")
                 import ast
+
                 tree = ast.parse(content)
                 for node in ast.walk(tree):
                     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):

@@ -1,4 +1,5 @@
 """Learning Engine — store, retrieve, rank, recommend successful patterns from past runs."""
+
 import json
 import logging
 import os
@@ -59,8 +60,7 @@ class LearningEngine:
         LEARNING_DIR.mkdir(parents=True, exist_ok=True)
         self._load_patterns()
 
-    def learn_fix(self, error_type: str, error_text: str, fix: str, file_pattern: str = "",
-                   job_id: str = "") -> None:
+    def learn_fix(self, error_type: str, error_text: str, fix: str, file_pattern: str = "", job_id: str = "") -> None:
         try:
             record_fix_pattern(error_type, error_text[:200], file_pattern, fix[:500])
             key = f"fix:{error_type}:{hash(error_text[:100])}"
@@ -72,9 +72,13 @@ class LearningEngine:
     def learn_architecture(self, description: str, blueprint: dict, job_id: str = "") -> None:
         try:
             key = f"arch:{hash(description[:100])}"
-            self._store_pattern(PatternType.ARCHITECTURE, key, json.dumps(blueprint),
-                                tags=[t.get("tech", "") for t in blueprint.get("tech_stack", {}).values() if isinstance(t, dict)],
-                                job_id=job_id)
+            self._store_pattern(
+                PatternType.ARCHITECTURE,
+                key,
+                json.dumps(blueprint),
+                tags=[t.get("tech", "") for t in blueprint.get("tech_stack", {}).values() if isinstance(t, dict)],
+                job_id=job_id,
+            )
             save_project_insight(job_id, "architecture", description[:200], json.dumps(blueprint)[:1000])
         except Exception as exc:
             logger.warning("Learn architecture failed: %s", exc)
@@ -82,25 +86,33 @@ class LearningEngine:
     def learn_deployment(self, target: str, config: dict, success: bool, job_id: str = "") -> None:
         if success:
             key = f"deploy:{target}:{hash(json.dumps(config, sort_keys=True)[:100])}"
-            self._store_pattern(PatternType.DEPLOYMENT, key, json.dumps(config),
-                                tags=[target, "success"], job_id=job_id)
+            self._store_pattern(
+                PatternType.DEPLOYMENT, key, json.dumps(config), tags=[target, "success"], job_id=job_id
+            )
 
     def learn_prompt(self, prompt: str, response: str, score: float, job_id: str = "") -> None:
         if score > 0.7:
             key = f"prompt:{hash(prompt[:100])}"
-            self._store_pattern(PatternType.PROMPT, key, response[:1000],
-                                tags=[f"score:{score:.2f}"], confidence=score, job_id=job_id)
+            self._store_pattern(
+                PatternType.PROMPT, key, response[:1000], tags=[f"score:{score:.2f}"], confidence=score, job_id=job_id
+            )
 
-    def learn_agent_decision(self, agent_name: str, context: str, decision: str,
-                               outcome: str, job_id: str = "") -> None:
+    def learn_agent_decision(
+        self, agent_name: str, context: str, decision: str, outcome: str, job_id: str = ""
+    ) -> None:
         if outcome == "success":
             key = f"agent:{agent_name}:{hash(context[:100])}"
-            self._store_pattern(PatternType.AGENT_DECISION, key, decision,
-                                tags=[agent_name, outcome], job_id=job_id)
+            self._store_pattern(PatternType.AGENT_DECISION, key, decision, tags=[agent_name, outcome], job_id=job_id)
 
-    def _store_pattern(self, ptype: PatternType, key: str, value: str,
-                       tags: list[str] | None = None, confidence: float = 1.0,
-                       job_id: str = "") -> None:
+    def _store_pattern(
+        self,
+        ptype: PatternType,
+        key: str,
+        value: str,
+        tags: list[str] | None = None,
+        confidence: float = 1.0,
+        job_id: str = "",
+    ) -> None:
         tags = tags or []
         with self._lock:
             existing = self.patterns.get(key)
@@ -112,8 +124,12 @@ class LearningEngine:
                     existing.metadata.setdefault("job_ids", []).append(job_id)
             else:
                 pattern = LearnedPattern(
-                    pattern_type=ptype.value, key=key, value=value[:2000],
-                    tags=tags, confidence=confidence, job_id=job_id,
+                    pattern_type=ptype.value,
+                    key=key,
+                    value=value[:2000],
+                    tags=tags,
+                    confidence=confidence,
+                    job_id=job_id,
                 )
                 self.patterns[key] = pattern
                 for tag in tags:
@@ -135,8 +151,11 @@ class LearningEngine:
 
     def recommend_prompts(self, score_min: float = 0.7, limit: int = 5) -> list[dict]:
         with self._lock:
-            candidates = [p for p in self.patterns.values()
-                         if p.pattern_type == PatternType.PROMPT.value and p.confidence >= score_min]
+            candidates = [
+                p
+                for p in self.patterns.values()
+                if p.pattern_type == PatternType.PROMPT.value and p.confidence >= score_min
+            ]
             candidates.sort(key=lambda p: p.confidence, reverse=True)
             return [p.to_dict() for p in candidates[:limit]]
 
@@ -157,8 +176,12 @@ class LearningEngine:
                 "total_patterns": len(self.patterns),
                 "by_type": dict(type_counts),
                 "total_fixes": sum(1 for p in self.patterns.values() if p.pattern_type == PatternType.FIX.value),
-                "total_architectures": sum(1 for p in self.patterns.values() if p.pattern_type == PatternType.ARCHITECTURE.value),
-                "total_deployments": sum(1 for p in self.patterns.values() if p.pattern_type == PatternType.DEPLOYMENT.value),
+                "total_architectures": sum(
+                    1 for p in self.patterns.values() if p.pattern_type == PatternType.ARCHITECTURE.value
+                ),
+                "total_deployments": sum(
+                    1 for p in self.patterns.values() if p.pattern_type == PatternType.DEPLOYMENT.value
+                ),
                 "top_tags": dict(sorted(self._index.items(), key=lambda x: -len(x[1]))[:10]),
             }
 

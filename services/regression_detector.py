@@ -1,4 +1,5 @@
 """Regression Detector — detect regressions in autonomy scores, success rate, costs, runtime, deployment, and benchmarks."""
+
 import json
 import logging
 import uuid
@@ -57,7 +58,9 @@ class RegressionDetector:
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
                 for item in data:
-                    alert = RegressionAlert(**{k: v for k, v in item.items() if k in RegressionAlert.__dataclass_fields__})
+                    alert = RegressionAlert(
+                        **{k: v for k, v in item.items() if k in RegressionAlert.__dataclass_fields__}
+                    )
                     self._alerts[alert.id] = alert
             except Exception as e:
                 self._logger.warning("Failed to load regressions: %s", e)
@@ -176,7 +179,9 @@ class RegressionDetector:
             return alert
         return None
 
-    def check_benchmark_regression(self, previous: float, current: float, domain: str = "", run_id: str = "") -> RegressionAlert | None:
+    def check_benchmark_regression(
+        self, previous: float, current: float, domain: str = "", run_id: str = ""
+    ) -> RegressionAlert | None:
         if previous <= 0:
             return None
         drop_pct = ((previous - current) / previous) * 100
@@ -213,7 +218,9 @@ class RegressionDetector:
         check = self.check_runtime_increase(previous.get("avg_runtime_ms", 0), current.get("avg_runtime_ms", 0), run_id)
         if check:
             alerts.append(check)
-        check = self.check_deployment_failures(previous.get("deployment_success_rate", 1.0), current.get("deployment_success_rate", 1.0), run_id)
+        check = self.check_deployment_failures(
+            previous.get("deployment_success_rate", 1.0), current.get("deployment_success_rate", 1.0), run_id
+        )
         if check:
             alerts.append(check)
         return alerts

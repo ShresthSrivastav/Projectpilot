@@ -164,8 +164,11 @@ def auto_repair_imports(
             log_to_db(job_id, "ImportRepair", "No unresolved imports to repair")
             break
 
-        log_to_db(job_id, "ImportRepair",
-                  f"Attempt {attempt}: {sum(len(v) for v in unresolved.values())} unresolved import(s)")
+        log_to_db(
+            job_id,
+            "ImportRepair",
+            f"Attempt {attempt}: {sum(len(v) for v in unresolved.values())} unresolved import(s)",
+        )
 
         # Phase 1: Create missing __init__.py files
         new_init = _create_missing_inits(job_dir, unresolved)
@@ -192,8 +195,12 @@ def auto_repair_imports(
     if success:
         log_to_db(job_id, "ImportRepair", f"Import repair successful after {attempts} attempt(s)")
     else:
-        log_to_db(job_id, "ImportRepair",
-                  f"Import repair incomplete: {sum(len(v) for v in remaining.values())} remaining", "WARNING")
+        log_to_db(
+            job_id,
+            "ImportRepair",
+            f"Import repair incomplete: {sum(len(v) for v in remaining.values())} remaining",
+            "WARNING",
+        )
 
     return {
         "success": success,
@@ -209,7 +216,9 @@ def _module_exists(job_dir: Path, module_name: str, source_file: str) -> bool:
     if module_name.startswith("."):
         source_dir = (job_dir / source_file).parent
         parts = module_name.lstrip(".").split(".")
-        depth = len(module_name) - len(parts[0]) - 1 if len(parts) > 0 else len(module_name) - len(module_name.lstrip("."))
+        depth = (
+            len(module_name) - len(parts[0]) - 1 if len(parts) > 0 else len(module_name) - len(module_name.lstrip("."))
+        )
         check_dir = source_dir
         for _ in range(depth):
             check_dir = check_dir.parent
@@ -228,7 +237,9 @@ def _module_exists(job_dir: Path, module_name: str, source_file: str) -> bool:
     try:
         result = subprocess.run(
             [sys.executable, "-c", f"import {module_name}"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
             cwd=str(job_dir),
         )
         return result.returncode == 0
@@ -239,13 +250,51 @@ def _module_exists(job_dir: Path, module_name: str, source_file: str) -> bool:
 def _is_known_third_party(name: str) -> bool:
     """Check if the top-level module is a known third-party package."""
     known = {
-        "fastapi", "flask", "sqlalchemy", "pydantic", "uvicorn", "streamlit",
-        "requests", "httpx", "pytest", "jose", "passlib", "bcrypt", "pyjwt",
-        "cryptography", "dotenv", "aiofiles", "multipart", "pypdf", "altair",
-        "pyflakes", "github", "git", "yaml", "jinja2", "markdown", "bs4",
-        "lxml", "pillow", "numpy", "pandas", "redis", "celery", "docker",
-        "boto3", "google", "anthropic", "openai", "chromadb", "sentence_transformers",
-        "starlette", "click", "typer", "rich", "tqdm", "psutil",
+        "fastapi",
+        "flask",
+        "sqlalchemy",
+        "pydantic",
+        "uvicorn",
+        "streamlit",
+        "requests",
+        "httpx",
+        "pytest",
+        "jose",
+        "passlib",
+        "bcrypt",
+        "pyjwt",
+        "cryptography",
+        "dotenv",
+        "aiofiles",
+        "multipart",
+        "pypdf",
+        "altair",
+        "pyflakes",
+        "github",
+        "git",
+        "yaml",
+        "jinja2",
+        "markdown",
+        "bs4",
+        "lxml",
+        "pillow",
+        "numpy",
+        "pandas",
+        "redis",
+        "celery",
+        "docker",
+        "boto3",
+        "google",
+        "anthropic",
+        "openai",
+        "chromadb",
+        "sentence_transformers",
+        "starlette",
+        "click",
+        "typer",
+        "rich",
+        "tqdm",
+        "psutil",
     }
     return name in known
 

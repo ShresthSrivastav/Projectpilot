@@ -39,8 +39,9 @@ def _ensure_table():
         init_activity_db()
 
 
-def log_activity(workspace_id: str, user_id: str, action: str, description: str = "",
-                 resource_type: str = "", resource_id: str = "") -> None:
+def log_activity(
+    workspace_id: str, user_id: str, action: str, description: str = "", resource_type: str = "", resource_id: str = ""
+) -> None:
     _ensure_table()
     conn = _get_conn()
     conn.execute(

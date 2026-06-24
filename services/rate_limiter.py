@@ -1,4 +1,5 @@
 """Rate limiter — in-memory token bucket per client IP."""
+
 import logging
 import os
 import time
@@ -37,9 +38,7 @@ class TokenBucket:
         return True
 
 
-buckets: dict[str, TokenBucket] = {
-    name: TokenBucket(cap, WINDOW) for name, cap in LIMITS.items()
-}
+buckets: dict[str, TokenBucket] = {name: TokenBucket(cap, WINDOW) for name, cap in LIMITS.items()}
 
 
 def _get_limit_key(request: Request) -> tuple[str, str]:

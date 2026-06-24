@@ -13,6 +13,7 @@ class KubernetesTarget(BaseDeploymentTarget):
 
     def deploy(self) -> DeploymentResult:
         import time
+
         start = time.time()
         try:
             # Simulate kubectl apply

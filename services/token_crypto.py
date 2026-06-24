@@ -5,6 +5,7 @@ secret configured in the environment (TOKEN_ENCRYPTION_KEY).
 
 If no key is configured, tokens are stored in plaintext with a warning.
 """
+
 import base64
 import logging
 import os

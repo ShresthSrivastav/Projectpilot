@@ -11,24 +11,24 @@ SECRET_PATTERNS: list[re.Pattern] = [
     re.compile(r'(?i)(api[_-]?key|secret|password|token|credential)\s*[=:]\s*["\'][^"\']+["\']'),
     re.compile(r'(?i)aws_access_key_id\s*[=:]\s*["\'][^"\']+["\']'),
     re.compile(r'(?i)aws_secret_access_key\s*[=:]\s*["\'][^"\']+["\']'),
-    re.compile(r'(?i)sk-[a-zA-Z0-9]{20,}'),       # OpenAI-style keys
-    re.compile(r'(?i)ghp_[a-zA-Z0-9]{36}'),          # GitHub PAT
+    re.compile(r"(?i)sk-[a-zA-Z0-9]{20,}"),  # OpenAI-style keys
+    re.compile(r"(?i)ghp_[a-zA-Z0-9]{36}"),  # GitHub PAT
 ]
 
 # Danger patterns that should never appear in generated code
 DANGEROUS_PATTERNS: list[re.Pattern] = [
-    re.compile(r'\beval\s*\('),
-    re.compile(r'\bexec\s*\('),
-    re.compile(r'__import__\s*\('),
-    re.compile(r'(?i)subprocess\.(call|popen|run)\s*\(.*shell\s*=\s*True'),
-    re.compile(r'(?i)os\.system\s*\('),
-    re.compile(r'(?i)pickle\.loads?\s*\('),
+    re.compile(r"\beval\s*\("),
+    re.compile(r"\bexec\s*\("),
+    re.compile(r"__import__\s*\("),
+    re.compile(r"(?i)subprocess\.(call|popen|run)\s*\(.*shell\s*=\s*True"),
+    re.compile(r"(?i)os\.system\s*\("),
+    re.compile(r"(?i)pickle\.loads?\s*\("),
 ]
 
 # Wildcard CORS patterns
 CORS_PATTERNS: list[re.Pattern] = [
     re.compile(r'allow_origins\s*=\s*\[?\s*["\']\*["\']'),
-    re.compile(r'Access-Control-Allow-Origin:\s*\*'),
+    re.compile(r"Access-Control-Allow-Origin:\s*\*"),
 ]
 
 # Files to skip (auto-generated or third-party)
@@ -57,7 +57,7 @@ def validate(job_dir: Path) -> dict:
 
         for pattern in DANGEROUS_PATTERNS:
             for m in pattern.finditer(text):
-                snippet = text[max(0, m.start()-20):m.end()+20]
+                snippet = text[max(0, m.start() - 20) : m.end() + 20]
                 issues.append(f"[{rel}] Dangerous pattern: `{pattern.pattern}`  —  `{snippet.strip()}`")
 
         for pattern in CORS_PATTERNS:
@@ -82,5 +82,8 @@ def validate(job_dir: Path) -> dict:
 
 
 _DANGEROUS_PACKAGES = {
-    "weasyprint", "selenium", "playwright", "scrapy",
+    "weasyprint",
+    "selenium",
+    "playwright",
+    "scrapy",
 }

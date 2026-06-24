@@ -1,4 +1,5 @@
 """Deployment Orchestrator — multi-target build, deploy, verify, rollback."""
+
 import json
 import logging
 import os
@@ -75,7 +76,11 @@ class DeploymentOrchestrator:
         health_check_url: str | None = None,
         run_browser_validation: bool = False,
     ) -> DeploymentSession:
-        dt = DeploymentTarget(target.lower()) if target.lower() in [t.value for t in DeploymentTarget] else DeploymentTarget.DOCKER
+        dt = (
+            DeploymentTarget(target.lower())
+            if target.lower() in [t.value for t in DeploymentTarget]
+            else DeploymentTarget.DOCKER
+        )
         session = DeploymentSession(job_id=job_id, project_dir=project_dir, target=dt)
         with self._lock:
             self.sessions[session.id] = session
@@ -160,7 +165,10 @@ class DeploymentOrchestrator:
                 )
             r = subprocess.run(
                 ["docker", "build", "-t", f"autodev-{project.name}", "."],
-                cwd=str(project), capture_output=True, text=True, timeout=300,
+                cwd=str(project),
+                capture_output=True,
+                text=True,
+                timeout=300,
             )
             return r.returncode == 0, r.stdout + r.stderr
         except Exception as exc:
@@ -170,8 +178,12 @@ class DeploymentOrchestrator:
         try:
             vercel_json = project / "vercel.json"
             if not vercel_json.exists():
-                vercel_json.write_text(json.dumps({"version": 2, "builds": [{"src": "**/*.py", "use": "@vercel/python"}]}))
-            r = subprocess.run(["npx", "vercel", "build"], cwd=str(project), capture_output=True, text=True, timeout=120)
+                vercel_json.write_text(
+                    json.dumps({"version": 2, "builds": [{"src": "**/*.py", "use": "@vercel/python"}]})
+                )
+            r = subprocess.run(
+                ["npx", "vercel", "build"], cwd=str(project), capture_output=True, text=True, timeout=120
+            )
             return r.returncode == 0, r.stdout + r.stderr
         except Exception as exc:
             return False, str(exc)
@@ -180,7 +192,7 @@ class DeploymentOrchestrator:
         try:
             toml = project / "netlify.toml"
             if not toml.exists():
-                toml.write_text("[build]\n  command = \"echo 'built'\"\n  publish = \".\"\n")
+                toml.write_text('[build]\n  command = "echo \'built\'"\n  publish = "."\n')
             return True, "Netlify build prepared"
         except Exception as exc:
             return False, str(exc)
@@ -208,6 +220,7 @@ class DeploymentOrchestrator:
     def _deploy_docker(self, project: Path) -> Tuple[bool, str, str | None]:
         try:
             from services.container_manager import ContainerManager
+
             cm = ContainerManager()
             container = cm.create_container(
                 image=f"autodev-{project.name}",
@@ -231,21 +244,27 @@ class DeploymentOrchestrator:
         try:
             render_yaml = project / "render.yaml"
             if not render_yaml.exists():
-                render_yaml.write_text(f"services:\n  - type: web\n    name: {project.name}\n    env: python\n    buildCommand: pip install -r requirements.txt\n    startCommand: python main.py\n")
+                render_yaml.write_text(
+                    f"services:\n  - type: web\n    name: {project.name}\n    env: python\n    buildCommand: pip install -r requirements.txt\n    startCommand: python main.py\n"
+                )
             return True, "Render config generated", "https://mock.onrender.com"
         except Exception as exc:
             return False, str(exc), None
 
     def _deploy_vercel(self, project: Path) -> Tuple[bool, str, str | None]:
         try:
-            r = subprocess.run(["npx", "vercel", "--prod"], cwd=str(project), capture_output=True, text=True, timeout=120)
+            r = subprocess.run(
+                ["npx", "vercel", "--prod"], cwd=str(project), capture_output=True, text=True, timeout=120
+            )
             return r.returncode == 0, r.stdout + r.stderr, f"https://{project.name}.vercel.app"
         except Exception:
             return True, "Vercel CLI not available (mock deploy)", "https://mock.vercel.app"
 
     def _deploy_netlify(self, project: Path) -> Tuple[bool, str, str | None]:
         try:
-            r = subprocess.run(["npx", "netlify", "deploy", "--prod"], cwd=str(project), capture_output=True, text=True, timeout=120)
+            r = subprocess.run(
+                ["npx", "netlify", "deploy", "--prod"], cwd=str(project), capture_output=True, text=True, timeout=120
+            )
             return r.returncode == 0, r.stdout + r.stderr, "https://mock.netlify.app"
         except Exception:
             return True, "Netlify CLI not available (mock deploy)", "https://mock.netlify.app"
@@ -254,13 +273,16 @@ class DeploymentOrchestrator:
         try:
             fly_toml = project / "fly.toml"
             if not fly_toml.exists():
-                fly_toml.write_text(f"app = '{project.name}'\n[env]\n  PORT = '8080'\n[[services]]\n  internal_port = 8080\n")
+                fly_toml.write_text(
+                    f"app = '{project.name}'\n[env]\n  PORT = '8080'\n[[services]]\n  internal_port = 8080\n"
+                )
             return True, "Fly.io config generated", "https://mock.fly.dev"
         except Exception as exc:
             return False, str(exc), None
 
     def _health_check(self, url: str) -> bool:
         import httpx
+
         for attempt in range(5):
             try:
                 r = httpx.get(url, timeout=5)
@@ -273,6 +295,7 @@ class DeploymentOrchestrator:
     def _browser_validate(self, url: str) -> bool:
         try:
             from services.browser_validation_service import ValidationStep, get_validation_service
+
             vs = get_validation_service()
             journey = vs.create_journey(f"Deploy-validate-{uuid.uuid4().hex[:6]}", url)
             vs.add_step(journey.id, ValidationStep(action="navigate", url=url, description="Deployment check"))
@@ -288,6 +311,7 @@ class DeploymentOrchestrator:
         try:
             if session.target == DeploymentTarget.DOCKER:
                 from services.container_manager import ContainerManager
+
                 for cid in list(ContainerManager().containers.keys()):
                     ContainerManager().destroy_container(cid)
             session.status = DeploymentStatus.ROLLED_BACK

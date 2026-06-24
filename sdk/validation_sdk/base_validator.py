@@ -1,4 +1,5 @@
 """Base Validator SDK — interface for creating custom validators."""
+
 import logging
 import uuid
 from abc import ABC, abstractmethod
@@ -33,8 +34,7 @@ class BaseValidator(ABC):
         self._logger = logging.getLogger(f"validator.{self.__class__.__name__}")
 
     @abstractmethod
-    def validate(self, target: Any) -> ValidationReport:
-        ...
+    def validate(self, target: Any) -> ValidationReport: ...
 
     def add_rule(self, rule: ValidationRule) -> None:
         self.rules.append(rule)

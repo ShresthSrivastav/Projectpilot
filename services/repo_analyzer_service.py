@@ -11,6 +11,7 @@ Workflow:
   8. Commit changes to a new branch
   9. Create pull request via GitHub API
 """
+
 import logging
 import os
 import re
@@ -84,7 +85,12 @@ def analyze_repository(repo_path: str, job_id: str | None = None, model: str = "
     _write_report(path, "quality_report.md", _format_quality_report(quality, code_smells))
     _write_report(path, "test_coverage_report.md", _format_coverage_report(coverage))
 
-    logger.info("Repository analysis complete for %s: %d files, %d issues", repo_path, len(files), len(code_smells) + len(security))
+    logger.info(
+        "Repository analysis complete for %s: %d files, %d issues",
+        repo_path,
+        len(files),
+        len(code_smells) + len(security),
+    )
     return results
 
 
@@ -192,9 +198,18 @@ def _detect_languages(files: dict[str, str]) -> dict[str, int]:
         ext = Path(name).suffix
         if ext:
             ext_count[ext] += 1
-    lang_map = {".py": "Python", ".js": "JavaScript", ".ts": "TypeScript",
-                ".jsx": "React JSX", ".tsx": "React TSX", ".html": "HTML",
-                ".css": "CSS", ".json": "JSON", ".yaml": "YAML", ".yml": "YAML"}
+    lang_map = {
+        ".py": "Python",
+        ".js": "JavaScript",
+        ".ts": "TypeScript",
+        ".jsx": "React JSX",
+        ".tsx": "React TSX",
+        ".html": "HTML",
+        ".css": "CSS",
+        ".json": "JSON",
+        ".yaml": "YAML",
+        ".yml": "YAML",
+    }
     return {lang_map.get(k, k): v for k, v in sorted(ext_count.items(), key=lambda x: -x[1])}
 
 
@@ -213,7 +228,7 @@ def _build_dependency_graph(files: dict[str, str], base_path: Path) -> dict[str,
         deps = []
         ext = Path(name).suffix
         if ext == ".py":
-            for m in re.finditer(r'(?:import|from)\s+(\S+)', content):
+            for m in re.finditer(r"(?:import|from)\s+(\S+)", content):
                 mod = m.group(1).split(".")[0]
                 if mod and mod not in ("os", "sys", "re", "json", "typing", "datetime", "pathlib"):
                     deps.append(mod)
@@ -264,31 +279,66 @@ def _detect_code_smells(files: dict[str, str], base_path: Path) -> list[dict]:
             continue
         lines = content.split("\n")
         if len(lines) > 300:
-            smells.append({"file": name, "line": 1, "type": "large_file", "severity": "medium",
-                           "message": f"File has {len(lines)} lines. Consider splitting into smaller modules."})
+            smells.append(
+                {
+                    "file": name,
+                    "line": 1,
+                    "type": "large_file",
+                    "severity": "medium",
+                    "message": f"File has {len(lines)} lines. Consider splitting into smaller modules.",
+                }
+            )
         for i, line in enumerate(lines, 1):
             stripped = line.strip()
             if len(stripped) > 150:
-                smells.append({"file": name, "line": i, "type": "long_line", "severity": "low",
-                               "message": f"Line has {len(stripped)} characters. Max recommended: 120."})
+                smells.append(
+                    {
+                        "file": name,
+                        "line": i,
+                        "type": "long_line",
+                        "severity": "low",
+                        "message": f"Line has {len(stripped)} characters. Max recommended: 120.",
+                    }
+                )
             if stripped.startswith("def ") or stripped.startswith("class "):
                 if i > 1 and lines[i - 2].strip() and not lines[i - 2].strip().startswith("#"):
                     pass
             if ext == ".py":
                 if "TODO" in stripped or "FIXME" in stripped or "HACK" in stripped:
-                    smells.append({"file": name, "line": i, "type": "todo_comment", "severity": "low",
-                                   "message": stripped.strip()})
+                    smells.append(
+                        {
+                            "file": name,
+                            "line": i,
+                            "type": "todo_comment",
+                            "severity": "low",
+                            "message": stripped.strip(),
+                        }
+                    )
                 if "print(" in stripped and not stripped.startswith("#"):
-                    smells.append({"file": name, "line": i, "type": "debug_print", "severity": "low",
-                                   "message": "Debug print statement in production code."})
+                    smells.append(
+                        {
+                            "file": name,
+                            "line": i,
+                            "type": "debug_print",
+                            "severity": "low",
+                            "message": "Debug print statement in production code.",
+                        }
+                    )
                 if "try:" in stripped:
                     # Check for bare except
                     pass
         # Check for bare except
-        for m in re.finditer(r'except\s*:', content):
-            line_num = content[:m.start()].count("\n") + 1
-            smells.append({"file": name, "line": line_num, "type": "bare_except", "severity": "high",
-                           "message": "Bare except clause catches all exceptions. Specify exception types."})
+        for m in re.finditer(r"except\s*:", content):
+            line_num = content[: m.start()].count("\n") + 1
+            smells.append(
+                {
+                    "file": name,
+                    "line": line_num,
+                    "type": "bare_except",
+                    "severity": "high",
+                    "message": "Bare except clause catches all exceptions. Specify exception types.",
+                }
+            )
     return smells
 
 
@@ -307,11 +357,16 @@ def _detect_security_issues(files: dict[str, str], base_path: Path) -> list[dict
     for name, content in files.items():
         for issue_type, pattern, severity in patterns:
             for m in re.finditer(pattern, content):
-                line_num = content[:m.start()].count("\n") + 1
-                issues.append({
-                    "file": name, "line": line_num, "type": issue_type,
-                    "severity": severity, "message": f"Potential {issue_type.replace('_', ' ')} detected.",
-                })
+                line_num = content[: m.start()].count("\n") + 1
+                issues.append(
+                    {
+                        "file": name,
+                        "line": line_num,
+                        "type": issue_type,
+                        "severity": severity,
+                        "message": f"Potential {issue_type.replace('_', ' ')} detected.",
+                    }
+                )
     return issues
 
 
@@ -322,8 +377,8 @@ def _assess_quality(files: dict[str, str], base_path: Path) -> dict:
     for name, content in files.items():
         ext = Path(name).suffix
         if ext == ".py":
-            function_count += len(re.findall(r'^\s*def ', content, re.MULTILINE))
-            class_count += len(re.findall(r'^\s*class ', content, re.MULTILINE))
+            function_count += len(re.findall(r"^\s*def ", content, re.MULTILINE))
+            class_count += len(re.findall(r"^\s*class ", content, re.MULTILINE))
             docstring_count += len(re.findall(r'"""', content)) // 2
     return {
         "total_functions": function_count,
@@ -346,7 +401,9 @@ def _assess_test_coverage(files: dict[str, str]) -> dict:
 
 def _find_missing_tests(files: dict[str, str]) -> list[str]:
     source_files = [f for f in files if not f.startswith("tests/") and not f.startswith("test_")]
-    test_files = {f.replace("tests/", "").replace("test_", "") for f in files if f.startswith("tests/") or f.startswith("test_")}
+    test_files = {
+        f.replace("tests/", "").replace("test_", "") for f in files if f.startswith("tests/") or f.startswith("test_")
+    }
     missing = []
     for sf in source_files:
         stem = Path(sf).stem
@@ -430,8 +487,13 @@ def _run_validation(base_path: Path) -> dict:
     test_files = list(test_dir.rglob("test_*.py"))
     if test_files:
         try:
-            r = subprocess.run(["python", "-m", "pytest", str(test_dir), "-x", "--tb=short", "-q"],
-                               capture_output=True, text=True, timeout=120, cwd=str(base_path))
+            r = subprocess.run(
+                ["python", "-m", "pytest", str(test_dir), "-x", "--tb=short", "-q"],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=str(base_path),
+            )
             result["tests_passed"] = r.returncode == 0
             result["test_output"] = r.stdout[-1000:] + r.stderr[-1000:]
         except Exception as exc:
@@ -492,10 +554,12 @@ def _format_architecture_report(results: dict) -> str:
     ]
     for folder, count in arch.get("folders", {}).items():
         lines.append(f"| {folder} | {count} |")
-    lines.extend([
-        "",
-        "## Entry Points",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Entry Points",
+        ]
+    )
     for ep in arch.get("entry_points", []):
         lines.append(f"- `{ep}`")
     lines.extend(["", "## Dependency Graph (top 20)", ""])
@@ -518,7 +582,9 @@ def _format_security_report(issues: list[dict]) -> str:
         "|----------|------|------|------|-------------|",
     ]
     for issue in sorted(issues, key=lambda x: {"high": 0, "medium": 1, "low": 2}.get(x.get("severity", "low"), 3)):
-        lines.append(f"| {issue.get('severity', 'low').upper()} | {issue.get('file', '')} | {issue.get('line', 0)} | {issue.get('type', '')} | {issue.get('message', '')} |")
+        lines.append(
+            f"| {issue.get('severity', 'low').upper()} | {issue.get('file', '')} | {issue.get('line', 0)} | {issue.get('type', '')} | {issue.get('message', '')} |"
+        )
     return "\n".join(lines)
 
 
@@ -539,7 +605,9 @@ def _format_quality_report(quality: dict, smells: list) -> str:
         "|----------|------|------|------|---------|",
     ]
     for s in sorted(smells, key=lambda x: {"high": 0, "medium": 1, "low": 2}.get(x.get("severity", "low"), 3)):
-        lines.append(f"| {s.get('severity', 'low').upper()} | {s.get('file', '')} | {s.get('line', '')} | {s.get('type', '')} | {s.get('message', '')} |")
+        lines.append(
+            f"| {s.get('severity', 'low').upper()} | {s.get('file', '')} | {s.get('line', '')} | {s.get('type', '')} | {s.get('message', '')} |"
+        )
     return "\n".join(lines)
 
 

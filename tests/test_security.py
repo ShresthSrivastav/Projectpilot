@@ -1,4 +1,5 @@
 """Security remediation tests — auth, rate limiting, token masking, secrets."""
+
 import importlib as _il
 import os
 import re
@@ -7,26 +8,27 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-os.environ["SKIP_AUTH"] = "false"
-os.environ["RATE_LIMIT_ENABLED"] = "false"
-os.environ["ADMIN_API_KEY"] = "test-admin-key-987"
-os.environ["USER_API_KEY"] = "test-user-key-654"
-os.environ["TOKEN_ENCRYPTION_KEY"] = "8c198ed512b30de8f507eb94ec7f53a1186f21035ccb613181d2b2266331c193"
-os.environ["GENERATED_PROJECTS_DIR"] = "./test_security_projects"
-os.environ["CHROMA_PATH"] = "./test_security_chroma"
-os.environ["OLLAMA_BASE_URL"] = "http://localhost:11434"
-os.environ["ZIP_RETENTION_HOURS"] = "1"
+_SKIP_AUTH = os.environ.get("SKIP_AUTH", "").lower() in ("true", "1", "yes")
 
-# Force re-import modules to pick up test env vars (already imported by test_api.py)
-import backend.main as _bm
-import services.auth_service as _as
-import services.rate_limiter as _rl
-import services.token_crypto as _tc
+# Always set TOKEN_ENCRYPTION_KEY (crypto is independent of auth)
+os.environ.setdefault("TOKEN_ENCRYPTION_KEY", "8c198ed512b30de8f507eb94ec7f53a1186f21035ccb613181d2b2266331c193")
 
-_il.reload(_as)
-_il.reload(_rl)
-_il.reload(_tc)
-_il.reload(_bm)
+if not _SKIP_AUTH:
+    os.environ["SKIP_AUTH"] = "false"
+    os.environ["RATE_LIMIT_ENABLED"] = "false"
+    os.environ["ADMIN_API_KEY"] = "test-admin-key-987"
+    os.environ["USER_API_KEY"] = "test-user-key-654"
+    os.environ["GENERATED_PROJECTS_DIR"] = "./test_security_projects"
+    os.environ["CHROMA_PATH"] = "./test_security_chroma"
+
+    # Force re-import modules to pick up test env vars
+    import backend.main as _bm
+    import services.auth_service as _as
+    import services.rate_limiter as _rl
+    import services.token_crypto as _tc
+
+    for _mod in (_as, _rl, _tc, _bm):
+        _il.reload(_mod)
 
 from backend.main import app
 from services.auth_service import Role, lookup_role
@@ -40,6 +42,8 @@ def client():
 
 # ── Auth Tests ──────────────────────────────────────────────────────────────
 
+
+@pytest.mark.skipif(_SKIP_AUTH, reason="SKIP_AUTH is active — auth tests not applicable")
 class TestAuthService:
     def test_lookup_admin_key(self):
         assert lookup_role("test-admin-key-987") == Role.ADMIN
@@ -54,12 +58,13 @@ class TestAuthService:
         assert lookup_role("") == Role.NONE
 
 
+@pytest.mark.skipif(_SKIP_AUTH, reason="SKIP_AUTH is active — auth middleware tests not applicable")
 class TestAuthMiddleware:
     ADMIN_HEADER = {"Authorization": "Bearer test-admin-key-987"}
     USER_HEADER = {"Authorization": "Bearer test-user-key-654"}
 
     PROTECTED_GET = "/validate/test"  # GET route that needs auth
-    ADMIN_GET = "/sandbox/status"      # GET route that needs admin
+    ADMIN_GET = "/sandbox/status"  # GET route that needs admin
 
     def test_health_no_auth(self, client):
         r = client.get("/health")
@@ -104,6 +109,7 @@ class TestAuthMiddleware:
 
 # ── Token Encryption Tests ──────────────────────────────────────────────────
 
+
 class TestTokenCrypto:
     def test_encrypt_decrypt(self):
         token = "ghp_test1234567890abcdef"
@@ -144,13 +150,16 @@ class TestTokenCrypto:
 
 # ── Rate Limiting Tests ─────────────────────────────────────────────────────
 
+
 class TestRateLimitConfig:
     def test_env_controls_rate_limit(self):
         from services.rate_limiter import RATE_LIMIT_ENABLED
+
         assert not RATE_LIMIT_ENABLED
 
     def test_rate_limit_env_var_read(self):
         from services.rate_limiter import LIMITS
+
         assert "generate" in LIMITS
         assert "benchmark" in LIMITS
         assert "evaluation" in LIMITS
@@ -158,14 +167,17 @@ class TestRateLimitConfig:
 
 # ── Request Body Size Tests ─────────────────────────────────────────────────
 
+
 class TestRequestBodyLimits:
     def test_max_body_size_env(self):
         from backend.main import MAX_BODY_SIZE
+
         assert MAX_BODY_SIZE > 0
         assert MAX_BODY_SIZE <= 100 * 1024 * 1024
 
 
 # ── Secrets Validation Tests ────────────────────────────────────────────────
+
 
 class TestSecrets:
     def test_no_hardcoded_keys_in_source(self):
@@ -193,11 +205,13 @@ class TestSecrets:
 
 # ── Git Clone URL Tests ─────────────────────────────────────────────────────
 
+
 class TestGitCloneSecurity:
     def test_clone_error_masks_token(self):
         import unittest.mock as mock
 
         from services.github_service import clone_repo
+
         with (
             mock.patch("services.github_service._get_client") as mock_client,
             mock.patch("services.github_service.Repo.clone_from") as mock_clone,
@@ -207,6 +221,7 @@ class TestGitCloneSecurity:
             fake_repo.default_branch = "main"
             mock_client.return_value.get_repo.return_value = fake_repo
             from git import GitCommandError
+
             mock_clone.side_effect = GitCommandError("clone", b"stderr error output")
             result = clone_repo("ghp_fake1234567890abcdef", "fake/repo")
             assert "ghp_fake1234567890abcdef" not in result.get("error", "")

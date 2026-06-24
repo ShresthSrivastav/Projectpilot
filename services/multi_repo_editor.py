@@ -1,4 +1,5 @@
 """Multi-Repository Editor — coordinated branch/commit/PR management across repositories."""
+
 import logging
 import subprocess
 import threading
@@ -66,7 +67,9 @@ class MultiRepoEditor:
         self._coordinated_changes: dict[str, CoordinatedChange] = {}
 
     def plan_change(
-        self, org_id: str, description: str,
+        self,
+        org_id: str,
+        description: str,
         repos: dict[str, dict[str, str]],
     ) -> CoordinatedChange:
         branch_name = f"auto-change-{uuid.uuid4().hex[:8]}"
@@ -130,15 +133,15 @@ class MultiRepoEditor:
                 rc.error = str(exc)
                 logger.warning("Failed to apply changes to %s: %s", repo_name, exc)
 
-        all_committed = all(
-            rc.status == ChangeStatus.COMMITTED for rc in cc.changes.values()
-        )
+        all_committed = all(rc.status == ChangeStatus.COMMITTED for rc in cc.changes.values())
         cc.status = ChangeStatus.COMMITTED if all_committed else ChangeStatus.FAILED
         cc.completed_at = time.time()
         return cc
 
     def create_prs(
-        self, change_id: str, github_token: str = "",
+        self,
+        change_id: str,
+        github_token: str = "",
         repo_full_names: dict[str, str] | None = None,
     ) -> CoordinatedChange:
         cc = self._get_change(change_id)
@@ -161,6 +164,7 @@ class MultiRepoEditor:
 
             try:
                 import requests
+
                 api_url = f"https://api.github.com/repos/{full_name}/pulls"
                 resp = requests.post(
                     api_url,
@@ -194,10 +198,7 @@ class MultiRepoEditor:
         return self._get_change(change_id)
 
     def list_changes(self, org_id: str) -> list[dict]:
-        return [
-            cc.to_dict() for cc in self._coordinated_changes.values()
-            if cc.org_id == org_id
-        ]
+        return [cc.to_dict() for cc in self._coordinated_changes.values() if cc.org_id == org_id]
 
     def _get_change(self, change_id: str) -> CoordinatedChange | None:
         with self._lock:
@@ -206,38 +207,58 @@ class MultiRepoEditor:
     def _git_checkout_branch(self, repo_path: Path, branch: str) -> None:
         result = subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            capture_output=True, text=True, cwd=str(repo_path), timeout=30,
+            capture_output=True,
+            text=True,
+            cwd=str(repo_path),
+            timeout=30,
         )
         current_branch = result.stdout.strip()
         if current_branch != branch:
             check_result = subprocess.run(
                 ["git", "rev-parse", "--verify", branch],
-                capture_output=True, text=True, cwd=str(repo_path), timeout=30,
+                capture_output=True,
+                text=True,
+                cwd=str(repo_path),
+                timeout=30,
             )
             if check_result.returncode == 0:
                 subprocess.run(
                     ["git", "checkout", branch],
-                    capture_output=True, cwd=str(repo_path), timeout=30, check=True,
+                    capture_output=True,
+                    cwd=str(repo_path),
+                    timeout=30,
+                    check=True,
                 )
             else:
                 subprocess.run(
                     ["git", "checkout", "-b", branch],
-                    capture_output=True, cwd=str(repo_path), timeout=30, check=True,
+                    capture_output=True,
+                    cwd=str(repo_path),
+                    timeout=30,
+                    check=True,
                 )
 
     def _git_commit(self, repo_path: Path, message: str, branch: str) -> None:
         subprocess.run(
             ["git", "add", "-A"],
-            capture_output=True, cwd=str(repo_path), timeout=30, check=True,
+            capture_output=True,
+            cwd=str(repo_path),
+            timeout=30,
+            check=True,
         )
         result = subprocess.run(
             ["git", "diff", "--cached", "--quiet"],
-            capture_output=True, cwd=str(repo_path), timeout=30,
+            capture_output=True,
+            cwd=str(repo_path),
+            timeout=30,
         )
         if result.returncode != 0:
             subprocess.run(
                 ["git", "commit", "-m", message],
-                capture_output=True, cwd=str(repo_path), timeout=30, check=True,
+                capture_output=True,
+                cwd=str(repo_path),
+                timeout=30,
+                check=True,
             )
 
 
@@ -250,6 +271,7 @@ def get_multi_repo_editor(graph: OrganizationGraph | None = None) -> MultiRepoEd
     with _editor_lock:
         if key not in _multi_repo_editors:
             from services.org_graph_service import get_org_graph_service
+
             g = graph or get_org_graph_service()
             _multi_repo_editors[key] = MultiRepoEditor(g)
         return _multi_repo_editors[key]

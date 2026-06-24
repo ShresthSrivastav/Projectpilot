@@ -1,4 +1,5 @@
 """Base Workflow SDK — interface for creating custom DAG workflows."""
+
 import logging
 import time
 import uuid
@@ -51,16 +52,13 @@ class BaseWorkflow(ABC):
         self._created_at: float = time.time()
 
     @abstractmethod
-    def build_graph(self) -> dict[str, WorkflowStep]:
-        ...
+    def build_graph(self) -> dict[str, WorkflowStep]: ...
 
     @abstractmethod
-    def execute(self) -> dict[str, Any]:
-        ...
+    def execute(self) -> dict[str, Any]: ...
 
     @abstractmethod
-    def monitor(self) -> dict[str, Any]:
-        ...
+    def monitor(self) -> dict[str, Any]: ...
 
     def add_step(self, step: WorkflowStep) -> None:
         step.id = step.id or step.name.lower().replace(" ", "_")
@@ -71,11 +69,13 @@ class BaseWorkflow(ABC):
 
     def save_checkpoint(self, data: dict[str, Any]) -> str:
         cpid = str(uuid.uuid4())
-        self._checkpoints.append({
-            "id": cpid,
-            "data": data,
-            "timestamp": time.time(),
-        })
+        self._checkpoints.append(
+            {
+                "id": cpid,
+                "data": data,
+                "timestamp": time.time(),
+            }
+        )
         return cpid
 
     def load_checkpoint(self, checkpoint_id: str) -> dict[str, Any] | None:

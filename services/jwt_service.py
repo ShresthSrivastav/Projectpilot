@@ -17,9 +17,11 @@ def _get_secret() -> str:
     global SECRET_KEY
     if SECRET_KEY is None:
         import os
+
         SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")
         if not SECRET_KEY:
             import secrets
+
             SECRET_KEY = secrets.token_hex(32)
     return SECRET_KEY
 

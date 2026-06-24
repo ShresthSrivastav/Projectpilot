@@ -1,4 +1,5 @@
 """Advanced Browser Validation — Playwright workflows, journey simulation, screenshot validation, regression testing."""
+
 import logging
 import os
 import threading
@@ -245,23 +246,59 @@ class BrowserValidationService:
             rel_path = file_info["path"]
 
             if "login" in content.lower() or "signin" in content.lower() or 'type="password"' in content:
-                steps.append(ValidationStep(action="navigate", url=f"{base_url}/login", description=f"Navigate to login page ({rel_path})"))
-                steps.append(ValidationStep(action="fill", selector="input[name='username'],input[name='email']", value="testuser",
-                                             description="Fill username"))
-                steps.append(ValidationStep(action="fill", selector="input[type='password']", value="testpass",
-                                             description="Fill password"))
-                steps.append(ValidationStep(action="click", selector="button[type='submit']", description="Submit login"))
-                steps.append(ValidationStep(action="check_url", expected_url="/dashboard", description="Verify redirect to dashboard"))
+                steps.append(
+                    ValidationStep(
+                        action="navigate", url=f"{base_url}/login", description=f"Navigate to login page ({rel_path})"
+                    )
+                )
+                steps.append(
+                    ValidationStep(
+                        action="fill",
+                        selector="input[name='username'],input[name='email']",
+                        value="testuser",
+                        description="Fill username",
+                    )
+                )
+                steps.append(
+                    ValidationStep(
+                        action="fill", selector="input[type='password']", value="testpass", description="Fill password"
+                    )
+                )
+                steps.append(
+                    ValidationStep(action="click", selector="button[type='submit']", description="Submit login")
+                )
+                steps.append(
+                    ValidationStep(
+                        action="check_url", expected_url="/dashboard", description="Verify redirect to dashboard"
+                    )
+                )
 
             if "form" in content.lower() or "<form" in content:
-                steps.append(ValidationStep(action="navigate", url=f"{base_url}/register", description=f"Navigate to form ({rel_path})"))
-                steps.append(ValidationStep(action="fill", selector="input:first-of-type", value="Test User",
-                                             description="Fill first field"))
-                steps.append(ValidationStep(action="click", selector="button[type='submit']", description="Submit form"))
+                steps.append(
+                    ValidationStep(
+                        action="navigate", url=f"{base_url}/register", description=f"Navigate to form ({rel_path})"
+                    )
+                )
+                steps.append(
+                    ValidationStep(
+                        action="fill", selector="input:first-of-type", value="Test User", description="Fill first field"
+                    )
+                )
+                steps.append(
+                    ValidationStep(action="click", selector="button[type='submit']", description="Submit form")
+                )
 
-            if content.count("/api/") > 0 or content.count('fetch(') > 0 or content.count('axios') > 0:
-                steps.append(ValidationStep(action="navigate", url=base_url, description=f"Navigate to app root ({rel_path})"))
-                steps.append(ValidationStep(action="screenshot", screenshot_name=f"app_root_{Path(rel_path).stem}", description="Take screenshot"))
+            if content.count("/api/") > 0 or content.count("fetch(") > 0 or content.count("axios") > 0:
+                steps.append(
+                    ValidationStep(action="navigate", url=base_url, description=f"Navigate to app root ({rel_path})")
+                )
+                steps.append(
+                    ValidationStep(
+                        action="screenshot",
+                        screenshot_name=f"app_root_{Path(rel_path).stem}",
+                        description="Take screenshot",
+                    )
+                )
 
         if steps:
             journey.steps = steps

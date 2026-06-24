@@ -8,6 +8,7 @@ Each dimension scores 0-100.  Overall score is weighted average:
   Docs          (10%)
   Deployment    (10%)
 """
+
 import logging
 import subprocess
 import sys
@@ -135,7 +136,10 @@ def _score_tests(job_dir: Path, gate_results: dict | None) -> dict:
     try:
         result = subprocess.run(
             [sys.executable, "-m", "pytest", str(test_dir), "--co", "-q"],
-            capture_output=True, text=True, timeout=30, cwd=str(job_dir),
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=str(job_dir),
         )
         collected = sum(1 for line in result.stdout.splitlines() if "test_" in line)
         score += min(20, collected * 2)
@@ -221,7 +225,7 @@ def _build_report(job_id: str, overall: float, dims: dict[str, dict]) -> str:
     for dim, data in dims.items():
         w = WEIGHTS[dim]
         ws = round(data["score"] * w, 1)
-        lines.append(f"| {dim.title()} | {data['score']}/100 | {w*100:.0f}% | {ws} |")
+        lines.append(f"| {dim.title()} | {data['score']}/100 | {w * 100:.0f}% | {ws} |")
 
     lines += ["", "### Details", ""]
     for dim, data in dims.items():

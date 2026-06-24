@@ -1,4 +1,5 @@
 """Planner / Architecture Agent — builds implementation blueprint."""
+
 import json
 import logging
 import re
@@ -40,12 +41,18 @@ def _parse_json(text: str) -> dict[str, Any]:
 def _default(req: dict) -> dict:
     pt = req.get("project_type", "crud_dashboard")
     tables = ["users"]
-    if "student"    in pt: tables.append("students")
-    elif "inventory" in pt: tables.append("products")
-    elif "task"     in pt: tables.append("tasks")
-    elif "employee" in pt: tables.append("employees")
-    elif "blog"     in pt: tables.extend(["posts", "comments"])
-    else:                  tables.append("items")
+    if "student" in pt:
+        tables.append("students")
+    elif "inventory" in pt:
+        tables.append("products")
+    elif "task" in pt:
+        tables.append("tasks")
+    elif "employee" in pt:
+        tables.append("employees")
+    elif "blog" in pt:
+        tables.extend(["posts", "comments"])
+    else:
+        tables.append("items")
 
     has_auth = req.get("auth_required", "auth" in str(req.get("features", [])).lower())
     auth_deps = ["pyjwt==2.8.0", "passlib[bcrypt]==1.7.4"] if has_auth else []
@@ -64,37 +71,42 @@ def _default(req: dict) -> dict:
     return {
         "folders": ["backend", "frontend", "database", "tests"],
         "files": [
-            {"path": "backend/main.py",    "purpose": f"{backend_fw.title()} application"},
-            {"path": "backend/crud.py",    "purpose": "Database CRUD operations"},
+            {"path": "backend/main.py", "purpose": f"{backend_fw.title()} application"},
+            {"path": "backend/crud.py", "purpose": "Database CRUD operations"},
             {"path": "database/models.py", "purpose": "SQLAlchemy ORM models"},
-            {"path": "database/db.py",     "purpose": "Database engine / session"},
-            {"path": "frontend/app.py",    "purpose": f"{frontend_fw.title()} UI"},
-            {"path": "requirements.txt",   "purpose": "Python dependencies"},
-            {"path": "Dockerfile",         "purpose": "Container definition"},
-            {"path": "README.md",          "purpose": "Project documentation"},
+            {"path": "database/db.py", "purpose": "Database engine / session"},
+            {"path": "frontend/app.py", "purpose": f"{frontend_fw.title()} UI"},
+            {"path": "requirements.txt", "purpose": "Python dependencies"},
+            {"path": "Dockerfile", "purpose": "Container definition"},
+            {"path": "README.md", "purpose": "Project documentation"},
         ],
         "routes": [
-            {"method": "POST",   "path": "/auth/login",    "description": "User login"},
-            {"method": "GET",    "path": "/items",         "description": "List all items"},
-            {"method": "POST",   "path": "/items",         "description": "Create item"},
-            {"method": "GET",    "path": "/items/{id}",    "description": "Get item by ID"},
-            {"method": "PUT",    "path": "/items/{id}",    "description": "Update item"},
-            {"method": "DELETE", "path": "/items/{id}",    "description": "Delete item"},
-            {"method": "GET",    "path": "/health",        "description": "Health check"},
+            {"method": "POST", "path": "/auth/login", "description": "User login"},
+            {"method": "GET", "path": "/items", "description": "List all items"},
+            {"method": "POST", "path": "/items", "description": "Create item"},
+            {"method": "GET", "path": "/items/{id}", "description": "Get item by ID"},
+            {"method": "PUT", "path": "/items/{id}", "description": "Update item"},
+            {"method": "DELETE", "path": "/items/{id}", "description": "Delete item"},
+            {"method": "GET", "path": "/health", "description": "Health check"},
         ],
         "db_tables": [
-            {"name": t, "columns": ["id:string", "created_at:datetime", "updated_at:datetime"]}
-            for t in tables
+            {"name": t, "columns": ["id:string", "created_at:datetime", "updated_at:datetime"]} for t in tables
         ],
-        "dependencies": backend_deps + frontend_deps + [
-            "sqlalchemy==2.0.30", "pydantic==2.7.1", "requests==2.32.3",
-            "python-multipart==0.0.9", "aiosqlite==0.20.0",
-        ] + auth_deps,
+        "dependencies": backend_deps
+        + frontend_deps
+        + [
+            "sqlalchemy==2.0.30",
+            "pydantic==2.7.1",
+            "requests==2.32.3",
+            "python-multipart==0.0.9",
+            "aiosqlite==0.20.0",
+        ]
+        + auth_deps,
         "tech_stack": {
-            "backend":  backend_fw.title(),
+            "backend": backend_fw.title(),
             "frontend": frontend_fw.title(),
-            "db":       "SQLite + SQLAlchemy",
-            "auth":     "JWT" if has_auth else "none",
+            "db": "SQLite + SQLAlchemy",
+            "auth": "JWT" if has_auth else "none",
         },
     }
 
@@ -115,8 +127,7 @@ def run(requirements: dict[str, Any], job_id: str, model: str = None) -> dict[st
         log_to_db(job_id, "PlannerAgent", f"Blueprint received from LLM ({elapsed}ms).")
     except (RuntimeError, ValueError) as exc:
         elapsed = int((time.monotonic() - t0) * 1000)
-        log_to_db(job_id, "PlannerAgent",
-                  f"LLM FAILED after {elapsed}ms: {exc} — using fallback blueprint", "CRITICAL")
+        log_to_db(job_id, "PlannerAgent", f"LLM FAILED after {elapsed}ms: {exc} — using fallback blueprint", "CRITICAL")
         blueprint = _default(requirements)
 
     # Fill in any missing top-level keys with sensible defaults
@@ -127,7 +138,8 @@ def run(requirements: dict[str, Any], job_id: str, model: str = None) -> dict[st
 
     save_blueprint(job_id, blueprint)
     log_to_db(
-        job_id, "PlannerAgent",
+        job_id,
+        "PlannerAgent",
         f"Blueprint ready — {len(blueprint.get('files', []))} files, "
         f"{len(blueprint.get('routes', []))} routes, "
         f"{len(blueprint.get('db_tables', []))} tables.",

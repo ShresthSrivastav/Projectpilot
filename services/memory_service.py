@@ -6,6 +6,7 @@ Provides high-level API for storing and retrieving:
 - Fix patterns that were successful
 - Project insights and learnings
 """
+
 import json
 import logging
 from typing import Any
@@ -37,22 +38,26 @@ def learn_from_project(job_id: str, requirements: dict, blueprint: dict, test_re
         test_passed = test_results.get("passed", False)
         if test_passed:
             insight_summary = f"Project {job_id} completed with all tests passing"
-            save_project_insight(job_id, "successful_generation", insight_summary,
-                                 json.dumps({"test_results": test_results}))
+            save_project_insight(
+                job_id, "successful_generation", insight_summary, json.dumps({"test_results": test_results})
+            )
         else:
             failures = test_results.get("failures", [])
             if failures:
                 insight_summary = f"Project {job_id} had {len(failures)} test failures"
-                save_project_insight(job_id, "test_failures", insight_summary,
-                                     json.dumps({"failures": failures[:5]}))
+                save_project_insight(job_id, "test_failures", insight_summary, json.dumps({"failures": failures[:5]}))
 
         feature_count = len(requirements.get("features", []))
         file_count = blueprint.get("file_count", 0)
         if feature_count > 0 and file_count > 0:
             ratio = round(file_count / feature_count, 1)
             insight_summary = f"Typical complexity: {ratio} files per feature"
-            save_project_insight(job_id, "complexity_pattern", insight_summary,
-                                 json.dumps({"features": feature_count, "files": file_count, "ratio": ratio}))
+            save_project_insight(
+                job_id,
+                "complexity_pattern",
+                insight_summary,
+                json.dumps({"features": feature_count, "files": file_count, "ratio": ratio}),
+            )
 
         insights["learned"] = True
     except Exception as exc:

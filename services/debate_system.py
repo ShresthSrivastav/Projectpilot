@@ -1,4 +1,5 @@
 """Multi-Agent Debate System — independent solvers, consensus, arbitration, quality scoring."""
+
 import json
 import logging
 import os
@@ -106,19 +107,24 @@ class DebateSystem:
     def _local_solver(self, topic: str, context: str = "", job_id: str = "") -> tuple[str, str, float]:
         result = call_model(
             f"Solve this programming task:\n\n{topic}\n\nContext:\n{context}\n\nProvide a complete solution.",
-            model="local", job_id=job_id or None, agent="DebateSolver_local",
+            model="local",
+            job_id=job_id or None,
+            agent="DebateSolver_local",
         )
         return result, "Using Ollama with local model for independent solution.", 0.7
 
     def _cloud_solver(self, topic: str, context: str = "", job_id: str = "") -> tuple[str, str, float]:
         result = call_model(
             f"Solve this programming task:\n\n{topic}\n\nContext:\n{context}\n\nProvide a comprehensive production-grade solution.",
-            model="cloud", job_id=job_id or None, agent="DebateSolver_cloud",
+            model="cloud",
+            job_id=job_id or None,
+            agent="DebateSolver_cloud",
         )
         return result, "Using Google Gemini for independent solution.", 0.8
 
-    def start_debate(self, topic: str, config: DebateConfig | None = None,
-                     context: str = "", job_id: str = "") -> DebateSession:
+    def start_debate(
+        self, topic: str, config: DebateConfig | None = None, context: str = "", job_id: str = ""
+    ) -> DebateSession:
         config = config or DebateConfig()
         session = DebateSession(topic=topic, config=config)
         session.metadata["context"] = context
@@ -155,10 +161,15 @@ class DebateSystem:
                     logger.info("Solver %s completed in %.0fms (confidence: %.2f)", solver_name, duration, confidence)
                 except Exception as exc:
                     logger.error("Solver %s failed: %s", solver_name, exc)
-                    session.results.append(SolverResult(
-                        solver_id=solver_name, solver_name=solver_name,
-                        solution="", reasoning=f"Solver failed: {exc}", confidence=0.0,
-                    ))
+                    session.results.append(
+                        SolverResult(
+                            solver_id=solver_name,
+                            solver_name=solver_name,
+                            solution="",
+                            reasoning=f"Solver failed: {exc}",
+                            confidence=0.0,
+                        )
+                    )
 
             valid_results = [r for r in session.results if r.solution and len(r.solution) > 50]
             if len(valid_results) < 2:
@@ -197,7 +208,8 @@ class DebateSystem:
     def _build_discussion_prompt(self, session: DebateSession, context: str) -> str:
         solutions_text = "\n\n".join(
             f"=== Solver {r.solver_name} ===\nConfidence: {r.confidence:.2f}\nReasoning: {r.reasoning}\nSolution:\n{r.solution[:2000]}"
-            for r in session.results if r.solution
+            for r in session.results
+            if r.solution
         )
         return (
             f"You are an arbiter for multiple AI solvers debating this topic:\n\n{session.topic}\n\n"
@@ -243,7 +255,9 @@ class DebateSystem:
         return best.solution, round(avg_confidence, 3)
 
     def _arbiter_consensus(self, session: DebateSession, results: list[SolverResult]) -> tuple[str, float]:
-        solutions_json = json.dumps([{"solver": r.solver_name, "solution": r.solution[:3000], "confidence": r.confidence} for r in results])
+        solutions_json = json.dumps(
+            [{"solver": r.solver_name, "solution": r.solution[:3000], "confidence": r.confidence} for r in results]
+        )
         prompt = (
             f"Debate topic: {session.topic}\n\n"
             f"Solutions from {len(results)} solvers:\n{solutions_json}\n\n"
@@ -296,12 +310,14 @@ class DebateSystem:
         scores = []
         for r in session.results:
             if r.solution:
-                scores.append({
-                    "solver": r.solver_name,
-                    "confidence": r.confidence,
-                    "solution_length": len(r.solution),
-                    "has_error": False,
-                })
+                scores.append(
+                    {
+                        "solver": r.solver_name,
+                        "confidence": r.confidence,
+                        "solution_length": len(r.solution),
+                        "has_error": False,
+                    }
+                )
             else:
                 scores.append({"solver": r.solver_name, "confidence": 0.0, "solution_length": 0, "has_error": True})
         return {

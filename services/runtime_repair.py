@@ -52,8 +52,7 @@ def validate_runtime(job_dir: Path, timeout: int = 30) -> dict[str, Any]:
 
     try:
         proc = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "backend.main:app",
-             "--host", "127.0.0.1", "--port", str(port)],
+            [sys.executable, "-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", str(port)],
             cwd=str(job_dir),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -84,6 +83,7 @@ def validate_runtime(job_dir: Path, timeout: int = 30) -> dict[str, Any]:
             try:
                 import urllib.request
                 import json
+
                 url = f"http://127.0.0.1:{port}/health"
                 req = urllib.request.Request(url, method="GET")
                 with urllib.request.urlopen(req, timeout=3) as resp:
@@ -91,7 +91,13 @@ def validate_runtime(job_dir: Path, timeout: int = 30) -> dict[str, Any]:
                         body = json.loads(resp.read().decode())
                         proc.terminate()
                         proc.wait(timeout=5)
-                        return {"passed": True, "error": None, "output": "\n".join(output_lines), "health": body, "port": port}
+                        return {
+                            "passed": True,
+                            "error": None,
+                            "output": "\n".join(output_lines),
+                            "health": body,
+                            "port": port,
+                        }
             except Exception:
                 pass
 
@@ -169,9 +175,12 @@ def auto_repair_runtime(
             _install_deps(job_dir, job_id, force=True)
 
     final_result = validate_runtime(job_dir)
-    log_to_db(job_id, "RuntimeRepair",
-              f"Runtime repair {'succeeded' if final_result['passed'] else 'failed'} "
-              f"after {MAX_RUNTIME_REPAIR_ATTEMPTS} attempt(s)")
+    log_to_db(
+        job_id,
+        "RuntimeRepair",
+        f"Runtime repair {'succeeded' if final_result['passed'] else 'failed'} "
+        f"after {MAX_RUNTIME_REPAIR_ATTEMPTS} attempt(s)",
+    )
 
     return {
         "success": final_result["passed"],
@@ -229,15 +238,16 @@ def _install_deps(job_dir: Path, job_id: str, force: bool = False) -> bool:
         log_to_db(job_id, "RuntimeRepair", "Installing dependencies...")
         result = subprocess.run(
             [sys.executable, "-m", "pip", "install", "-r", str(req_file)],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True,
+            text=True,
+            timeout=120,
             cwd=str(job_dir),
         )
         if result.returncode == 0:
             log_to_db(job_id, "RuntimeRepair", "Dependencies installed")
             return True
         else:
-            log_to_db(job_id, "RuntimeRepair",
-                      f"pip install warnings: {result.stderr[-200:]}", "WARNING")
+            log_to_db(job_id, "RuntimeRepair", f"pip install warnings: {result.stderr[-200:]}", "WARNING")
             return False
     except subprocess.TimeoutExpired:
         log_to_db(job_id, "RuntimeRepair", "pip install timed out", "WARNING")
@@ -263,7 +273,9 @@ def _analyze_and_fix(
         try:
             result = subprocess.run(
                 [sys.executable, "-m", "pip", "install", missing_mod],
-                capture_output=True, text=True, timeout=60,
+                capture_output=True,
+                text=True,
+                timeout=60,
             )
             if result.returncode == 0:
                 log_to_db(job_id, "RuntimeRepair", f"Installed missing module: {missing_mod}")
@@ -307,8 +319,7 @@ def _analyze_and_fix(
 
         if response.startswith("INSTALL:"):
             pkg = response.split(":", 1)[1].strip()
-            subprocess.run([sys.executable, "-m", "pip", "install", pkg],
-                           capture_output=True, text=True, timeout=60)
+            subprocess.run([sys.executable, "-m", "pip", "install", pkg], capture_output=True, text=True, timeout=60)
             return f"llm_install:{pkg}"
 
         elif response.startswith("PATCH:"):

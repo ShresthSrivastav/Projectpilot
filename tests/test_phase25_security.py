@@ -7,6 +7,7 @@ Tests:
   4. Analytics/metrics workspace scoping
   5. Stress tests (concurrent agent execution, switching, knowledge retrieval)
 """
+
 import gc
 import os
 import tempfile
@@ -59,12 +60,15 @@ client = TestClient(app)
 
 
 def _register(name: str, email: str) -> dict:
-    resp = client.post("/api/auth/register", json={
-        "name": name,
-        "email": email,
-        "password": "password123",
-        "confirm_password": "password123",
-    })
+    resp = client.post(
+        "/api/auth/register",
+        json={
+            "name": name,
+            "email": email,
+            "password": "password123",
+            "confirm_password": "password123",
+        },
+    )
     assert resp.status_code == 200, f"Register failed: {resp.text}"
     return resp.json()
 
@@ -80,6 +84,7 @@ def setup_db():
     app.dependency_overrides[get_db] = override_get_db
     init_memory_db()
     from services.audit_service import init_audit_db
+
     init_audit_db()
     yield
     app.dependency_overrides.clear()
@@ -90,11 +95,12 @@ def setup_db():
 # Section 1: Agent Context Propagation
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class TestAgentContextPropagation:
     def test_agent_context_dataclass(self):
         from services.agent_context import AgentContext
-        ctx = AgentContext(workspace_id="ws-1", user_id="u1", job_id="job-1",
-                           project_name="Test", request_id="req-1")
+
+        ctx = AgentContext(workspace_id="ws-1", user_id="u1", job_id="job-1", project_name="Test", request_id="req-1")
         assert ctx.workspace_id == "ws-1"
         assert ctx.job_id == "job-1"
         assert ctx.is_isolated is True
@@ -106,8 +112,7 @@ class TestAgentContextPropagation:
         from services.agent_context import AgentContext
         from agents.orchestrator_agent import Orchestrator
 
-        ctx = AgentContext(workspace_id="orchestrator-test-ws", job_id="test-job",
-                           project_name="Test")
+        ctx = AgentContext(workspace_id="orchestrator-test-ws", job_id="test-job", project_name="Test")
         orch = Orchestrator(context=ctx, prompt="test", model="local")
         assert orch._ws == "orchestrator-test-ws"
         assert orch.job_id == "test-job"
@@ -115,10 +120,18 @@ class TestAgentContextPropagation:
     def test_chromadb_operations_use_explicit_workspace_id(self):
         """All key ChromaDB operations must accept and respect workspace_id."""
         from database.chroma_db import (
-            create_job, get_job, update_job_status,
-            save_prompt, log_to_db, save_requirements, get_requirements,
-            save_blueprint, get_blueprint, save_generated_project,
+            create_job,
+            get_job,
+            update_job_status,
+            save_prompt,
+            log_to_db,
+            save_requirements,
+            get_requirements,
+            save_blueprint,
+            get_blueprint,
+            save_generated_project,
         )
+
         ws_a = "agent-test-ws-a"
         ws_b = "agent-test-ws-b"
 
@@ -126,8 +139,7 @@ class TestAgentContextPropagation:
         for ws in [ws_a, ws_b]:
             create_job("agent-ctx-job", workspace_id=ws)
             save_prompt("agent-ctx-job", "test prompt", "Test", workspace_id=ws)
-            update_job_status("agent-ctx-job", "running", workspace_id=ws,
-                              current_agent="test", progress_pct=50)
+            update_job_status("agent-ctx-job", "running", workspace_id=ws, current_agent="test", progress_pct=50)
             log_to_db("agent-ctx-job", "TestAgent", "test log", workspace_id=ws)
             save_requirements("agent-ctx-job", {"req": True}, workspace_id=ws)
             save_blueprint("agent-ctx-job", {"bp": True}, workspace_id=ws)
@@ -144,6 +156,7 @@ class TestAgentContextPropagation:
     def test_agent_log_isolated(self):
         """log_to_db with workspace_id writes to the correct collection."""
         from database.chroma_db import log_to_db, get_logs
+
         ws_a = "log-test-ws-a"
         ws_b = "log-test-ws-b"
 
@@ -164,18 +177,15 @@ class TestAgentContextPropagation:
     def test_agent_memory_propagated_with_workspace(self):
         """Agent memory stored with workspace_id is isolated."""
         from database.memory_store import store_agent_memory, get_agent_memory
+
         ws_a = "mem-propagate-ws-a"
         ws_b = "mem-propagate-ws-b"
 
-        store_agent_memory("PlannerAgent", "job-1", "preferred_framework", "FastAPI",
-                          workspace_id=ws_a)
-        store_agent_memory("PlannerAgent", "job-2", "preferred_framework", "Django",
-                          workspace_id=ws_b)
+        store_agent_memory("PlannerAgent", "job-1", "preferred_framework", "FastAPI", workspace_id=ws_a)
+        store_agent_memory("PlannerAgent", "job-2", "preferred_framework", "Django", workspace_id=ws_b)
 
-        mem_a = get_agent_memory("PlannerAgent", key="preferred_framework",
-                                 workspace_id=ws_a)
-        mem_b = get_agent_memory("PlannerAgent", key="preferred_framework",
-                                 workspace_id=ws_b)
+        mem_a = get_agent_memory("PlannerAgent", key="preferred_framework", workspace_id=ws_a)
+        mem_b = get_agent_memory("PlannerAgent", key="preferred_framework", workspace_id=ws_b)
 
         vals_a = [m["value"] for m in mem_a]
         vals_b = [m["value"] for m in mem_b]
@@ -187,13 +197,12 @@ class TestAgentContextPropagation:
     def test_analytics_recorded_with_workspace(self):
         """Project analytics are scoped to workspace."""
         from database.memory_store import record_project_analytics, get_project_analytics
+
         ws_a = "analytics-propagate-a"
         ws_b = "analytics-propagate-b"
 
-        record_project_analytics("proj-1", project_name="Project A",
-                                 workspace_id=ws_a)
-        record_project_analytics("proj-2", project_name="Project B",
-                                 workspace_id=ws_b)
+        record_project_analytics("proj-1", project_name="Project A", workspace_id=ws_a)
+        record_project_analytics("proj-2", project_name="Project B", workspace_id=ws_b)
 
         a_projs = get_project_analytics(workspace_id=ws_a)
         b_projs = get_project_analytics(workspace_id=ws_b)
@@ -210,10 +219,12 @@ class TestAgentContextPropagation:
 # Section 2: RAG Workspace Isolation
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class TestRAGWorkspaceIsolation:
     def test_rag_upload_requires_workspace(self):
         from services.rag_service import upload_document
         import tempfile
+
         f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
         f.write("test content")
         f.close()
@@ -271,11 +282,13 @@ class TestRAGWorkspaceIsolation:
 
     def test_rag_query_empty_without_workspace(self):
         from services.rag_service import query, list_documents
+
         assert query("test", workspace_id="") == []
         assert list_documents(workspace_id="") == []
 
     def test_rag_delete_requires_workspace(self):
         from services.rag_service import delete_document
+
         assert delete_document("any-id", workspace_id="") is False
 
     def test_rag_document_has_workspace_metadata(self):
@@ -298,6 +311,7 @@ class TestRAGWorkspaceIsolation:
 
     def test_get_workspace_knowledge_collection(self):
         from services.rag_service import get_workspace_knowledge_collection
+
         coll = get_workspace_knowledge_collection("test-ws")
         assert coll is not None
         assert coll.name == "workspace_test-ws_knowledge"
@@ -307,6 +321,7 @@ class TestRAGWorkspaceIsolation:
 # Section 3: Membership Security
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class TestMembershipSecurity:
     def test_non_member_cannot_list_members(self):
         a = _register("Alice", "alice_memsec@test.com")
@@ -315,8 +330,7 @@ class TestMembershipSecurity:
         b_ws_id = b_ws[0]["id"]
 
         # Alice tries to list Bob's workspace members by ID
-        members = client.get(f"/api/workspace/members/{b_ws_id}",
-                             headers=_auth_header(a["access_token"]))
+        members = client.get(f"/api/workspace/members/{b_ws_id}", headers=_auth_header(a["access_token"]))
         assert members.status_code == 403, "Non-member must get 403"
 
     def test_member_can_list_members(self):
@@ -326,20 +340,23 @@ class TestMembershipSecurity:
         owner_ws_id = owner_ws[0]["id"]
 
         # Switch owner to their workspace
-        switch = client.post("/api/workspace/switch", json={"workspace_id": owner_ws_id},
-                             headers=_auth_header(owner["access_token"])).json()
+        switch = client.post(
+            "/api/workspace/switch", json={"workspace_id": owner_ws_id}, headers=_auth_header(owner["access_token"])
+        ).json()
         owner_token = switch["access_token"]
 
         # Invite user
-        invite = client.post("/api/workspace/current/invite",
-                             json={"email": "user_memsec@test.com", "role": "MEMBER"},
-                             headers=_auth_header(owner_token)).json()
-        client.post("/api/workspace/accept", json={"token": invite["token"]},
-                    headers=_auth_header(user["access_token"]))
+        invite = client.post(
+            "/api/workspace/current/invite",
+            json={"email": "user_memsec@test.com", "role": "MEMBER"},
+            headers=_auth_header(owner_token),
+        ).json()
+        client.post(
+            "/api/workspace/accept", json={"token": invite["token"]}, headers=_auth_header(user["access_token"])
+        )
 
         # Now user can list members
-        members = client.get(f"/api/workspace/members/{owner_ws_id}",
-                             headers=_auth_header(user["access_token"]))
+        members = client.get(f"/api/workspace/members/{owner_ws_id}", headers=_auth_header(user["access_token"]))
         assert members.status_code == 200
         data = members.json()
         assert any(m["name"] == "Owner" for m in data)
@@ -350,9 +367,11 @@ class TestMembershipSecurity:
 # Section 4: Analytics/Metrics Scoping
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class TestAnalyticsScoping:
     def test_analytics_overview_scoped(self):
         from database.memory_store import record_project_analytics, get_analytics_summary
+
         ws_a = "analytics-scope-ws-a"
         ws_b = "analytics-scope-ws-b"
 
@@ -367,10 +386,12 @@ class TestAnalyticsScoping:
 
     def test_analytics_projects_scoped(self):
         from database.memory_store import get_project_analytics
+
         ws_a = "analytics-proj-scope-a"
         ws_b = "analytics-proj-scope-b"
 
         from database.memory_store import record_project_analytics
+
         record_project_analytics("job-a1", project_name="Project A1", workspace_id=ws_a)
         record_project_analytics("job-a2", project_name="Project A2", workspace_id=ws_a)
         record_project_analytics("job-b1", project_name="Project B1", workspace_id=ws_b)
@@ -384,8 +405,7 @@ class TestAnalyticsScoping:
     def test_metrics_scoped(self):
         """Verify that metrics endpoint is available and returns data."""
         reg = _register("MetricsUser", "metrics@test.com")
-        ws = client.get("/api/workspace/current",
-                        headers=_auth_header(reg["access_token"])).json()
+        ws = client.get("/api/workspace/current", headers=_auth_header(reg["access_token"])).json()
 
         resp = client.get("/metrics", headers=_auth_header(reg["access_token"]))
         assert resp.status_code == 200
@@ -397,13 +417,13 @@ class TestAnalyticsScoping:
 # Section 5: Stress Tests
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class TestPhase25Stress:
     def test_concurrent_workspace_switching(self):
         reg = _register("Stress", "stress_p25@test.com")
         n = 5
         ws_list = [
-            client.post("/api/workspace", json={"name": f"SWS {i}"},
-                        headers=_auth_header(reg["access_token"])).json()
+            client.post("/api/workspace", json={"name": f"SWS {i}"}, headers=_auth_header(reg["access_token"])).json()
             for i in range(n)
         ]
 
@@ -411,11 +431,10 @@ class TestPhase25Stress:
 
         def switch_and_verify(ws_info):
             token = reg["access_token"]
-            switch = client.post("/api/workspace/switch",
-                                 json={"workspace_id": ws_info["id"]},
-                                 headers=_auth_header(token)).json()
-            current = client.get("/api/workspace/current",
-                                 headers=_auth_header(switch["access_token"])).json()
+            switch = client.post(
+                "/api/workspace/switch", json={"workspace_id": ws_info["id"]}, headers=_auth_header(token)
+            ).json()
+            current = client.get("/api/workspace/current", headers=_auth_header(switch["access_token"])).json()
             return current["id"] == ws_info["id"]
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=n) as exe:
@@ -435,8 +454,7 @@ class TestPhase25Stress:
             f = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
             f.write(f"This is document {i} from workspace stress test")
             f.close()
-            result = upload_document(f.name, tags=[f"tag-{i}"], workspace_id=ws,
-                                     uploaded_by="stress-tester")
+            result = upload_document(f.name, tags=[f"tag-{i}"], workspace_id=ws, uploaded_by="stress-tester")
             os.unlink(f.name)
             return result["status"] == "ok"
 
@@ -456,11 +474,8 @@ class TestPhase25Stress:
         reg = _register("RapidP25", "rapid_p25@test.com")
         token = reg["access_token"]
         for i in range(20):
-            ws = client.post("/api/workspace", json={"name": f"Rapid P25 WS {i}"},
-                             headers=_auth_header(token)).json()
-            switch = client.post("/api/workspace/switch",
-                                 json={"workspace_id": ws["id"]},
-                                 headers=_auth_header(token))
+            ws = client.post("/api/workspace", json={"name": f"Rapid P25 WS {i}"}, headers=_auth_header(token)).json()
+            switch = client.post("/api/workspace/switch", json={"workspace_id": ws["id"]}, headers=_auth_header(token))
             assert switch.status_code == 200, f"Create+switch {i} failed"
             token = switch.json()["access_token"]
 
@@ -469,8 +484,10 @@ class TestPhase25Stress:
 # Cleanup
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 def teardown_module():
     import shutil
+
     mem_dir = os.environ.get("MEMORY_STORE_DIR", "")
     chroma_dir = os.environ.get("CHROMA_PATH", "")
     for d in [mem_dir, chroma_dir]:

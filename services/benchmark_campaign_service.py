@@ -49,8 +49,14 @@ class CampaignRunResult:
 
 
 DOMAIN_METRICS_ORDER = [
-    "hotel_booking", "ecommerce", "blog_cms", "task_manager",
-    "expense_tracker", "chat_app", "lms", "property_management",
+    "hotel_booking",
+    "ecommerce",
+    "blog_cms",
+    "task_manager",
+    "expense_tracker",
+    "chat_app",
+    "lms",
+    "property_management",
 ]
 
 
@@ -89,6 +95,7 @@ class BenchmarkCampaignService:
 
         if not domains:
             from services.benchmark_service import get_benchmark_service
+
             bsvc = get_benchmark_service()
             domains = [d["id"] for d in bsvc.list_domains()]
 
@@ -99,13 +106,15 @@ class BenchmarkCampaignService:
             "id": campaign_id,
             "name": name or f"Campaign-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
             "status": "pending",
-            "config": json.dumps({
-                "domains": domains,
-                "runs_per_domain": runs_per_domain,
-                "parallel": parallel,
-                "max_workers": max_workers,
-                "model": model,
-            }),
+            "config": json.dumps(
+                {
+                    "domains": domains,
+                    "runs_per_domain": runs_per_domain,
+                    "parallel": parallel,
+                    "max_workers": max_workers,
+                    "model": model,
+                }
+            ),
             "total_runs": total_runs,
             "completed_runs": 0,
             "failed_runs": 0,
@@ -203,6 +212,7 @@ class BenchmarkCampaignService:
             except Exception as exc:
                 logger.warning("Campaign run %s/%s failed: %s", run["domain"], run["iteration"], exc)
                 from database.memory_store import mem_update_campaign_run
+
                 mem_update_campaign_run(run["id"], {"status": "failed", "error": str(exc)})
                 mem_update_campaign(campaign_id, {"failed_runs": None})  # placeholder, counted below
 
@@ -234,27 +244,36 @@ class BenchmarkCampaignService:
                 execution_time=getattr(metrics, "execution_time", 0.0),
                 cost=getattr(metrics, "cost", 0.0),
                 tests_generated=getattr(metrics, "feature_completeness", 0),
-                tests_passed=int(getattr(metrics, "test_pass_rate", 0) * max(getattr(metrics, "feature_completeness", 100), 1) / 100) if getattr(metrics, "test_pass_rate", 0) > 0 else 0,
-                healing_iterations=int(getattr(metrics, "self_healing_effectiveness", 0) / 10) if getattr(metrics, "self_healing_effectiveness", 0) > 0 else 0,
+                tests_passed=int(
+                    getattr(metrics, "test_pass_rate", 0) * max(getattr(metrics, "feature_completeness", 100), 1) / 100
+                )
+                if getattr(metrics, "test_pass_rate", 0) > 0
+                else 0,
+                healing_iterations=int(getattr(metrics, "self_healing_effectiveness", 0) / 10)
+                if getattr(metrics, "self_healing_effectiveness", 0) > 0
+                else 0,
                 deployment_success=getattr(metrics, "deployment_success_rate", 0) >= 80.0,
                 benchmark_success=result.status.value == "completed",
                 error=result.error or "",
                 completed_at=time.time(),
             )
 
-            mem_update_campaign_run(run["id"], {
-                "status": run_result.status,
-                "autonomy_score": run_result.autonomy_score,
-                "execution_time": run_result.execution_time,
-                "cost": run_result.cost,
-                "tests_generated": run_result.tests_generated,
-                "tests_passed": run_result.tests_passed,
-                "healing_iterations": run_result.healing_iterations,
-                "deployment_success": 1 if run_result.deployment_success else 0,
-                "benchmark_success": 1 if run_result.benchmark_success else 0,
-                "error": run_result.error,
-                "completed_at": run_result.completed_at,
-            })
+            mem_update_campaign_run(
+                run["id"],
+                {
+                    "status": run_result.status,
+                    "autonomy_score": run_result.autonomy_score,
+                    "execution_time": run_result.execution_time,
+                    "cost": run_result.cost,
+                    "tests_generated": run_result.tests_generated,
+                    "tests_passed": run_result.tests_passed,
+                    "healing_iterations": run_result.healing_iterations,
+                    "deployment_success": 1 if run_result.deployment_success else 0,
+                    "benchmark_success": 1 if run_result.benchmark_success else 0,
+                    "error": run_result.error,
+                    "completed_at": run_result.completed_at,
+                },
+            )
 
             self._save_run_result_file(run_result)
             self._update_campaign_counts(campaign_id)
@@ -269,14 +288,19 @@ class BenchmarkCampaignService:
 
     def _update_campaign_counts(self, campaign_id: str) -> None:
         from database.memory_store import mem_list_campaign_runs
+
         runs = mem_list_campaign_runs(campaign_id=campaign_id)
         completed = sum(1 for r in runs if r["status"] == "completed")
         failed = sum(1 for r in runs if r["status"] == "failed")
         from database.memory_store import mem_update_campaign
-        mem_update_campaign(campaign_id, {
-            "completed_runs": completed,
-            "failed_runs": failed,
-        })
+
+        mem_update_campaign(
+            campaign_id,
+            {
+                "completed_runs": completed,
+                "failed_runs": failed,
+            },
+        )
 
     def _finalize_campaign(self, campaign_id: str) -> None:
         from database.memory_store import mem_get_campaign, mem_list_campaign_runs, mem_update_campaign
@@ -294,12 +318,15 @@ class BenchmarkCampaignService:
             status = "failed"
         elif failed > 0 and completed > 0:
             status = "completed_with_errors"
-        mem_update_campaign(campaign_id, {
-            "status": status,
-            "completed_runs": completed,
-            "failed_runs": failed,
-            "completed_at": time.time(),
-        })
+        mem_update_campaign(
+            campaign_id,
+            {
+                "status": status,
+                "completed_runs": completed,
+                "failed_runs": failed,
+                "completed_at": time.time(),
+            },
+        )
 
         self._generate_domain_reports(campaign_id)
         self._generate_aggregate_report(campaign_id)
@@ -309,21 +336,24 @@ class BenchmarkCampaignService:
         """Feed campaign run results into the Learning Feedback Service."""
         try:
             from services.learning_feedback_service import get_learning_feedback_service
+
             learning = get_learning_feedback_service()
-            learning.ingest_benchmark_score({
-                "domain": run.domain,
-                "iteration": run.iteration,
-                "score": run.autonomy_score,
-                "status": run.status,
-                "execution_time": run.execution_time,
-                "cost": run.cost,
-                "tests_passed": run.tests_passed,
-                "tests_generated": run.tests_generated,
-                "deployment_success": run.deployment_success,
-                "healing_iterations": run.healing_iterations,
-                "category": "benchmark_performance",
-                "timestamp": run.completed_at,
-            })
+            learning.ingest_benchmark_score(
+                {
+                    "domain": run.domain,
+                    "iteration": run.iteration,
+                    "score": run.autonomy_score,
+                    "status": run.status,
+                    "execution_time": run.execution_time,
+                    "cost": run.cost,
+                    "tests_passed": run.tests_passed,
+                    "tests_generated": run.tests_generated,
+                    "deployment_success": run.deployment_success,
+                    "healing_iterations": run.healing_iterations,
+                    "category": "benchmark_performance",
+                    "timestamp": run.completed_at,
+                }
+            )
         except Exception as exc:
             logger.warning("Campaign learning feed failed: %s", exc)
 
@@ -338,6 +368,7 @@ class BenchmarkCampaignService:
 
     def resume_interrupted_campaign(self, campaign_id: str) -> dict[str, Any]:
         from database.memory_store import mem_get_campaign, mem_update_campaign
+
         campaign = mem_get_campaign(campaign_id)
         if not campaign:
             raise ValueError(f"Campaign not found: {campaign_id}")
@@ -348,6 +379,7 @@ class BenchmarkCampaignService:
 
     def detect_interrupted_campaigns(self) -> list[dict]:
         from database.memory_store import mem_list_campaigns
+
         campaigns = mem_list_campaigns()
         interrupted = []
         for c in campaigns:
@@ -361,6 +393,7 @@ class BenchmarkCampaignService:
 
     def _get_runs_for_campaign(self, campaign_id: str) -> list[dict]:
         from database.memory_store import mem_list_campaign_runs
+
         return mem_list_campaign_runs(campaign_id=campaign_id)
 
     def _generate_domain_reports(self, campaign_id: str) -> None:
@@ -474,17 +507,19 @@ class BenchmarkCampaignService:
                 key = (r["id"], r["iteration"])
                 if key not in seen:
                     seen.add(key)
-                    entries.append({
-                        "rank": 0,
-                        "domain": domain,
-                        "iteration": r["iteration"],
-                        "autonomy_score": r["autonomy_score"],
-                        "execution_time": r["execution_time"],
-                        "cost": r["cost"],
-                        "tests_passed": r["tests_passed"],
-                        "benchmark_success": r["benchmark_success"],
-                        "deployment_success": r["deployment_success"],
-                    })
+                    entries.append(
+                        {
+                            "rank": 0,
+                            "domain": domain,
+                            "iteration": r["iteration"],
+                            "autonomy_score": r["autonomy_score"],
+                            "execution_time": r["execution_time"],
+                            "cost": r["cost"],
+                            "tests_passed": r["tests_passed"],
+                            "benchmark_success": r["benchmark_success"],
+                            "deployment_success": r["deployment_success"],
+                        }
+                    )
 
         entries.sort(key=lambda x: x["autonomy_score"], reverse=True)
         for i, e in enumerate(entries):
@@ -523,6 +558,7 @@ class BenchmarkCampaignService:
 
     def get_campaign_status(self, campaign_id: str) -> dict[str, Any] | None:
         from database.memory_store import mem_get_campaign
+
         campaign = mem_get_campaign(campaign_id)
         if not campaign:
             return None
@@ -536,6 +572,7 @@ class BenchmarkCampaignService:
         domain: str | None = None,
     ) -> list[dict]:
         from database.memory_store import mem_list_campaign_runs
+
         return mem_list_campaign_runs(campaign_id=campaign_id, domain=domain)
 
     def get_campaign_report(
@@ -563,6 +600,7 @@ class BenchmarkCampaignService:
 
     def list_campaigns(self, limit: int = 50) -> list[dict]:
         from database.memory_store import mem_list_campaigns
+
         return mem_list_campaigns(limit=limit)
 
     def get_domain_report(self, campaign_id: str, domain: str) -> dict | None:

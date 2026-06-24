@@ -45,7 +45,7 @@ from services.security_validator import validate as validate_security
 logger = logging.getLogger(__name__)
 
 SKIP_RUNTIME = os.getenv("SKIP_RUNTIME_VALIDATION", "").lower() in ("true", "1", "yes")
-SKIP_IMPORT  = os.getenv("SKIP_IMPORT_VALIDATION", "").lower() in ("true", "1", "yes")
+SKIP_IMPORT = os.getenv("SKIP_IMPORT_VALIDATION", "").lower() in ("true", "1", "yes")
 
 
 def run_gates(
@@ -178,7 +178,9 @@ def run_gates(
     else:
         failed = [k for k, v in gate_results.items() if not v["passed"]]
         logger.warning("Acceptance gates FAILED for %s: %s (%dms)", job_id, failed, elapsed_ms)
-        log_to_db(job_id, "AcceptanceGates", f"{len(failed)}/{len(gate_results)} gates FAILED: {failed} ({elapsed_ms}ms)")
+        log_to_db(
+            job_id, "AcceptanceGates", f"{len(failed)}/{len(gate_results)} gates FAILED: {failed} ({elapsed_ms}ms)"
+        )
 
     return result
 
@@ -196,6 +198,7 @@ def _run_import_gate(job_dir: Path) -> dict:
 
 def _run_syntax_gate(job_dir: Path) -> dict:
     import py_compile
+
     errors = []
     files_checked = 0
     for py_file in sorted(job_dir.rglob("*.py")):
@@ -220,6 +223,7 @@ def _run_syntax_gate(job_dir: Path) -> dict:
 def _run_test_gate(job_dir: Path) -> dict:
     import subprocess
     import sys
+
     test_dirs = [job_dir / "tests", job_dir / "test"]
     test_dir = None
     for td in test_dirs:
@@ -231,7 +235,10 @@ def _run_test_gate(job_dir: Path) -> dict:
     try:
         result = subprocess.run(
             [sys.executable, "-m", "pytest", str(test_dir), "-v", "--tb=short", "--no-header", "-q"],
-            capture_output=True, text=True, timeout=120, cwd=str(job_dir),
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(job_dir),
         )
         output = result.stdout + result.stderr
         passed = result.returncode == 0
@@ -314,7 +321,10 @@ def _run_dependency_gate(job_dir: Path) -> dict:
         try:
             result = subprocess.run(
                 [sys.executable, "-m", "pip", "install", "-r", str(req_file), "--dry-run"],
-                capture_output=True, text=True, timeout=60, cwd=str(job_dir),
+                capture_output=True,
+                text=True,
+                timeout=60,
+                cwd=str(job_dir),
             )
             if result.returncode != 0:
                 errors.append(f"{req_file.name}: {result.stderr.strip()[-200:]}")
@@ -356,7 +366,10 @@ def _run_type_checking_gate(job_dir: Path) -> dict:
                 has_annotations = any(":" in p.strip() for p in params.split(",") if p.strip())
                 if not has_annotations and params.strip() and params.strip() != "self":
                     issues.append(f"{py_file.relative_to(job_dir)}: function '{fn}' has no type annotations")
-    return {"passed": len(issues) <= max(1, files_checked // 4), "details": {"files_checked": files_checked, "issues": issues[:20]}}
+    return {
+        "passed": len(issues) <= max(1, files_checked // 4),
+        "details": {"files_checked": files_checked, "issues": issues[:20]},
+    }
 
 
 def _run_db_migration_gate(job_dir: Path) -> dict:
@@ -374,7 +387,10 @@ def _run_db_migration_gate(job_dir: Path) -> dict:
         text = py_file.read_text(encoding="utf-8", errors="replace")
         if "Column(" in text or "relationship(" in text or "mapped_column" in text:
             models_found += 1
-    return {"passed": models_found > 0 or not has_sqlalchemy, "details": {"models_found": models_found, "issues": issues}}
+    return {
+        "passed": models_found > 0 or not has_sqlalchemy,
+        "details": {"models_found": models_found, "issues": issues},
+    }
 
 
 def _run_frontend_gate(job_dir: Path) -> dict:
@@ -392,7 +408,10 @@ def _run_frontend_gate(job_dir: Path) -> dict:
     for ht in html_templates:
         if not ht.read_text(encoding="utf-8", errors="replace").strip():
             issues.append(f"{ht.relative_to(job_dir)}: empty template")
-    return {"passed": len(issues) == 0, "details": {"templates": len(html_templates), "streamlit_files": len(streamlit_files), "issues": issues}}
+    return {
+        "passed": len(issues) == 0,
+        "details": {"templates": len(html_templates), "streamlit_files": len(streamlit_files), "issues": issues},
+    }
 
 
 def _run_api_gate(job_dir: Path) -> dict:
@@ -412,10 +431,10 @@ def _run_auth_gate(job_dir: Path) -> dict:
     protected_routes = 0
     for py_file in sorted(job_dir.rglob("*.py")):
         text = py_file.read_text(encoding="utf-8", errors="replace")
-        for m in re.finditer(r'@(?:app|router)\.(?:get|post|put|delete|patch)\s*\(', text):
+        for m in re.finditer(r"@(?:app|router)\.(?:get|post|put|delete|patch)\s*\(", text):
             start = max(0, m.start() - 200)
-            prefix = text[start:m.start()]
-            has_depends = "Depends" in text[m.start():m.end() + 500]
+            prefix = text[start : m.start()]
+            has_depends = "Depends" in text[m.start() : m.end() + 500]
             has_auth = "api_key" in prefix.lower() or "token" in prefix.lower() or "auth" in prefix.lower()
             if has_depends or has_auth:
                 protected_routes += 1
@@ -455,7 +474,14 @@ def _run_crud_gate(job_dir: Path) -> dict:
     if not models:
         return {"passed": True, "details": {"note": "No SQLAlchemy models found — skipping", "skipped": True}}
     all_crud = all(v > 0 for v in operations.values())
-    return {"passed": all_crud, "details": {"models": list(models), "operations": operations, "note": "All CRUD present" if all_crud else "Missing some CRUD operations"}}
+    return {
+        "passed": all_crud,
+        "details": {
+            "models": list(models),
+            "operations": operations,
+            "note": "All CRUD present" if all_crud else "Missing some CRUD operations",
+        },
+    }
 
 
 def _run_performance_gate(job_dir: Path) -> dict:
@@ -468,7 +494,13 @@ def _run_performance_gate(job_dir: Path) -> dict:
         size = ht.stat().st_size
         if size > 200000:
             large_files.append(str(ht.relative_to(job_dir)))
-    return {"passed": len(large_files) == 0, "details": {"large_files": large_files, "note": "Passes performance check" if not large_files else f"{len(large_files)} large file(s)"}}
+    return {
+        "passed": len(large_files) == 0,
+        "details": {
+            "large_files": large_files,
+            "note": "Passes performance check" if not large_files else f"{len(large_files)} large file(s)",
+        },
+    }
 
 
 def _run_documentation_gate(job_dir: Path) -> dict:
@@ -482,8 +514,17 @@ def _run_documentation_gate(job_dir: Path) -> dict:
         for m in re.finditer(r"(?:`|/)(?:api|endpoint|route)\s*/?\w+", text, re.IGNORECASE):
             endpoint_docs.add(m.group(0))
     if not endpoint_docs:
-        return {"passed": True, "details": {"note": "Documentation exists but no endpoint references — skipping cross-ref", "docs_count": len(docs_found)}}
-    return {"passed": True, "details": {"docs_count": len(docs_found), "endpoint_docs_referenced": len(endpoint_docs), "issues": issues}}
+        return {
+            "passed": True,
+            "details": {
+                "note": "Documentation exists but no endpoint references — skipping cross-ref",
+                "docs_count": len(docs_found),
+            },
+        }
+    return {
+        "passed": True,
+        "details": {"docs_count": len(docs_found), "endpoint_docs_referenced": len(endpoint_docs), "issues": issues},
+    }
 
 
 def _run_docker_gate(job_dir: Path) -> dict:
@@ -502,7 +543,15 @@ def _run_docker_gate(job_dir: Path) -> dict:
             missing.append("Dockerfile (unreadable)")
     if not start_sh.exists():
         pass
-    return {"passed": len(missing) == 0, "details": {"missing": missing, "has_dockerfile": dockerfile.exists(), "has_compose": compose.exists(), "has_start_sh": start_sh.exists()}}
+    return {
+        "passed": len(missing) == 0,
+        "details": {
+            "missing": missing,
+            "has_dockerfile": dockerfile.exists(),
+            "has_compose": compose.exists(),
+            "has_start_sh": start_sh.exists(),
+        },
+    }
 
 
 def _run_deployment_gate(job_dir: Path) -> dict:
@@ -517,7 +566,15 @@ def _run_deployment_gate(job_dir: Path) -> dict:
                 issues.append("docker-compose.yml missing 'services' key")
         except Exception as exc:
             issues.append(f"docker-compose.yml: {exc}")
-    return {"passed": len(issues) == 0, "details": {"has_compose": compose_file.exists(), "has_nginx": nginx_conf.exists(), "has_dockerfile": dockerfile.exists(), "issues": issues}}
+    return {
+        "passed": len(issues) == 0,
+        "details": {
+            "has_compose": compose_file.exists(),
+            "has_nginx": nginx_conf.exists(),
+            "has_dockerfile": dockerfile.exists(),
+            "issues": issues,
+        },
+    }
 
 
 def _run_e2e_gate(job_dir: Path, model: str, review_fn: callable | None) -> dict:
@@ -535,7 +592,10 @@ def _run_e2e_gate(job_dir: Path, model: str, review_fn: callable | None) -> dict
         if "from " in text and "import " in text:
             has_app_import = True
             break
-    return {"passed": True, "details": {"test_files": len(test_files), "app_files": len(app_files), "tests_import_app": has_app_import}}
+    return {
+        "passed": True,
+        "details": {"test_files": len(test_files), "app_files": len(app_files), "tests_import_app": has_app_import},
+    }
 
 
 def _parse_failures(output: str):

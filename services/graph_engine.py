@@ -1,4 +1,5 @@
 """Task Graph Execution Engine — DAG-based planning, parallel execution, checkpointing, recovery."""
+
 import json
 import logging
 import os
@@ -140,10 +141,7 @@ class TaskGraph:
             for t in self.tasks.values():
                 if t.status != TaskStatus.PENDING:
                     continue
-                if all(
-                    self.tasks[d].status == TaskStatus.COMPLETED
-                    for d in t.deps if d in self.tasks
-                ):
+                if all(self.tasks[d].status == TaskStatus.COMPLETED for d in t.deps if d in self.tasks):
                     ready.append(t)
             return ready
 
@@ -153,10 +151,7 @@ class TaskGraph:
             for t in self.tasks.values():
                 if t.status != TaskStatus.PENDING:
                     continue
-                if any(
-                    self.tasks[d].status == TaskStatus.FAILED
-                    for d in t.deps if d in self.tasks
-                ):
+                if any(self.tasks[d].status == TaskStatus.FAILED for d in t.deps if d in self.tasks):
                     blocked.append(t)
             return blocked
 
@@ -272,13 +267,15 @@ class TaskGraph:
         for fpath in sorted(Path(CHECKPOINT_DIR).glob("graph_*.json")):
             try:
                 data = json.loads(fpath.read_text())
-                checkpoints.append({
-                    "checkpoint_id": data.get("id", ""),
-                    "graph_id": data.get("graph_id", ""),
-                    "created_at": data.get("created_at", 0),
-                    "task_count": len(data.get("tasks", {})),
-                    "path": str(fpath),
-                })
+                checkpoints.append(
+                    {
+                        "checkpoint_id": data.get("id", ""),
+                        "graph_id": data.get("graph_id", ""),
+                        "created_at": data.get("created_at", 0),
+                        "task_count": len(data.get("tasks", {})),
+                        "path": str(fpath),
+                    }
+                )
             except Exception:
                 pass
         return checkpoints
@@ -286,7 +283,14 @@ class TaskGraph:
     def visualize_mermaid(self) -> str:
         lines = ["graph TD;"]
         for tid, t in self.tasks.items():
-            status_icon = {"completed": "✅", "failed": "❌", "running": "⏳", "pending": "⬜", "skipped": "⏭️", "blocked": "🚫"}
+            status_icon = {
+                "completed": "✅",
+                "failed": "❌",
+                "running": "⏳",
+                "pending": "⬜",
+                "skipped": "⏭️",
+                "blocked": "🚫",
+            }
             icon = status_icon.get(t.status.value, "⬜")
             label = f"{tid[:6]}({t.name or t.id[:6]})"
             lines.append(f"    {tid[:8]}[{icon} {label}]")
@@ -329,14 +333,13 @@ class GraphExecutor:
                 if func:
                     loop = None
                     import asyncio
+
                     try:
                         loop = asyncio.get_running_loop()
                     except RuntimeError:
                         pass
                     if loop and loop.is_running():
-                        fut = asyncio.run_coroutine_threadsafe(
-                            self._async_wrap(func, task), loop
-                        )
+                        fut = asyncio.run_coroutine_threadsafe(self._async_wrap(func, task), loop)
                         result = fut.result(timeout=task_timeout or 300)
                     else:
                         if asyncio.iscoroutinefunction(func):
@@ -354,7 +357,9 @@ class GraphExecutor:
                     errors[task.id] = str(exc)
                     logger.error("Task %s failed after %d retries: %s", task.id[:8], task.retry_count, exc)
                 else:
-                    logger.warning("Task %s failed (retry %d/%d): %s", task.id[:8], task.retry_count, task.max_retries, exc)
+                    logger.warning(
+                        "Task %s failed (retry %d/%d): %s", task.id[:8], task.retry_count, task.max_retries, exc
+                    )
 
         while self._running:
             ready = self.graph.get_ready_tasks()
@@ -367,7 +372,7 @@ class GraphExecutor:
                     break
                 time.sleep(0.1)
                 continue
-            batch = ready[:self.max_workers]
+            batch = ready[: self.max_workers]
             threads = []
             for task in batch:
                 t = threading.Thread(target=_run_task, args=(task,), daemon=True)
@@ -404,9 +409,15 @@ class PlanBuilder:
         self.graph = TaskGraph()
         self._task_counter = 0
 
-    def add_stage(self, name: str, agent_name: str, deps: list[str] | None = None,
-                  priority: TaskPriority = TaskPriority.NORMAL,
-                  description: str = "", **kwargs) -> str:
+    def add_stage(
+        self,
+        name: str,
+        agent_name: str,
+        deps: list[str] | None = None,
+        priority: TaskPriority = TaskPriority.NORMAL,
+        description: str = "",
+        **kwargs,
+    ) -> str:
         deps = deps or []
         task = Task(
             name=name,
@@ -419,45 +430,79 @@ class PlanBuilder:
         self._task_counter += 1
         return self.graph.add_task(task)
 
-    def build_standard_plan(self, prompt: str, job_id: str, model: str = "local",
-                            stack: dict | None = None) -> TaskGraph:
+    def build_standard_plan(
+        self, prompt: str, job_id: str, model: str = "local", stack: dict | None = None
+    ) -> TaskGraph:
         self.graph.metadata = {"prompt": prompt[:200], "job_id": job_id, "model": model}
-        req_id = self.add_stage("Requirements Analysis", "RequirementAgent",
-                                description="Analyze requirements from user prompt",
-                                prompt=prompt, job_id=job_id, model=model, stack=stack)
-        plan_id = self.add_stage("Project Planning", "PlannerAgent", deps=[req_id],
-                                 description="Create project blueprint",
-                                 job_id=job_id, model=model)
-        code_id = self.add_stage("Code Generation", "CodeAgent", deps=[plan_id],
-                                 description="Generate code from blueprint",
-                                 job_id=job_id, model=model)
-        test_id = self.add_stage("Test Generation", "TestGenAgent", deps=[code_id],
-                                 description="Generate tests",
-                                 job_id=job_id, model=model)
-        self.add_stage("Security Scan", "SecurityAgent", deps=[code_id],
-                       priority=TaskPriority.NORMAL,
-                       description="Scan for security issues",
-                       job_id=job_id, model=model)
-        review_id = self.add_stage("Code Review", "ValidationAgent", deps=[code_id, test_id],
-                                   description="Review code and tests",
-                                   job_id=job_id)
-        self.add_stage("Debug & Fix", "DebugAgent", deps=[test_id, review_id],
-                       description="Fix test failures",
-                       job_id=job_id, model=model)
-        self.add_stage("Documentation", "DocsAgent", deps=[code_id, review_id],
-                                 priority=TaskPriority.LOW,
-                                 description="Generate docs",
-                                 job_id=job_id, model=model)
+        req_id = self.add_stage(
+            "Requirements Analysis",
+            "RequirementAgent",
+            description="Analyze requirements from user prompt",
+            prompt=prompt,
+            job_id=job_id,
+            model=model,
+            stack=stack,
+        )
+        plan_id = self.add_stage(
+            "Project Planning",
+            "PlannerAgent",
+            deps=[req_id],
+            description="Create project blueprint",
+            job_id=job_id,
+            model=model,
+        )
+        code_id = self.add_stage(
+            "Code Generation",
+            "CodeAgent",
+            deps=[plan_id],
+            description="Generate code from blueprint",
+            job_id=job_id,
+            model=model,
+        )
+        test_id = self.add_stage(
+            "Test Generation", "TestGenAgent", deps=[code_id], description="Generate tests", job_id=job_id, model=model
+        )
+        self.add_stage(
+            "Security Scan",
+            "SecurityAgent",
+            deps=[code_id],
+            priority=TaskPriority.NORMAL,
+            description="Scan for security issues",
+            job_id=job_id,
+            model=model,
+        )
+        review_id = self.add_stage(
+            "Code Review",
+            "ValidationAgent",
+            deps=[code_id, test_id],
+            description="Review code and tests",
+            job_id=job_id,
+        )
+        self.add_stage(
+            "Debug & Fix",
+            "DebugAgent",
+            deps=[test_id, review_id],
+            description="Fix test failures",
+            job_id=job_id,
+            model=model,
+        )
+        self.add_stage(
+            "Documentation",
+            "DocsAgent",
+            deps=[code_id, review_id],
+            priority=TaskPriority.LOW,
+            description="Generate docs",
+            job_id=job_id,
+            model=model,
+        )
         return self.graph
 
 
-def create_pipeline_graph(prompt: str, job_id: str, model: str = "local",
-                           stack: dict | None = None) -> TaskGraph:
+def create_pipeline_graph(prompt: str, job_id: str, model: str = "local", stack: dict | None = None) -> TaskGraph:
     builder = PlanBuilder()
     return builder.build_standard_plan(prompt, job_id, model, stack)
 
 
-def execute_graph(graph: TaskGraph, max_workers: int = 4,
-                  task_timeout: float | None = None) -> dict[str, Any]:
+def execute_graph(graph: TaskGraph, max_workers: int = 4, task_timeout: float | None = None) -> dict[str, Any]:
     executor = GraphExecutor(graph, max_workers=max_workers)
     return executor.execute(task_timeout=task_timeout)

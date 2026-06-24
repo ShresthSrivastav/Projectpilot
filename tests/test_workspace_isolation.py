@@ -42,6 +42,7 @@ def setup():
     init_chroma_db()
     # Clean up test workspace collections in ChromaDB
     from database.chroma_db import _get_client
+
     client_obj = _get_client()
     for ws in [WS_A, WS_B]:
         for ct in ("jobs", "generation_logs", "requirements", "blueprints"):
@@ -56,6 +57,7 @@ def setup():
                 pass
     # Clean up test data in memory store
     from database.memory_store import _get_conn
+
     conn = _get_conn()
     for tbl in ["agent_memory", "project_analytics"]:
         try:
@@ -68,6 +70,7 @@ def setup():
 
 
 # ── ChromaDB isolation tests ──────────────────────────────────────────
+
 
 class TestChromaDBIsolation:
     def test_workspace_context_var(self, setup):
@@ -119,6 +122,7 @@ class TestChromaDBIsolation:
     def test_workspace_init(self, setup):
         """Verify init_workspace creates all collections."""
         from database.chroma_db import _get_client
+
         init_workspace("test-ws")
         for ct in ("jobs", "generation_logs", "requirements", "blueprints"):
             name = f"workspace_test-ws_{ct}"
@@ -127,6 +131,7 @@ class TestChromaDBIsolation:
 
 
 # ── Memory store isolation tests ──────────────────────────────────────
+
 
 class TestMemoryStoreIsolation:
     def test_agent_memory_isolated(self, setup):
@@ -159,9 +164,11 @@ class TestMemoryStoreIsolation:
 
 # ── Audit log tests ───────────────────────────────────────────────────
 
+
 class TestAuditLog:
     def test_audit_log_write_and_read(self, setup):
         from services.audit_service import log_audit_event, get_audit_logs, init_audit_db
+
         init_audit_db()
 
         log_audit_event(WS_A, "user-1", "Project Created", "project", "job-1")
@@ -179,15 +186,18 @@ class TestAuditLog:
 
     def test_audit_log_empty_workspace(self, setup):
         from services.audit_service import get_audit_logs
+
         logs = get_audit_logs("nonexistent-workspace")
         assert logs == []
 
 
 # ── Cleanup test files ────────────────────────────────────────────────
 
+
 def teardown_module():
     """Clean up test directories."""
     import shutil
+
     for d in ["test_memory_store", "test_chroma"]:
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), d)
         if os.path.exists(path):

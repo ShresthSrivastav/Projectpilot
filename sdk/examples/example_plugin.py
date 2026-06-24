@@ -48,22 +48,26 @@ class CodeQualityValidator(BasePlugin):
             for node in ast.walk(tree):
                 if isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.AsyncFunctionDef)):
                     if not ast.get_docstring(node):
-                        issues.append({
-                            "type": "style",
-                            "message": f"Missing docstring in {node.name}",
-                            "line": node.lineno,
-                        })
+                        issues.append(
+                            {
+                                "type": "style",
+                                "message": f"Missing docstring in {node.name}",
+                                "line": node.lineno,
+                            }
+                        )
         except SyntaxError as e:
             issues.append({"type": "error", "message": f"Syntax error: {e}"})
 
         # Check for long lines
         for i, line in enumerate(source_code.splitlines(), 1):
             if len(line) > 100:
-                issues.append({
-                    "type": "style",
-                    "message": f"Line {i} too long ({len(line)} > 100 chars)",
-                    "line": i,
-                })
+                issues.append(
+                    {
+                        "type": "style",
+                        "message": f"Line {i} too long ({len(line)} > 100 chars)",
+                        "line": i,
+                    }
+                )
 
         return {
             "valid": len([i for i in issues if i["type"] == "error"]) == 0,

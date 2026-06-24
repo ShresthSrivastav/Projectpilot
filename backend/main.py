@@ -11,6 +11,7 @@ New in v4:
   - lifespan context manager (replaces deprecated on_event)
   - Cleanup daemon started at startup
 """
+
 import asyncio
 import json
 import logging
@@ -119,7 +120,7 @@ from services.jwt_service import decode_access_token
 from services.chat_service import execute_confirmed_action as chat_execute_action
 from services.chat_service import process_message as chat_process_message
 from services.cleanup_service import start_cleanup_daemon
-from services.file_service import BASE_DIR, list_files
+from services.file_service import BASE_DIR, get_base_dir, list_files
 from services.llm_service import (
     CLOUD_MODEL,
     call_model,
@@ -151,6 +152,7 @@ _flags_lock = threading.Lock()
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -164,12 +166,16 @@ async def lifespan(app: FastAPI):
     if os.getenv("ADMIN_API_KEY"):
         logger.info('{"event":"auth_configured","mode":"admin_api_key"}')
     else:
-        logger.warning('{"event":"auth_ephemeral","detail":"ADMIN_API_KEY not set. Using ephemeral key printed at startup."}')
+        logger.warning(
+            '{"event":"auth_ephemeral","detail":"ADMIN_API_KEY not set. Using ephemeral key printed at startup."}'
+        )
 
     if os.getenv("GOOGLE_API_KEY"):
         logger.info('{"event":"cloud_api_key_configured","provider":"google"}')
     else:
-        logger.info('{"event":"cloud_api_key_missing","detail":"Cloud LLM calls will fail until GOOGLE_API_KEY is set."}')
+        logger.info(
+            '{"event":"cloud_api_key_missing","detail":"Cloud LLM calls will fail until GOOGLE_API_KEY is set."}'
+        )
 
     loop = asyncio.get_event_loop()
     loop.run_in_executor(_executor, _wait_and_pull_models)
@@ -199,24 +205,57 @@ def _init_supervisor():
         def wrapper(context):
             kwargs = {k: context[k] for k in arg_names if k in context}
             return fn(**kwargs)
+
         return wrapper
 
-    s.register_agent("RequirementAgent", _wrap(agents.requirement_agent.run, ["prompt", "project_name", "job_id", "model", "stack"]),
-                     priority=AgentPriority.CRITICAL, team="pipeline")
-    s.register_agent("PlannerAgent", _wrap(agents.planner_agent.run, ["requirements", "job_id", "model"]),
-                     priority=AgentPriority.HIGH, team="pipeline")
-    s.register_agent("CodeAgent", _wrap(agents.code_agent.run, ["requirements", "blueprint", "job_id", "model"]),
-                     priority=AgentPriority.HIGH, team="pipeline")
-    s.register_agent("TestGenAgent", _wrap(agents.test_gen_agent.run, ["generated_files", "requirements", "blueprint", "job_id", "model"]),
-                     priority=AgentPriority.NORMAL, team="pipeline")
-    s.register_agent("DebugAgent", _wrap(agents.debug_agent.run, ["generated_files", "job_id", "model", "blueprint"]),
-                     priority=AgentPriority.NORMAL, team="pipeline")
-    s.register_agent("DocsAgent", _wrap(agents.docs_agent.run, ["requirements", "blueprint", "generated_files", "job_id", "model"]),
-                     priority=AgentPriority.LOW, team="pipeline")
-    s.register_agent("ValidationAgent", _wrap(agents.validation_agent.run, ["job_id", "requirements", "blueprint"]),
-                     priority=AgentPriority.LOW, team="pipeline")
-    s.register_agent("SecurityAgent", _wrap(agents.security_agent.run, ["generated_files", "job_id", "blueprint", "model"]),
-                     priority=AgentPriority.LOW, team="quality")
+    s.register_agent(
+        "RequirementAgent",
+        _wrap(agents.requirement_agent.run, ["prompt", "project_name", "job_id", "model", "stack"]),
+        priority=AgentPriority.CRITICAL,
+        team="pipeline",
+    )
+    s.register_agent(
+        "PlannerAgent",
+        _wrap(agents.planner_agent.run, ["requirements", "job_id", "model"]),
+        priority=AgentPriority.HIGH,
+        team="pipeline",
+    )
+    s.register_agent(
+        "CodeAgent",
+        _wrap(agents.code_agent.run, ["requirements", "blueprint", "job_id", "model"]),
+        priority=AgentPriority.HIGH,
+        team="pipeline",
+    )
+    s.register_agent(
+        "TestGenAgent",
+        _wrap(agents.test_gen_agent.run, ["generated_files", "requirements", "blueprint", "job_id", "model"]),
+        priority=AgentPriority.NORMAL,
+        team="pipeline",
+    )
+    s.register_agent(
+        "DebugAgent",
+        _wrap(agents.debug_agent.run, ["generated_files", "job_id", "model", "blueprint"]),
+        priority=AgentPriority.NORMAL,
+        team="pipeline",
+    )
+    s.register_agent(
+        "DocsAgent",
+        _wrap(agents.docs_agent.run, ["requirements", "blueprint", "generated_files", "job_id", "model"]),
+        priority=AgentPriority.LOW,
+        team="pipeline",
+    )
+    s.register_agent(
+        "ValidationAgent",
+        _wrap(agents.validation_agent.run, ["job_id", "requirements", "blueprint"]),
+        priority=AgentPriority.LOW,
+        team="pipeline",
+    )
+    s.register_agent(
+        "SecurityAgent",
+        _wrap(agents.security_agent.run, ["generated_files", "job_id", "blueprint", "model"]),
+        priority=AgentPriority.LOW,
+        team="quality",
+    )
     logger.info('{"event":"supervisor_ready","agents":8}')
 
 
@@ -253,21 +292,44 @@ async def limit_request_body(request: Request, call_next):
 
 
 PROTECTED_PREFIXES = [
-    "/workspace/", "/jobs", "/regenerate-file", "/iterate/",
-    "/validate/", "/deploy/", "/plugins/", "/marketplace/",
-    "/agents/", "/workflows/", "/organization/",
-    "/github/", "/sandbox/", "/supervisor/",
-    "/autonomous/", "/debate/",
-    "/evaluation/", "/benchmarks/", "/benchmark/", "/campaign/",
-    "/rag/", "/chat/", "/browser/", "/runtime/", "/process/",
-    "/api/workspace/", "/api/workspace",
+    "/workspace/",
+    "/jobs",
+    "/regenerate-file",
+    "/iterate/",
+    "/validate/",
+    "/deploy/",
+    "/plugins/",
+    "/marketplace/",
+    "/agents/",
+    "/workflows/",
+    "/organization/",
+    "/github/",
+    "/sandbox/",
+    "/supervisor/",
+    "/autonomous/",
+    "/debate/",
+    "/evaluation/",
+    "/benchmarks/",
+    "/benchmark/",
+    "/campaign/",
+    "/rag/",
+    "/chat/",
+    "/browser/",
+    "/runtime/",
+    "/process/",
+    "/api/workspace/",
+    "/api/workspace",
     "/analytics/",
 ]
 
 ADMIN_ONLY_PREFIXES = [
-    "/supervisor/", "/sandbox/", "/process/",
-    "/plugins/install", "/plugins/uninstall",
-    "/marketplace/install", "/marketplace/delete",
+    "/supervisor/",
+    "/sandbox/",
+    "/process/",
+    "/plugins/install",
+    "/plugins/uninstall",
+    "/marketplace/install",
+    "/marketplace/delete",
 ]
 
 
@@ -335,6 +397,7 @@ def _validate_file_path(base: Path, relative: str) -> Path:
 
 def _wait_and_pull_models() -> None:
     import time
+
     for attempt in range(40):
         if is_available():
             logger.info('{"event":"ollama_ready","pulling_models":true}')
@@ -347,25 +410,25 @@ def _wait_and_pull_models() -> None:
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
-VALID_BACKENDS  = {"fastapi", "flask", "express", "spring", "go-gin", "none"}
+VALID_BACKENDS = {"fastapi", "flask", "express", "spring", "go-gin", "none"}
 VALID_FRONTENDS = {"streamlit", "react", "vue", "angular", "svelte", "html", "none"}
-VALID_DBS       = {"sqlite", "postgresql", "mysql", "mongodb", "redis", "dynamodb", "none"}
-VALID_CSS       = {"none", "bootstrap", "tailwind", "bulma", "materialize"}
-VALID_TESTING   = {"pytest", "unittest", "jest", "mocha", "vitest", "none"}
-VALID_ORM       = {"none", "sqlalchemy", "prisma", "typeorm", "django-orm", "mongoose", "sqlx"}
-VALID_AUTH      = {"none", "jwt", "oauth2", "session", "firebase", "auth0"}
-VALID_DEPLOY    = {"none", "docker", "docker-compose", "kubernetes", "serverless", "heroku"}
+VALID_DBS = {"sqlite", "postgresql", "mysql", "mongodb", "redis", "dynamodb", "none"}
+VALID_CSS = {"none", "bootstrap", "tailwind", "bulma", "materialize"}
+VALID_TESTING = {"pytest", "unittest", "jest", "mocha", "vitest", "none"}
+VALID_ORM = {"none", "sqlalchemy", "prisma", "typeorm", "django-orm", "mongoose", "sqlx"}
+VALID_AUTH = {"none", "jwt", "oauth2", "session", "firebase", "auth0"}
+VALID_DEPLOY = {"none", "docker", "docker-compose", "kubernetes", "serverless", "heroku"}
 
 
 class StackConfig(BaseModel):
-    backend:  str = Field("fastapi",   description=" | ".join(sorted(VALID_BACKENDS)))
+    backend: str = Field("fastapi", description=" | ".join(sorted(VALID_BACKENDS)))
     frontend: str = Field("streamlit", description=" | ".join(sorted(VALID_FRONTENDS)))
-    db:       str = Field("sqlite",    description=" | ".join(sorted(VALID_DBS)))
-    css:      str = Field("bootstrap", description=" | ".join(sorted(VALID_CSS)))
-    testing:  str = Field("pytest",    description=" | ".join(sorted(VALID_TESTING)))
-    orm:      str = Field("sqlalchemy", description=" | ".join(sorted(VALID_ORM)))
-    auth:     str = Field("none",      description=" | ".join(sorted(VALID_AUTH)))
-    deploy:   str = Field("docker",    description=" | ".join(sorted(VALID_DEPLOY)))
+    db: str = Field("sqlite", description=" | ".join(sorted(VALID_DBS)))
+    css: str = Field("bootstrap", description=" | ".join(sorted(VALID_CSS)))
+    testing: str = Field("pytest", description=" | ".join(sorted(VALID_TESTING)))
+    orm: str = Field("sqlalchemy", description=" | ".join(sorted(VALID_ORM)))
+    auth: str = Field("none", description=" | ".join(sorted(VALID_AUTH)))
+    deploy: str = Field("docker", description=" | ".join(sorted(VALID_DEPLOY)))
 
     @field_validator("backend")
     @classmethod
@@ -425,12 +488,13 @@ class StackConfig(BaseModel):
 
 
 class GenerateRequest(BaseModel):
-    prompt:        str = Field(..., min_length=10, max_length=500)
-    project_name:  str = Field("My Project", min_length=1, max_length=100)
-    model:         str | None = "local"
-    stack:         StackConfig | None = None
-    clarification: str | None = Field(None, max_length=300,
-                                          description="Answer to the clarifying question, appended to prompt")
+    prompt: str = Field(..., min_length=10, max_length=500)
+    project_name: str = Field("My Project", min_length=1, max_length=100)
+    model: str | None = "local"
+    stack: StackConfig | None = None
+    clarification: str | None = Field(
+        None, max_length=300, description="Answer to the clarifying question, appended to prompt"
+    )
 
     @field_validator("prompt")
     @classmethod
@@ -447,15 +511,14 @@ class GenerateRequest(BaseModel):
 
 class ClarifyRequest(BaseModel):
     prompt: str = Field(..., min_length=10, max_length=500)
-    model:  str | None = "local"
+    model: str | None = "local"
 
 
 class RegenerateRequest(BaseModel):
-    job_id:          str
-    file_path:       str = Field(..., description="Relative path, e.g. backend/main.py")
-    correction_note: str | None = Field(None, max_length=500,
-                                            description="What to fix / improve in this file")
-    model:           str | None = "local"
+    job_id: str
+    file_path: str = Field(..., description="Relative path, e.g. backend/main.py")
+    correction_note: str | None = Field(None, max_length=500, description="What to fix / improve in this file")
+    model: str | None = "local"
 
 
 def run_pipeline(
@@ -582,6 +645,7 @@ async def cancel_job(job_id: str):
 
 # ── Ownership check helper ──────────────────────────────────────────────────
 
+
 def _require_job_owner(job_id: str, ws_id: str, uid: str) -> dict:
     """Load the job and verify the caller is the owner. Returns the job dict.
 
@@ -654,10 +718,7 @@ def _append_changelog(job_id: str, action: str, details: str) -> None:
     if not job_dir.exists():
         return
     changelog = job_dir / "CHANGELOG.md"
-    entry = (
-        f"\n## {datetime.now():%Y-%m-%d %H:%M} — {action}\n"
-        f"{details}\n"
-    )
+    entry = f"\n## {datetime.now():%Y-%m-%d %H:%M} — {action}\n{details}\n"
     try:
         with open(changelog, "a", encoding="utf-8") as f:
             f.write(entry)
@@ -697,6 +758,7 @@ async def fix_tests(job_id: str, req: FixTestsRequest):
     apply fixes, re-run tests. Returns before/after results.
     """
     from database.chroma_db import get_job as _get_job
+
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found.")
@@ -717,10 +779,17 @@ async def fix_tests(job_id: str, req: FixTestsRequest):
             if _m:
                 _td.append({"test": _m.group(1), "status": _m.group(2)})
         from database.chroma_db import update_job_status as _update_status
-        _update_status(job_id, "complete", test_total=pr.get("collected", 0),
-                       test_passed=pr.get("collected", 0), test_failed=0,
-                       test_skipped=0, test_summary="All tests pass.",
-                       test_details=json.dumps(_td) if _td else "")
+
+        _update_status(
+            job_id,
+            "complete",
+            test_total=pr.get("collected", 0),
+            test_passed=pr.get("collected", 0),
+            test_failed=0,
+            test_skipped=0,
+            test_summary="All tests pass.",
+            test_details=json.dumps(_td) if _td else "",
+        )
         return {
             "job_id": job_id,
             "already_passing": True,
@@ -823,7 +892,8 @@ async def fix_tests(job_id: str, req: FixTestsRequest):
 
         if _err_is_import:
             _file_tree = "\n".join(
-                str(p.relative_to(job_dir)) for p in sorted(job_dir.rglob("*"))
+                str(p.relative_to(job_dir))
+                for p in sorted(job_dir.rglob("*"))
                 if p.is_file() and "__pycache__" not in str(p)
             )
             _failure_guide = (
@@ -875,8 +945,8 @@ async def fix_tests(job_id: str, req: FixTestsRequest):
             f"Test file(s):\n{_current_test_block}\n\n"
             f"Attempt {attempt}/3.\n\n{_failure_guide}\n\n"
             "CRITICAL — preserve EVERY existing assertion line exactly:\n"
-            + "\n".join(f"  {a}" for a in sorted(_orig_assertions)) +
-            "\n\n"
+            + "\n".join(f"  {a}" for a in sorted(_orig_assertions))
+            + "\n\n"
             "Output the complete changed file in:\n"
             "--- FILE: tests/test_app.py\n"
             "--- ACTION: MODIFY\n"
@@ -887,9 +957,9 @@ async def fix_tests(job_id: str, req: FixTestsRequest):
         )
 
         try:
-            result = call_model(prompt, system_prompt=system,
-                                model=req.model or "local",
-                                job_id=job_id, agent="FixTestsEndpoint")
+            result = call_model(
+                prompt, system_prompt=system, model=req.model or "local", job_id=job_id, agent="FixTestsEndpoint"
+            )
         except RuntimeError as exc:
             raise HTTPException(status_code=500, detail=f"LLM call failed: {exc}")
 
@@ -936,13 +1006,17 @@ async def fix_tests(job_id: str, req: FixTestsRequest):
             _test_details.append({"test": _m.group(1), "status": _m.group(2)})
     # Update stored test results in DB so the frontend reflects new state
     from database.chroma_db import update_job_status as _update_status
-    _update_status(job_id, "complete",
-                   test_total=after_collected,
-                   test_passed=after_collected - len(after_failures),
-                   test_failed=len(after_failures),
-                   test_skipped=0,
-                   test_summary=f"{after_collected - len(after_failures)} passed, {len(after_failures)} failed.",
-                   test_details=json.dumps(_test_details) if _test_details else "")
+
+    _update_status(
+        job_id,
+        "complete",
+        test_total=after_collected,
+        test_passed=after_collected - len(after_failures),
+        test_failed=len(after_failures),
+        test_skipped=0,
+        test_summary=f"{after_collected - len(after_failures)} passed, {len(after_failures)} failed.",
+        test_details=json.dumps(_test_details) if _test_details else "",
+    )
 
     if modified or added:
         details = ""
@@ -971,11 +1045,11 @@ async def fix_tests(job_id: str, req: FixTestsRequest):
 
 # ── Iterate (modify existing project) ─────────────────────────────────────
 
+
 class IterateRequest(BaseModel):
-    prompt:  str = Field(..., min_length=3, max_length=1000,
-                         description="What to add/change in the existing project")
-    model:   str | None = "local"
-    job_id:  str | None = None
+    prompt: str = Field(..., min_length=3, max_length=1000, description="What to add/change in the existing project")
+    model: str | None = "local"
+    job_id: str | None = None
 
 
 def _normalize_job_dir(job_dir: Path) -> None:
@@ -984,6 +1058,7 @@ def _normalize_job_dir(job_dir: Path) -> None:
     if nested.exists():
         try:
             import shutil
+
             for item in nested.iterdir():
                 dest = job_dir / item.name
                 if dest.exists():
@@ -1025,9 +1100,11 @@ async def iterate_project(job_id: str, req: IterateRequest, request: Request = N
     if not job_dir.exists():
         # Try to unzip from the stored zip
         from services.zip_service import get_zip_path
+
         zpath = get_zip_path(job_id)
         if zpath and Path(zpath).exists():
             import zipfile
+
             job_dir.mkdir(parents=True, exist_ok=True)
             with zipfile.ZipFile(zpath, "r") as zf:
                 for member in zf.namelist():
@@ -1043,10 +1120,21 @@ async def iterate_project(job_id: str, req: IterateRequest, request: Request = N
     existing_files = await _read_all_project_files(job_dir)
     # Only include source code files — skip auto-generated / non-code files
     _code_exts = {".py", ".js", ".ts", ".jsx", ".tsx", ".html", ".css", ".vue", ".svelte"}
-    _skip_prefixes = {"README", "Dockerfile", "start.", "requirements", "VALIDATION_REPORT",
-                      "__pycache__", ".git", "node_modules", "package-lock", "yarn.lock"}
+    _skip_prefixes = {
+        "README",
+        "Dockerfile",
+        "start.",
+        "requirements",
+        "VALIDATION_REPORT",
+        "__pycache__",
+        ".git",
+        "node_modules",
+        "package-lock",
+        "yarn.lock",
+    }
     src_files = {
-        k: v for k, v in existing_files.items()
+        k: v
+        for k, v in existing_files.items()
         if any(k.endswith(ext) for ext in _code_exts)
         and not any(k.startswith(prefix) or prefix in k for prefix in _skip_prefixes)
     }
@@ -1055,8 +1143,7 @@ async def iterate_project(job_id: str, req: IterateRequest, request: Request = N
         src_files = existing_files
 
     file_contents_str = "\n\n".join(
-        f"--- FILE: {k} ---\n{v}\n--- END FILE: {k} ---"
-        for k, v in sorted(src_files.items())
+        f"--- FILE: {k} ---\n{v}\n--- END FILE: {k} ---" for k, v in sorted(src_files.items())
     )
 
     prompt = (
@@ -1078,12 +1165,14 @@ async def iterate_project(job_id: str, req: IterateRequest, request: Request = N
         "Output changes in the specified format. Maintain code quality and consistency."
     )
     try:
-        result = call_model(prompt, system_prompt=system, model=req.model or "local",
-                            job_id=job_id, agent="IterateEndpoint")
+        result = call_model(
+            prompt, system_prompt=system, model=req.model or "local", job_id=job_id, agent="IterateEndpoint"
+        )
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=f"LLM call failed: {exc}")
 
     import logging
+
     _ilog = logging.getLogger("backend.main")
     _ilog.info("Iterate LLM result (%d chars): %.500s", len(result), result)
 
@@ -1118,7 +1207,8 @@ async def iterate_project(job_id: str, req: IterateRequest, request: Request = N
             # Extract content (between --- CONTENT: and --- END)
             content_match = re.search(
                 r"---\s*CONTENT\s*:\s*\n?(.*?)(?:\n---\s*END|$)",
-                block_text, re.DOTALL,
+                block_text,
+                re.DOTALL,
             )
             content = content_match.group(1).strip() if content_match else ""
 
@@ -1138,27 +1228,35 @@ async def iterate_project(job_id: str, req: IterateRequest, request: Request = N
 
     # Compute diffs for modified files
     import difflib
+
     diffs = {}
     for fpath in modified:
         full = _validate_file_path(job_dir, fpath)
         if full.exists():
             new_text = full.read_text(encoding="utf-8")
             old_text = existing_files.get(fpath, "")
-            diff_lines = list(difflib.unified_diff(
-                old_text.splitlines(keepends=True),
-                new_text.splitlines(keepends=True),
-                fromfile=f"a/{fpath}", tofile=f"b/{fpath}",
-            ))
+            diff_lines = list(
+                difflib.unified_diff(
+                    old_text.splitlines(keepends=True),
+                    new_text.splitlines(keepends=True),
+                    fromfile=f"a/{fpath}",
+                    tofile=f"b/{fpath}",
+                )
+            )
             if diff_lines:
                 diffs[fpath] = "".join(diff_lines)
     for fpath in added:
         full = job_dir / fpath
         if full.exists():
             new_text = full.read_text(encoding="utf-8")
-            diff_lines = list(difflib.unified_diff(
-                [], new_text.splitlines(keepends=True),
-                fromfile="/dev/null", tofile=f"b/{fpath}",
-            ))
+            diff_lines = list(
+                difflib.unified_diff(
+                    [],
+                    new_text.splitlines(keepends=True),
+                    fromfile="/dev/null",
+                    tofile=f"b/{fpath}",
+                )
+            )
             diffs[fpath] = "".join(diff_lines)
 
     # Re-run syntax and tests
@@ -1199,13 +1297,13 @@ async def iterate_project(job_id: str, req: IterateRequest, request: Request = N
                     "failures": fr["after"].get("failures", []),
                 }
 
-    update_job_status(job_id, "complete", current_agent="", progress_pct=100,
-                      error_message="", review_summary="")
+    update_job_status(job_id, "complete", current_agent="", progress_pct=100, error_message="", review_summary="")
 
     # Auto-run AI review after iteration
     try:
         review = run_project_review(job_id, model=req.model or "local")
         import json
+
         update_job_status(job_id, "complete", progress_pct=100, review_summary=json.dumps(review))
     except Exception:
         pass
@@ -1258,10 +1356,10 @@ async def get_file_tree(job_id: str, request: Request = None):
 
     files = [str(p.relative_to(job_dir)) for p in list_files(job_id)]
     return {
-        "job_id":  job_id,
-        "files":   sorted(files),
-        "zipped":  zip_exists(job_id),
-        "status":  job.get("status"),
+        "job_id": job_id,
+        "files": sorted(files),
+        "zipped": zip_exists(job_id),
+        "status": job.get("status"),
     }
 
 
@@ -1312,14 +1410,15 @@ async def validate_project(job_id: str, request: Request = None):
 
     all_syntax_ok = all(r["valid"] for r in syntax_results.values())
     return {
-        "job_id":         job_id,
+        "job_id": job_id,
         "syntax_results": syntax_results,
-        "syntax_ok":      all_syntax_ok,
-        "pytest":         pytest_result,
+        "syntax_ok": all_syntax_ok,
+        "pytest": pytest_result,
     }
 
 
 # ── AI Project Review ──────────────────────────────────────────────────────────
+
 
 class ReviewRequest(BaseModel):
     model: str | None = "local"
@@ -1328,6 +1427,7 @@ class ReviewRequest(BaseModel):
 def run_project_review(job_id: str, model: str = "local") -> dict[str, Any]:
     """AI-powered review of the entire project. Sync so it can run from pipeline threads."""
     import json as _json
+
     job_dir = BASE_DIR / job_id
     if not job_dir.exists():
         return {"job_id": job_id, "verdict": "FAIL", "error": "Project files not available."}
@@ -1379,10 +1479,8 @@ def run_project_review(job_id: str, model: str = "local") -> dict[str, Any]:
         f"Project: {job_id}\n\n"
         f"## File Tree\n{file_tree}\n\n"
         f"## Source Code\n{code_section}\n\n"
-        f"## Syntax Errors\n"
-        + ("\n".join(syntax_errors) if syntax_errors else "None") + "\n\n"
-        "## Test Results\n"
-        + (test_output[:2000] if test_output else "No tests found.") + "\n\n"
+        f"## Syntax Errors\n" + ("\n".join(syntax_errors) if syntax_errors else "None") + "\n\n"
+        "## Test Results\n" + (test_output[:2000] if test_output else "No tests found.") + "\n\n"
         "Analyze this project and output a JSON object with these fields:\n"
         '  "verdict": "PASS" | "WARN" | "FAIL" — overall assessment\n'
         '  "issues": [{"severity": "error"|"warning", "description": "...", '
@@ -1396,6 +1494,7 @@ def run_project_review(job_id: str, model: str = "local") -> dict[str, Any]:
 
     def _parse_review(result: str) -> dict | None:
         import re as _re
+
         stripped = _re.sub(r"```\w*\n?", "", result).strip()
         # Try full parse
         try:
@@ -1405,7 +1504,7 @@ def run_project_review(job_id: str, model: str = "local") -> dict[str, Any]:
         except Exception:
             pass
         # Try to extract JSON block
-        m = _re.search(r'\{.*\}', stripped, _re.DOTALL)
+        m = _re.search(r"\{.*\}", stripped, _re.DOTALL)
         if m:
             try:
                 parsed = _json.loads(m.group(0))
@@ -1429,11 +1528,9 @@ def run_project_review(job_id: str, model: str = "local") -> dict[str, Any]:
             prompt = (
                 f"Project: {job_id}\n\n"
                 f"## File Tree\n{file_tree}\n\n"
-                f"## Syntax Errors\n"
-                + ("\n".join(syntax_errors) if syntax_errors else "None") + "\n\n"
-                "## Test Results\n"
-                + (test_output[:1000] if test_output else "No tests found.") + "\n\n"
-                "Output JSON: {\"verdict\": \"PASS|WARN|FAIL\", \"issues\": [], \"recommendations\": []}"
+                f"## Syntax Errors\n" + ("\n".join(syntax_errors) if syntax_errors else "None") + "\n\n"
+                "## Test Results\n" + (test_output[:1000] if test_output else "No tests found.") + "\n\n"
+                'Output JSON: {"verdict": "PASS|WARN|FAIL", "issues": [], "recommendations": []}'
             )
 
     if not parsed:
@@ -1466,6 +1563,7 @@ async def review_project(job_id: str, req: ReviewRequest):
     review = run_project_review(job_id, model=req.model or "local")
     # Store in DB for display
     import json as _json
+
     update_job_status(job_id, job.get("status", "complete"), progress_pct=100, review_summary=_json.dumps(review))
     return review
 
@@ -1476,6 +1574,7 @@ async def get_status(job_id: str, request: Request = None):
     uid = getattr(request.state, "user_id", "") if request else ""
     job = _require_job_owner(job_id, ws_id, uid)
     import json
+
     test_details_raw = job.get("test_details", "")
     try:
         test_details = json.loads(test_details_raw) if test_details_raw else []
@@ -1486,28 +1585,26 @@ async def get_status(job_id: str, request: Request = None):
     except HTTPException:
         job_dir = None
     return {
-        "job_id":          job_id,
-        "status":          job.get("status"),
-        "project_name":    job.get("project_name"),
-        "current_agent":   job.get("current_agent"),
-        "progress_pct":    int(job.get("progress_pct", 0)),
-        "error_message":   job.get("error_message", ""),
-        "file_count":      int(job.get("file_count", 0)),
-        "test_total":      int(job.get("test_total", 0)),
-        "test_passed":     int(job.get("test_passed", 0)),
-        "test_failed":     int(job.get("test_failed", 0)),
-        "test_skipped":    int(job.get("test_skipped", 0)),
-        "test_summary":    job.get("test_summary", ""),
-        "test_details":    test_details,
-        "review_summary":  job.get("review_summary", ""),
-        "logs":            get_logs(job_id),
-        "file_list":       [str(p.relative_to(job_dir))
-                            for p in list_files(job_id)]
-                            if job_dir.exists() else [],
-        "gates_passed":    int(job.get("gates_passed", 0)),
-        "gates_total":     int(job.get("gates_total", 0)),
-        "gates_failed":    json.loads(job.get("gates_failed", "[]")) if job.get("gates_failed") else [],
-        "zip_available":   zip_exists(job_id),
+        "job_id": job_id,
+        "status": job.get("status"),
+        "project_name": job.get("project_name"),
+        "current_agent": job.get("current_agent"),
+        "progress_pct": int(job.get("progress_pct", 0)),
+        "error_message": job.get("error_message", ""),
+        "file_count": int(job.get("file_count", 0)),
+        "test_total": int(job.get("test_total", 0)),
+        "test_passed": int(job.get("test_passed", 0)),
+        "test_failed": int(job.get("test_failed", 0)),
+        "test_skipped": int(job.get("test_skipped", 0)),
+        "test_summary": job.get("test_summary", ""),
+        "test_details": test_details,
+        "review_summary": job.get("review_summary", ""),
+        "logs": get_logs(job_id),
+        "file_list": [str(p.relative_to(job_dir)) for p in list_files(job_id)] if job_dir.exists() else [],
+        "gates_passed": int(job.get("gates_passed", 0)),
+        "gates_total": int(job.get("gates_total", 0)),
+        "gates_failed": json.loads(job.get("gates_failed", "[]")) if job.get("gates_failed") else [],
+        "zip_available": zip_exists(job_id),
     }
 
 
@@ -1564,6 +1661,7 @@ async def delete_project(job_id: str, request: Request = None):
     import shutil
 
     from database.memory_store import delete_project_analytics
+
     ok = True
     if not delete_job(job_id, workspace_id=ws_id):
         ok = False
@@ -1590,20 +1688,20 @@ async def delete_project(job_id: str, request: Request = None):
 
 @app.get("/health")
 async def health():
-    available  = is_available()
-    models     = get_available_models() if available else []
+    available = is_available()
+    models = get_available_models() if available else []
     pull_state = get_pull_status()
     models_ready = all(v == "ready" for v in pull_state.values()) if pull_state else False
     return {
-        "status":           "ok",
-        "ollama_online":    available,
-        "models_ready":     models_ready,
-        "pull_status":      pull_state,
+        "status": "ok",
+        "ollama_online": available,
+        "models_ready": models_ready,
+        "pull_status": pull_state,
         "available_models": models,
-        "cloud_available":  is_cloud_available(),
-        "cloud_model":      CLOUD_MODEL,
-        "providers":        get_available_providers(),
-        "version":          "13.0.0",
+        "cloud_available": is_cloud_available(),
+        "cloud_model": CLOUD_MODEL,
+        "providers": get_available_providers(),
+        "version": "13.0.0",
     }
 
 
@@ -1619,9 +1717,9 @@ class RagUploadRequest(BaseModel):
 
 
 @app.post("/rag/upload")
-async def rag_upload(file: UploadFile = File(...), tags: str | None = Form(None),
-                     request: Request = None):
+async def rag_upload(file: UploadFile = File(...), tags: str | None = Form(None), request: Request = None):
     from services.rag_service import upload_document
+
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
     uid = getattr(request.state, "user_id", "") if request else ""
     if file.filename:
@@ -1642,10 +1740,14 @@ async def rag_upload(file: UploadFile = File(...), tags: str | None = Form(None)
 
 
 @app.post("/rag/query")
-async def rag_query(text: str = Body(..., embed=True), top_k: int = Body(5, embed=True),
-                    tags: list[str] | None = Body(None, embed=True),
-                    request: Request = None):
+async def rag_query(
+    text: str = Body(..., embed=True),
+    top_k: int = Body(5, embed=True),
+    tags: list[str] | None = Body(None, embed=True),
+    request: Request = None,
+):
     from services.rag_service import query
+
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
     results = query(text, top_k=top_k, tags=tags, workspace_id=ws_id)
     return {"results": results}
@@ -1654,6 +1756,7 @@ async def rag_query(text: str = Body(..., embed=True), top_k: int = Body(5, embe
 @app.get("/rag/list")
 async def rag_list(request: Request = None):
     from services.rag_service import list_documents
+
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
     return {"documents": list_documents(workspace_id=ws_id)}
 
@@ -1661,6 +1764,7 @@ async def rag_list(request: Request = None):
 @app.delete("/rag/{doc_id}")
 async def rag_delete(doc_id: str, request: Request = None):
     from services.rag_service import delete_document
+
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
     ok = delete_document(doc_id, workspace_id=ws_id)
     return {"deleted": ok}
@@ -1669,6 +1773,7 @@ async def rag_delete(doc_id: str, request: Request = None):
 # ═══════════════════════════════════════════════════════════════════════════
 # v5 Endpoints — Analytics
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 @app.get("/analytics/overview")
 async def analytics_overview(request: Request = None):
@@ -1685,6 +1790,7 @@ async def analytics_projects(request: Request = None):
 @app.get("/analytics/project/{job_id}")
 async def analytics_project(job_id: str):
     from services.analytics_service import get_project_stats
+
     return get_project_stats(job_id)
 
 
@@ -1692,21 +1798,25 @@ async def analytics_project(job_id: str):
 # v5 Endpoints — Plugins
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 @app.get("/plugins")
 async def plugin_list():
     from services.plugin_loader import list_plugins
+
     return {"plugins": list_plugins()}
 
 
 @app.post("/plugins/reload")
 async def plugin_reload():
     from services.plugin_loader import reload_plugins
+
     return {"plugins": list(reload_plugins().keys())}
 
 
 @app.post("/plugins/{name}/toggle")
 async def plugin_toggle(name: str, enable: bool = Body(..., embed=True)):
     from services.plugin_loader import disable_plugin, enable_plugin
+
     ok = enable_plugin(name) if enable else disable_plugin(name)
     return {"name": name, "enabled": enable, "ok": ok}
 
@@ -1715,18 +1825,27 @@ async def plugin_toggle(name: str, enable: bool = Body(..., embed=True)):
 # v5 Endpoints — Diagrams
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 @app.get("/diagram/{job_id}")
 async def get_diagram(job_id: str):
     from services.diagram_service import generate_architecture_markdown
+
     job = get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     bp = get_blueprint(job_id) or {}
     if not bp:
-        bp = {"files": [], "routes": [], "db_tables": [], "tech_stack": {},
-              "dependencies": []}
-    agents = ["RequirementAgent", "PlannerAgent", "CodeAgent", "TestGenAgent",
-              "DebugAgent", "DocsAgent", "ValidationAgent", "ZipService"]
+        bp = {"files": [], "routes": [], "db_tables": [], "tech_stack": {}, "dependencies": []}
+    agents = [
+        "RequirementAgent",
+        "PlannerAgent",
+        "CodeAgent",
+        "TestGenAgent",
+        "DebugAgent",
+        "DocsAgent",
+        "ValidationAgent",
+        "ZipService",
+    ]
     md = generate_architecture_markdown(bp, agents)
     return {"diagram_markdown": md, "job_id": job_id}
 
@@ -1734,24 +1853,27 @@ async def get_diagram(job_id: str):
 @app.get("/diagram/{job_id}/component")
 async def get_component_diagram(job_id: str):
     from services.diagram_service import generate_component_diagram
+
     job = get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    bp = get_blueprint(job_id) or {"files": [], "routes": [], "db_tables": [],
-                                    "tech_stack": {"backend": "FastAPI",
-                                                   "frontend": "Streamlit",
-                                                   "db": "SQLite"}}
+    bp = get_blueprint(job_id) or {
+        "files": [],
+        "routes": [],
+        "db_tables": [],
+        "tech_stack": {"backend": "FastAPI", "frontend": "Streamlit", "db": "SQLite"},
+    }
     return {"mermaid": generate_component_diagram(bp), "job_id": job_id}
 
 
 @app.get("/diagram/{job_id}/er")
 async def get_er_diagram(job_id: str):
     from services.diagram_service import generate_er_diagram
+
     job = get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    bp = get_blueprint(job_id) or {"files": [], "routes": [], "db_tables": [],
-                                    "tech_stack": {}}
+    bp = get_blueprint(job_id) or {"files": [], "routes": [], "db_tables": [], "tech_stack": {}}
     return {"mermaid": generate_er_diagram(bp), "job_id": job_id}
 
 
@@ -1759,9 +1881,11 @@ async def get_er_diagram(job_id: str):
 # v5 Endpoints — Code Review
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 @app.post("/code-review/{job_id}")
 async def run_code_review(job_id: str):
     from services.code_review_service import run as run_review
+
     result = run_review(job_id=job_id)
     return result
 
@@ -1770,9 +1894,11 @@ async def run_code_review(job_id: str):
 # v5 Endpoints — Supervisor Agent Run
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 @app.post("/supervisor/run-agent/{agent_name}")
 async def supervisor_run_agent(agent_name: str, context: dict[str, Any] = Body(..., embed=True)):
     from services.supervisor_service import Supervisor
+
     s = Supervisor()
     try:
         result = s.delegate(agent_name, context)
@@ -1828,6 +1954,7 @@ from services.github_service import (
 
 # ── Connection ───────────────────────────────────────────────────────────
 
+
 class GithubConnectRequest(BaseModel):
     token: str
     username: str = ""
@@ -1858,6 +1985,7 @@ async def github_list_connections():
 
 
 # ── Repos ────────────────────────────────────────────────────────────────
+
 
 @app.get("/github/{username}/repos")
 async def github_list_repos(username: str):
@@ -1895,6 +2023,7 @@ async def github_search(q: str, username: str = ""):
 
 # ── Branches ─────────────────────────────────────────────────────────────
 
+
 @app.get("/github/{full_name:path}/branches")
 async def github_list_branches(full_name: str, username: str = ""):
     conn = get_connection(username)
@@ -1926,6 +2055,7 @@ async def github_delete_branch(full_name: str, branch: str, username: str = ""):
 
 
 # ── Files ────────────────────────────────────────────────────────────────
+
 
 @app.get("/github/{full_name:path}/files")
 async def github_list_files(full_name: str, path: str = "", ref: str = "", username: str = ""):
@@ -1975,6 +2105,7 @@ async def github_delete_file_ep(full_name: str, path: str, message: str, sha: st
 
 # ── Commits ──────────────────────────────────────────────────────────────
 
+
 @app.get("/github/{full_name:path}/commits")
 async def github_list_commits(full_name: str, branch: str = "", since: str = "", until: str = "", username: str = ""):
     conn = get_connection(username)
@@ -1992,6 +2123,7 @@ async def github_commit_detail(full_name: str, sha: str, username: str = ""):
 
 
 # ── Pull Requests ────────────────────────────────────────────────────────
+
 
 class PRCreateRequest(BaseModel):
     username: str
@@ -2041,6 +2173,7 @@ async def github_pr_files(full_name: str, pr_number: int, username: str = ""):
 
 
 # ── Issues ───────────────────────────────────────────────────────────────
+
 
 class IssueCreateRequest(BaseModel):
     username: str
@@ -2104,6 +2237,7 @@ async def github_list_comments(full_name: str, issue_number: int, username: str 
 
 # ── Local Clone / Sync ───────────────────────────────────────────────────
 
+
 @app.post("/github/{full_name:path}/clone")
 async def github_clone(full_name: str, username: str = "", branch: str = ""):
     conn = get_connection(username)
@@ -2142,14 +2276,16 @@ async def github_local_read(full_name: str, path: str):
 
 
 @app.post("/github/{full_name:path}/local-file")
-async def github_local_write(full_name: str, path: str, content: str = Body(..., embed=True),
-                              message: str = "", username: str = ""):
+async def github_local_write(
+    full_name: str, path: str, content: str = Body(..., embed=True), message: str = "", username: str = ""
+):
     return local_write_file(full_name, path, content, message)
 
 
 @app.post("/github/{full_name:path}/commit-push")
-async def github_commit_push(full_name: str, message: str = Body(..., embed=True),
-                              branch: str = "", username: str = ""):
+async def github_commit_push(
+    full_name: str, message: str = Body(..., embed=True), branch: str = "", username: str = ""
+):
     conn = get_connection(username)
     if not conn:
         raise HTTPException(status_code=404, detail="No connection found")
@@ -2157,6 +2293,7 @@ async def github_commit_push(full_name: str, message: str = Body(..., embed=True
 
 
 # ── Webhooks ─────────────────────────────────────────────────────────────
+
 
 @app.get("/github/{full_name:path}/webhooks")
 async def github_list_webhooks(full_name: str, username: str = ""):
@@ -2190,32 +2327,38 @@ async def github_delete_webhook(full_name: str, hook_id: int, username: str = ""
 
 # ── AI Agent: GitHub Analysis ────────────────────────────────────────────
 
+
 @app.post("/github/agent/analyze-repo")
 async def github_agent_analyze(full_name: str = Body(...), username: str = Body(...), model: str = "local"):
     conn = get_connection(username)
     if not conn:
         raise HTTPException(status_code=404, detail="No connection found")
     from services.github_agent_service import analyze_repository
+
     return analyze_repository(conn["token"], full_name, model=model)
 
 
 @app.post("/github/agent/review-pr")
-async def github_agent_review_pr(full_name: str = Body(...), pr_number: int = Body(...),
-                                  username: str = Body(...), model: str = "local"):
+async def github_agent_review_pr(
+    full_name: str = Body(...), pr_number: int = Body(...), username: str = Body(...), model: str = "local"
+):
     conn = get_connection(username)
     if not conn:
         raise HTTPException(status_code=404, detail="No connection found")
     from services.github_agent_service import review_pull_request
+
     return review_pull_request(conn["token"], full_name, pr_number, model=model)
 
 
 @app.post("/github/agent/fix-issue")
-async def github_agent_fix_issue(full_name: str = Body(...), issue_number: int = Body(...),
-                                  username: str = Body(...), model: str = "local"):
+async def github_agent_fix_issue(
+    full_name: str = Body(...), issue_number: int = Body(...), username: str = Body(...), model: str = "local"
+):
     conn = get_connection(username)
     if not conn:
         raise HTTPException(status_code=404, detail="No connection found")
     from services.github_agent_service import fix_issue
+
     return fix_issue(conn["token"], full_name, issue_number, model=model)
 
 
@@ -2225,20 +2368,24 @@ async def github_agent_suggest(full_name: str = Body(...), username: str = Body(
     if not conn:
         raise HTTPException(status_code=404, detail="No connection found")
     from services.github_agent_service import suggest_improvements
+
     return suggest_improvements(conn["token"], full_name, model=model)
 
 
 # ── Chat Endpoints ─────────────────────────────────────────────────────────────
+
 
 class ChatRequest(BaseModel):
     message: str
     conversation_id: str | None = None
     title: str | None = None
 
+
 class ChatConfirmRequest(BaseModel):
     conversation_id: str
     tool_name: str
     args: dict[str, Any]
+
 
 class NewChatRequest(BaseModel):
     conversation_id: str | None = None
@@ -2301,6 +2448,7 @@ def chat_delete_conversation(conversation_id: str, request: Request = None):
 
 # ── Webhook Receiver (GitHub calls this) ──────────────────────────────────
 
+
 @app.post("/github/webhook-receiver/{full_name:path}")
 async def github_webhook_receiver(full_name: str, request: Request):
     """
@@ -2316,6 +2464,7 @@ async def github_webhook_receiver(full_name: str, request: Request):
         branch = ref.replace("refs/heads/", "") if ref else ""
         try:
             from services.github_service import pull_repo
+
             result = pull_repo("", full_name, branch=branch)
             return {"event": event, "branch": branch, "result": result}
         except Exception as exc:
@@ -2325,6 +2474,7 @@ async def github_webhook_receiver(full_name: str, request: Request):
         pr_number = payload.get("number", 0)
         try:
             from services.github_agent_service import review_pull_request
+
             result = review_pull_request("", full_name, pr_number, model="local")
             return {"event": event, "pr": pr_number, "result": result}
         except Exception as exc:
@@ -2345,6 +2495,7 @@ class AutoFixRequest(BaseModel):
 @app.post("/autofix/{job_id}")
 async def autofix_project(job_id: str, req: AutoFixRequest):
     from services.autofix_service import run_autofix
+
     job = get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found.")
@@ -2361,6 +2512,7 @@ class SandboxRunRequest(BaseModel):
 @app.post("/sandbox/run")
 async def sandbox_run(req: SandboxRunRequest):
     from services.sandbox_service import run_python
+
     result = run_python(req.code, requirements=req.requirements, timeout=req.timeout)
     return result
 
@@ -2368,12 +2520,14 @@ async def sandbox_run(req: SandboxRunRequest):
 @app.get("/sandbox/status")
 async def sandbox_status():
     from services.sandbox_service import is_available
+
     return {"available": is_available()}
 
 
 @app.get("/memory/context/{job_id}")
 async def memory_context(job_id: str):
     from services.memory_service import get_context_for_prompt
+
     ctx = get_context_for_prompt("", job_id=job_id)
     return ctx
 
@@ -2381,6 +2535,7 @@ async def memory_context(job_id: str):
 @app.get("/memory/insights")
 async def memory_insights(insight_type: str | None = None, limit: int = 50):
     from database.memory_store import get_project_insights
+
     insights = get_project_insights(insight_type=insight_type, limit=limit)
     return {"insights": insights}
 
@@ -2409,9 +2564,22 @@ async def workspace_update_file(job_id: str, path: str, req: WorkspaceFileCreate
     original = full.read_text(encoding="utf-8")
     full.write_text(req.content, encoding="utf-8")
     from difflib import unified_diff
-    diff = list(unified_diff(original.splitlines(keepends=True), req.content.splitlines(keepends=True),
-                              fromfile=f"a/{path}", tofile=f"b/{path}"))
-    return {"job_id": job_id, "path": path, "action": "updated", "chars": len(req.content), "diff": "".join(diff[-1000:])}
+
+    diff = list(
+        unified_diff(
+            original.splitlines(keepends=True),
+            req.content.splitlines(keepends=True),
+            fromfile=f"a/{path}",
+            tofile=f"b/{path}",
+        )
+    )
+    return {
+        "job_id": job_id,
+        "path": path,
+        "action": "updated",
+        "chars": len(req.content),
+        "diff": "".join(diff[-1000:]),
+    }
 
 
 @app.delete("/workspace/{job_id}/files/{path:path}")
@@ -2432,6 +2600,7 @@ class DeployRequest(BaseModel):
 @app.post("/deploy/{job_id}")
 async def deploy_project(job_id: str, req: DeployRequest):
     from services.deployment_service import deploy_project
+
     job = get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found.")
@@ -2445,6 +2614,7 @@ async def metrics(request: Request = None):
 
     from database.memory_store import get_analytics_summary, get_cost_summary
     from services.llm_service import get_token_count
+
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
     tokens = get_token_count()
     analytics = get_analytics_summary(workspace_id=ws_id)
@@ -2461,6 +2631,7 @@ async def metrics(request: Request = None):
 @app.get("/providers")
 async def list_providers():
     from services.llm_service import get_available_providers
+
     return {"providers": get_available_providers()}
 
 
@@ -2479,7 +2650,9 @@ class BrowserOpenRequest(BaseModel):
 
 class BrowserActionRequest(BaseModel):
     session_id: str
-    action: str = Field(..., description="navigate | click | fill | select | upload | screenshot | content | evaluate | wait")
+    action: str = Field(
+        ..., description="navigate | click | fill | select | upload | screenshot | content | evaluate | wait"
+    )
     selector: str | None = None
     value: str | None = None
     url: str | None = None
@@ -2502,6 +2675,7 @@ class BrowserCloseRequest(BaseModel):
 @app.post("/browser/open")
 async def browser_open(req: BrowserOpenRequest):
     from services.browser_service import create_session, navigate
+
     try:
         session = create_session()
         result = navigate(session.session_id, req.url, timeout=req.timeout)
@@ -2524,6 +2698,7 @@ async def browser_action(req: BrowserActionRequest):
         upload_file,
         wait_for_selector,
     )
+
     try:
         if req.action == "navigate":
             if not req.url:
@@ -2568,6 +2743,7 @@ async def browser_action(req: BrowserActionRequest):
 @app.post("/browser/screenshot")
 async def browser_screenshot(session_id: str = Body(...), full_page: bool = Body(True)):
     from services.browser_service import screenshot as _screenshot
+
     try:
         return _screenshot(session_id, full_page=full_page)
     except ValueError as exc:
@@ -2577,6 +2753,7 @@ async def browser_screenshot(session_id: str = Body(...), full_page: bool = Body
 @app.post("/browser/test")
 async def browser_test(req: BrowserTestRequest):
     from services.browser_service import run_test
+
     try:
         result = run_test(req.session_id, req.test_script)
         return result
@@ -2587,6 +2764,7 @@ async def browser_test(req: BrowserTestRequest):
 @app.post("/browser/close")
 async def browser_close(req: BrowserCloseRequest):
     from services.browser_service import close_session
+
     ok = close_session(req.session_id)
     return {"session_id": req.session_id, "closed": ok}
 
@@ -2594,12 +2772,14 @@ async def browser_close(req: BrowserCloseRequest):
 @app.get("/browser/sessions")
 async def browser_list_sessions():
     from services.browser_service import list_sessions
+
     return {"sessions": list_sessions()}
 
 
 @app.get("/browser/sessions/{session_id}/actions")
 async def browser_get_actions(session_id: str):
     from services.browser_service import get_action_log
+
     try:
         return {"actions": get_action_log(session_id)}
     except ValueError as exc:
@@ -2635,6 +2815,7 @@ class RepoCreatePRRequest(BaseModel):
 @app.post("/repo/analyze")
 async def repo_analyze(req: RepoAnalyzeRequest):
     from services.repo_analyzer_service import analyze_repository
+
     try:
         result = analyze_repository(req.repo_path, model=req.model or "local")
         return result
@@ -2647,6 +2828,7 @@ async def repo_analyze(req: RepoAnalyzeRequest):
 @app.post("/repo/improve")
 async def repo_improve(req: RepoImproveRequest):
     from services.repo_analyzer_service import improve_repository
+
     try:
         result = improve_repository(
             req.repo_path,
@@ -2664,11 +2846,17 @@ async def repo_improve(req: RepoImproveRequest):
 @app.post("/repo/create-pr")
 async def repo_create_pr(req: RepoCreatePRRequest):
     from services.repo_analyzer_service import create_pr
+
     try:
         result = create_pr(
-            req.repo_path, req.github_token, req.repo_full_name,
-            branch_name=req.branch_name, base_branch=req.base_branch,
-            title=req.title, body=req.body, model=req.model or "local",
+            req.repo_path,
+            req.github_token,
+            req.repo_full_name,
+            branch_name=req.branch_name,
+            base_branch=req.base_branch,
+            title=req.title,
+            body=req.body,
+            model=req.model or "local",
         )
         return result
     except FileNotFoundError as exc:
@@ -2683,24 +2871,28 @@ async def repo_create_pr(req: RepoCreatePRRequest):
 @app.get("/dashboard/status")
 async def dashboard_status():
     from services.dashboard_service import get_dashboard_status
+
     return get_dashboard_status()
 
 
 @app.get("/dashboard/timeline")
 async def dashboard_timeline(limit: int = 100):
     from services.dashboard_service import get_timeline
+
     return {"events": get_timeline(limit=limit)}
 
 
 @app.get("/dashboard/agents")
 async def dashboard_agents():
     from services.dashboard_service import get_all_agents
+
     return {"agents": get_all_agents()}
 
 
 @app.get("/dashboard/agents/{name}")
 async def dashboard_agent(name: str):
     from services.dashboard_service import get_agent
+
     agent = get_agent(name)
     if not agent:
         raise HTTPException(status_code=404, detail=f"Agent '{name}' not found")
@@ -2710,27 +2902,35 @@ async def dashboard_agent(name: str):
 @app.get("/dashboard/graph")
 async def dashboard_graph(agent: str | None = None):
     from services.dashboard_service import get_execution_graph
+
     return get_execution_graph(agent_name=agent)
 
 
 @app.get("/dashboard/memory")
 async def dashboard_memory():
     from services.dashboard_service import track_memory_usage
+
     return track_memory_usage()
 
 
 @app.websocket("/dashboard/stream")
 async def dashboard_websocket(websocket: WebSocket):
     from services.dashboard_service import get_dashboard_status, subscribe, unsubscribe
+
     await websocket.accept()
+
     def _on_event(event):
         try:
             import anyio
-            anyio.from_thread.run(websocket.send_json, {
-                "type": event.event_type,
-                "data": event.data,
-                "timestamp": event.timestamp,
-            })
+
+            anyio.from_thread.run(
+                websocket.send_json,
+                {
+                    "type": event.event_type,
+                    "data": event.data,
+                    "timestamp": event.timestamp,
+                },
+            )
         except Exception:
             pass
 
@@ -2761,6 +2961,7 @@ class DocsGenerateRequest(BaseModel):
 @app.post("/docs/generate")
 async def docs_generate(req: DocsGenerateRequest):
     from services.docs_generator_service import generate_all
+
     result = generate_all(output_dir=req.output_dir)
     return {"generated": result}
 
@@ -2768,6 +2969,7 @@ async def docs_generate(req: DocsGenerateRequest):
 @app.get("/docs/status")
 async def docs_status():
     from services.docs_generator_service import DOCS_DIR
+
     docs = []
     if DOCS_DIR.exists():
         for fp in sorted(DOCS_DIR.rglob("*.md")):
@@ -2799,16 +3001,21 @@ class GraphExecuteRequest(BaseModel):
 @app.post("/graph/build")
 async def graph_build(req: GraphBuildRequest):
     from services.graph_engine import PlanBuilder
+
     builder = PlanBuilder()
     graph = builder.build_standard_plan(req.prompt, req.job_id, req.model, req.stack)
     import json
 
     from database.memory_store import save_graph_session
+
     save_graph_session(graph.id, req.job_id, json.dumps(graph.to_dict()), "built")
-    return {"graph_id": graph.id, "tasks": [t.to_dict() for t in graph.tasks.values()],
-            "topological_order": graph.get_topological_order(),
-            "critical_path": [t.id for t in graph.get_critical_path()],
-            "visualization": graph.visualize_mermaid()}
+    return {
+        "graph_id": graph.id,
+        "tasks": [t.to_dict() for t in graph.tasks.values()],
+        "topological_order": graph.get_topological_order(),
+        "critical_path": [t.id for t in graph.get_critical_path()],
+        "visualization": graph.visualize_mermaid(),
+    }
 
 
 @app.post("/graph/execute")
@@ -2817,6 +3024,7 @@ async def graph_execute(req: GraphExecuteRequest):
 
     from database.memory_store import get_graph_session
     from services.graph_engine import GraphExecutor, TaskGraph
+
     saved = get_graph_session(req.graph_id)
     if not saved:
         raise HTTPException(status_code=404, detail="Graph not found")
@@ -2824,9 +3032,12 @@ async def graph_execute(req: GraphExecuteRequest):
     graph = TaskGraph(graph_id=req.graph_id)
     for tid, tdata in data.get("tasks", {}).items():
         from services.graph_engine import Task, TaskPriority
+
         t = Task(
-            id=tid, name=tdata.get("name", ""),
-            deps=tdata.get("deps", []), dependents=tdata.get("dependents", []),
+            id=tid,
+            name=tdata.get("name", ""),
+            deps=tdata.get("deps", []),
+            dependents=tdata.get("dependents", []),
             agent_name=tdata.get("agent_name", ""),
             kwargs=tdata.get("kwargs", {}),
             priority=TaskPriority(tdata.get("priority", 2)),
@@ -2841,6 +3052,7 @@ async def graph_execute(req: GraphExecuteRequest):
 @app.get("/graph/{graph_id}")
 async def graph_status(graph_id: str):
     from database.memory_store import get_graph_session
+
     saved = get_graph_session(graph_id)
     if not saved:
         raise HTTPException(status_code=404, detail="Graph not found")
@@ -2853,6 +3065,7 @@ async def graph_visualize(graph_id: str):
 
     from database.memory_store import get_graph_session
     from services.graph_engine import TaskGraph
+
     saved = get_graph_session(graph_id)
     if not saved:
         raise HTTPException(status_code=404, detail="Graph not found")
@@ -2860,14 +3073,19 @@ async def graph_visualize(graph_id: str):
     graph = TaskGraph(graph_id=graph_id)
     for tid, tdata in data.get("tasks", {}).items():
         from services.graph_engine import Task
+
         graph.tasks[tid] = Task.from_dict(tdata)
-    return {"mermaid": graph.visualize_mermaid(), "topological_order": graph.get_topological_order(),
-            "critical_path": [t.id for t in graph.get_critical_path()]}
+    return {
+        "mermaid": graph.visualize_mermaid(),
+        "topological_order": graph.get_topological_order(),
+        "critical_path": [t.id for t in graph.get_critical_path()],
+    }
 
 
 @app.get("/graph/{graph_id}/checkpoints")
 async def graph_checkpoints(graph_id: str):
     from services.graph_engine import TaskGraph
+
     g = TaskGraph(graph_id=graph_id)
     return {"checkpoints": g.list_checkpoints()}
 
@@ -2875,6 +3093,7 @@ async def graph_checkpoints(graph_id: str):
 @app.post("/graph/{graph_id}/resume/{checkpoint_id}")
 async def graph_resume(graph_id: str, checkpoint_id: str, max_workers: int = 4):
     from services.graph_engine import GraphExecutor, TaskGraph
+
     g = TaskGraph(graph_id=graph_id)
     loaded = g.load_checkpoint(checkpoint_id)
     if not loaded:
@@ -2887,6 +3106,7 @@ async def graph_resume(graph_id: str, checkpoint_id: str, max_workers: int = 4):
 @app.get("/graphs")
 async def graph_list():
     from database.memory_store import list_graph_sessions
+
     return {"graphs": list_graph_sessions()}
 
 
@@ -2910,10 +3130,15 @@ class KGImpactRequest(BaseModel):
 @app.post("/kg/build")
 async def kg_build(req: KGRequest):
     from services.knowledge_graph import build_knowledge_graph
+
     try:
         kg = build_knowledge_graph(req.repo_path)
-        return {"file_count": len(kg.files), "relationship_count": len(kg.relationships),
-                "summary": kg.get_architecture_summary(), "graph_id": id(kg)}
+        return {
+            "file_count": len(kg.files),
+            "relationship_count": len(kg.relationships),
+            "summary": kg.get_architecture_summary(),
+            "graph_id": id(kg),
+        }
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
@@ -2921,11 +3146,16 @@ async def kg_build(req: KGRequest):
 @app.post("/kg/impact")
 async def kg_impact(req: KGImpactRequest):
     from services.knowledge_graph import build_knowledge_graph
+
     try:
         kg = build_knowledge_graph(req.repo_path)
         result = kg.impact_analysis(req.changed_files)
-        return {"affected_files": result.affected_files, "impact_score": result.impact_score,
-                "breaking_changes": result.breaking_changes, "recommendations": result.recommendations}
+        return {
+            "affected_files": result.affected_files,
+            "impact_score": result.impact_score,
+            "breaking_changes": result.breaking_changes,
+            "recommendations": result.recommendations,
+        }
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
@@ -2933,6 +3163,7 @@ async def kg_impact(req: KGImpactRequest):
 @app.post("/kg/query")
 async def kg_query(req: KGAnalyzeRequest):
     from services.knowledge_graph import build_knowledge_graph
+
     try:
         kg = build_knowledge_graph(req.repo_path)
         return {
@@ -2948,6 +3179,7 @@ async def kg_query(req: KGAnalyzeRequest):
 @app.post("/kg/visualize")
 async def kg_visualize(req: KGRequest):
     from services.knowledge_graph import build_knowledge_graph
+
     try:
         kg = build_knowledge_graph(req.repo_path)
         return {"mermaid": kg.visualize_mermaid(), "summary": kg.get_architecture_summary()}
@@ -2958,6 +3190,7 @@ async def kg_visualize(req: KGRequest):
 @app.post("/kg/architecture")
 async def kg_architecture(req: KGRequest):
     from services.knowledge_graph import build_knowledge_graph
+
     try:
         kg = build_knowledge_graph(req.repo_path)
         return kg.get_architecture_summary()
@@ -2984,6 +3217,7 @@ class DebateQueryRequest(BaseModel):
 @app.post("/debate/start")
 async def debate_start(req: DebateRequest):
     from services.debate_system import ConsensusMethod, DebateConfig, get_debate_system
+
     ds = get_debate_system()
     config = DebateConfig(
         solvers=req.solvers or ["local", "cloud", "local", "cloud"],
@@ -2998,6 +3232,7 @@ async def debate_start(req: DebateRequest):
 @app.get("/debate/status/{session_id}")
 async def debate_status(session_id: str):
     from services.debate_system import get_debate_system
+
     ds = get_debate_system()
     session = ds.get_session(session_id)
     if not session:
@@ -3008,6 +3243,7 @@ async def debate_status(session_id: str):
 @app.get("/debate/sessions")
 async def debate_list():
     from services.debate_system import get_debate_system
+
     ds = get_debate_system()
     return {"sessions": ds.list_sessions()}
 
@@ -3015,6 +3251,7 @@ async def debate_list():
 @app.get("/debate/quality/{session_id}")
 async def debate_quality(session_id: str):
     from services.debate_system import get_debate_system
+
     ds = get_debate_system()
     return ds.evaluate_quality(session_id)
 
@@ -3068,6 +3305,7 @@ class RunRegressionRequest(BaseModel):
 @app.post("/validation/journey/create")
 async def validation_create_journey(req: CreateJourneyRequest):
     from services.browser_validation_service import get_validation_service
+
     vs = get_validation_service()
     journey = vs.create_journey(req.name, req.base_url, req.tags)
     return {"journey_id": journey.id, "name": journey.name, "step_count": 0}
@@ -3076,12 +3314,20 @@ async def validation_create_journey(req: CreateJourneyRequest):
 @app.post("/validation/journey/step")
 async def validation_add_step(req: AddStepRequest):
     from services.browser_validation_service import ValidationStep, get_validation_service
+
     vs = get_validation_service()
     step = ValidationStep(
-        action=req.action, selector=req.selector, value=req.value,
-        url=req.url, script=req.script, screenshot_name=req.screenshot_name,
-        expected_text=req.expected_text, expected_url=req.expected_url,
-        wait_time=req.wait_time, timeout=req.timeout, description=req.description,
+        action=req.action,
+        selector=req.selector,
+        value=req.value,
+        url=req.url,
+        script=req.script,
+        screenshot_name=req.screenshot_name,
+        expected_text=req.expected_text,
+        expected_url=req.expected_url,
+        wait_time=req.wait_time,
+        timeout=req.timeout,
+        description=req.description,
     )
     ok = vs.add_step(req.journey_id, step)
     if not ok:
@@ -3092,6 +3338,7 @@ async def validation_add_step(req: AddStepRequest):
 @app.post("/validation/journey/execute")
 async def validation_execute_journey(req: ExecuteJourneyRequest):
     from services.browser_validation_service import get_validation_service
+
     vs = get_validation_service()
     return vs.execute_journey(req.journey_id, headless=req.headless, base_url=req.base_url)
 
@@ -3099,6 +3346,7 @@ async def validation_execute_journey(req: ExecuteJourneyRequest):
 @app.post("/validation/auto-generate")
 async def validation_auto_generate(req: AutoGenerateRequest):
     from services.browser_validation_service import get_validation_service
+
     vs = get_validation_service()
     journey = vs.auto_generate_tests(req.repo_path, req.base_url, req.name)
     return {"journey_id": journey.id, "name": journey.name, "steps": len(journey.steps)}
@@ -3107,6 +3355,7 @@ async def validation_auto_generate(req: AutoGenerateRequest):
 @app.post("/validation/regression/create")
 async def validation_create_regression(req: RegressionRequest):
     from services.browser_validation_service import get_validation_service
+
     vs = get_validation_service()
     rt = vs.create_regression_test(req.name, req.journey_ids)
     return {"regression_id": rt.id, "name": rt.name}
@@ -3115,6 +3364,7 @@ async def validation_create_regression(req: RegressionRequest):
 @app.post("/validation/regression/run")
 async def validation_run_regression(req: RunRegressionRequest):
     from services.browser_validation_service import get_validation_service
+
     vs = get_validation_service()
     return vs.run_regression(req.regression_id, headless=req.headless)
 
@@ -3122,6 +3372,7 @@ async def validation_run_regression(req: RunRegressionRequest):
 @app.get("/validation/journeys")
 async def validation_list_journeys():
     from services.browser_validation_service import get_validation_service
+
     vs = get_validation_service()
     return {"journeys": vs.list_journeys()}
 
@@ -3129,6 +3380,7 @@ async def validation_list_journeys():
 @app.get("/validation/regression-tests")
 async def validation_list_regression():
     from services.browser_validation_service import get_validation_service
+
     vs = get_validation_service()
     return {"regression_tests": vs.list_regression_tests()}
 
@@ -3136,6 +3388,7 @@ async def validation_list_regression():
 @app.delete("/validation/journey/{journey_id}")
 async def validation_delete_journey(journey_id: str):
     from services.browser_validation_service import get_validation_service
+
     vs = get_validation_service()
     ok = vs.delete_journey(journey_id)
     if not ok:
@@ -3156,6 +3409,7 @@ class AutonomousStartRequest(BaseModel):
 @app.post("/autonomous/start")
 async def autonomous_start(req: AutonomousStartRequest):
     from services.autonomous_service import AutonomousConfig, get_autonomous_engine
+
     engine = get_autonomous_engine()
     config = AutonomousConfig(
         max_iterations=req.max_iterations or 10,
@@ -3169,6 +3423,7 @@ async def autonomous_start(req: AutonomousStartRequest):
 @app.get("/autonomous/status/{session_id}")
 async def autonomous_status(session_id: str):
     from services.autonomous_service import get_autonomous_engine
+
     engine = get_autonomous_engine()
     session = engine.get_session(session_id)
     if not session:
@@ -3179,6 +3434,7 @@ async def autonomous_status(session_id: str):
 @app.get("/autonomous/history/{session_id}")
 async def autonomous_history(session_id: str):
     from services.autonomous_service import get_autonomous_engine
+
     engine = get_autonomous_engine()
     return engine.get_iteration_history(session_id)
 
@@ -3186,6 +3442,7 @@ async def autonomous_history(session_id: str):
 @app.get("/autonomous/sessions")
 async def autonomous_list():
     from services.autonomous_service import get_autonomous_engine
+
     engine = get_autonomous_engine()
     return {"sessions": engine.list_sessions()}
 
@@ -3193,6 +3450,7 @@ async def autonomous_list():
 @app.get("/autonomous/metrics/{job_id}")
 async def autonomous_metrics(job_id: str):
     from database.memory_store import get_cost_summary, get_iteration_history
+
     cost = get_cost_summary(job_id)
     history = get_iteration_history(job_id)
     return {"job_id": job_id, "cost": cost, "iteration_history": history}
@@ -3204,12 +3462,14 @@ async def autonomous_metrics(job_id: str):
 @app.get("/cost/total")
 async def cost_total():
     from database.memory_store import get_cost_summary
+
     return get_cost_summary()
 
 
 @app.get("/cost/{job_id}")
 async def cost_by_job(job_id: str):
     from database.memory_store import get_cost_summary
+
     return get_cost_summary(job_id)
 
 
@@ -3219,12 +3479,14 @@ async def cost_by_job(job_id: str):
 @app.get("/visualizer/graphs")
 async def visualizer_graphs():
     from database.memory_store import list_graph_sessions
+
     return {"graphs": list_graph_sessions(limit=50)}
 
 
 @app.get("/visualizer/debates")
 async def visualizer_debates():
     from services.debate_system import get_debate_system
+
     ds = get_debate_system()
     return {"debates": ds.list_sessions()}
 
@@ -3232,6 +3494,7 @@ async def visualizer_debates():
 @app.get("/visualizer/autonomous")
 async def visualizer_autonomous():
     from services.autonomous_service import get_autonomous_engine
+
     engine = get_autonomous_engine()
     return {"sessions": engine.list_sessions()}
 
@@ -3240,6 +3503,7 @@ async def visualizer_autonomous():
 async def visualizer_progress(job_id: str):
     from database.chroma_db import get_job
     from database.memory_store import get_cost_summary, get_iteration_history
+
     job = get_job(job_id)
     history = get_iteration_history(job_id)
     cost = get_cost_summary(job_id)
@@ -3255,6 +3519,7 @@ async def visualizer_progress(job_id: str):
 @app.get("/visualizer/timeline/{job_id}")
 async def visualizer_timeline(job_id: str):
     from services.dashboard_service import get_timeline
+
     return {"timeline": get_timeline(limit=200, job_id=job_id)}
 
 
@@ -3288,12 +3553,17 @@ class RuntimeActionRequest(BaseModel):
 @app.post("/runtime/create")
 async def runtime_create(req: RuntimeCreateRequest):
     from services.runtime_orchestrator import ExecutionEnvironment, RuntimeType, get_orchestrator
+
     env = ExecutionEnvironment(
-        runtime_type=RuntimeType(req.runtime_type.lower()) if req.runtime_type in ("docker", "subprocess") else RuntimeType.SUBPROCESS,
-        image=req.image, command=req.command or [],
+        runtime_type=RuntimeType(req.runtime_type.lower())
+        if req.runtime_type in ("docker", "subprocess")
+        else RuntimeType.SUBPROCESS,
+        image=req.image,
+        command=req.command or [],
         env_vars=req.env_vars or {},
         port_mappings={int(k): v for k, v in (req.port_mappings or {}).items()},
-        memory_limit=req.memory_limit, cpu_limit=req.cpu_limit,
+        memory_limit=req.memory_limit,
+        cpu_limit=req.cpu_limit,
         timeout=req.timeout,
     )
     orch = get_orchestrator()
@@ -3304,6 +3574,7 @@ async def runtime_create(req: RuntimeCreateRequest):
 @app.post("/runtime/start")
 async def runtime_start(req: RuntimeActionRequest):
     from services.runtime_orchestrator import get_orchestrator
+
     orch = get_orchestrator()
     try:
         session = orch.start_runtime(req.session_id)
@@ -3317,6 +3588,7 @@ async def runtime_start(req: RuntimeActionRequest):
 @app.post("/runtime/stop")
 async def runtime_stop(req: RuntimeActionRequest):
     from services.runtime_orchestrator import get_orchestrator
+
     orch = get_orchestrator()
     try:
         session = orch.stop_runtime(req.session_id)
@@ -3328,6 +3600,7 @@ async def runtime_stop(req: RuntimeActionRequest):
 @app.post("/runtime/restart")
 async def runtime_restart(req: RuntimeActionRequest):
     from services.runtime_orchestrator import get_orchestrator
+
     orch = get_orchestrator()
     try:
         session = orch.restart_runtime(req.session_id)
@@ -3339,6 +3612,7 @@ async def runtime_restart(req: RuntimeActionRequest):
 @app.post("/runtime/destroy")
 async def runtime_destroy(req: RuntimeActionRequest):
     from services.runtime_orchestrator import get_orchestrator
+
     orch = get_orchestrator()
     try:
         orch.destroy_runtime(req.session_id)
@@ -3350,6 +3624,7 @@ async def runtime_destroy(req: RuntimeActionRequest):
 @app.get("/runtime/{session_id}")
 async def runtime_status(session_id: str):
     from services.runtime_orchestrator import get_orchestrator
+
     orch = get_orchestrator()
     session = orch.get_runtime(session_id)
     if not session:
@@ -3360,6 +3635,7 @@ async def runtime_status(session_id: str):
 @app.get("/runtime/{session_id}/logs")
 async def runtime_logs(session_id: str, tail: int = 100):
     from services.runtime_orchestrator import get_orchestrator
+
     orch = get_orchestrator()
     try:
         logs = orch.get_logs(session_id, tail=tail)
@@ -3371,6 +3647,7 @@ async def runtime_logs(session_id: str, tail: int = 100):
 @app.get("/runtime/{session_id}/metrics")
 async def runtime_metrics(session_id: str):
     from services.runtime_orchestrator import get_orchestrator
+
     orch = get_orchestrator()
     try:
         metrics = orch.get_metrics(session_id)
@@ -3382,6 +3659,7 @@ async def runtime_metrics(session_id: str):
 @app.get("/runtimes")
 async def runtime_list(job_id: str | None = None):
     from services.runtime_orchestrator import get_orchestrator
+
     orch = get_orchestrator()
     return {"runtimes": orch.list_runtimes(job_id=job_id)}
 
@@ -3389,6 +3667,7 @@ async def runtime_list(job_id: str | None = None):
 @app.post("/runtime/recover/{session_id}")
 async def runtime_recover(session_id: str):
     from services.runtime_orchestrator import get_orchestrator
+
     orch = get_orchestrator()
     session = orch.recover_failure(session_id)
     if not session:
@@ -3418,12 +3697,18 @@ class ContainerActionRequest(BaseModel):
 @app.post("/container/create")
 async def container_create(req: ContainerCreateRequest):
     from services.container_manager import get_container_manager
+
     cm = get_container_manager()
     container = cm.create_container(
-        image=req.image, command=req.command, env_vars=req.env_vars,
+        image=req.image,
+        command=req.command,
+        env_vars=req.env_vars,
         port_mappings={int(k): v for k, v in (req.port_mappings or {}).items()},
-        memory_limit=req.memory_limit, cpu_limit=req.cpu_limit,
-        network_enabled=req.network_enabled, volumes=req.volumes, name=req.name,
+        memory_limit=req.memory_limit,
+        cpu_limit=req.cpu_limit,
+        network_enabled=req.network_enabled,
+        volumes=req.volumes,
+        name=req.name,
     )
     return {"container_id": container.id, "docker_id": container.docker_id, "status": container.status}
 
@@ -3431,6 +3716,7 @@ async def container_create(req: ContainerCreateRequest):
 @app.post("/container/start")
 async def container_start(req: ContainerActionRequest):
     from services.container_manager import get_container_manager
+
     cm = get_container_manager()
     try:
         container = cm.start_container(req.container_id)
@@ -3442,6 +3728,7 @@ async def container_start(req: ContainerActionRequest):
 @app.post("/container/stop")
 async def container_stop(req: ContainerActionRequest):
     from services.container_manager import get_container_manager
+
     cm = get_container_manager()
     try:
         container = cm.stop_container(req.container_id)
@@ -3453,6 +3740,7 @@ async def container_stop(req: ContainerActionRequest):
 @app.post("/container/restart")
 async def container_restart(req: ContainerActionRequest):
     from services.container_manager import get_container_manager
+
     cm = get_container_manager()
     try:
         container = cm.restart_container(req.container_id)
@@ -3464,6 +3752,7 @@ async def container_restart(req: ContainerActionRequest):
 @app.post("/container/destroy")
 async def container_destroy(req: ContainerActionRequest):
     from services.container_manager import get_container_manager
+
     cm = get_container_manager()
     try:
         cm.destroy_container(req.container_id)
@@ -3475,6 +3764,7 @@ async def container_destroy(req: ContainerActionRequest):
 @app.get("/container/{container_id}/logs")
 async def container_logs(container_id: str, tail: int = 100):
     from services.container_manager import get_container_manager
+
     cm = get_container_manager()
     try:
         logs = cm.get_logs(container_id, tail=tail)
@@ -3486,6 +3776,7 @@ async def container_logs(container_id: str, tail: int = 100):
 @app.get("/container/{container_id}/stats")
 async def container_stats(container_id: str):
     from services.container_manager import get_container_manager
+
     cm = get_container_manager()
     try:
         stats = cm.get_stats(container_id)
@@ -3497,6 +3788,7 @@ async def container_stats(container_id: str):
 @app.get("/container/{container_id}/health")
 async def container_health(container_id: str):
     from services.container_manager import get_container_manager
+
     cm = get_container_manager()
     healthy = cm.health_check(container_id)
     return {"container_id": container_id, "healthy": healthy}
@@ -3517,10 +3809,15 @@ class ProcessRunRequest(BaseModel):
 @app.post("/process/run")
 async def process_run(req: ProcessRunRequest):
     from services.process_manager import get_process_manager
+
     pm = get_process_manager()
     proc = pm.run(
-        command=req.command, working_dir=req.working_dir, env_vars=req.env_vars,
-        timeout=req.timeout, runtime_type=req.runtime_type, serve=req.serve,
+        command=req.command,
+        working_dir=req.working_dir,
+        env_vars=req.env_vars,
+        timeout=req.timeout,
+        runtime_type=req.runtime_type,
+        serve=req.serve,
     )
     return {"process_id": proc.id, "pid": proc.pid, "status": proc.status.value, "port": proc.port}
 
@@ -3528,16 +3825,24 @@ async def process_run(req: ProcessRunRequest):
 @app.get("/process/{process_id}")
 async def process_status(process_id: str):
     from services.process_manager import get_process_manager
+
     pm = get_process_manager()
     proc = pm.get_process(process_id)
     if not proc:
         raise HTTPException(status_code=404, detail="Process not found")
-    return {"process_id": proc.id, "pid": proc.pid, "status": proc.status.value, "stdout": proc.stdout[-2000:], "stderr": proc.stderr[-2000:]}
+    return {
+        "process_id": proc.id,
+        "pid": proc.pid,
+        "status": proc.status.value,
+        "stdout": proc.stdout[-2000:],
+        "stderr": proc.stderr[-2000:],
+    }
 
 
 @app.get("/process/{process_id}/log")
 async def process_log(process_id: str):
     from services.process_manager import get_process_manager
+
     pm = get_process_manager()
     log = pm.get_process_log(process_id)
     if not log:
@@ -3548,6 +3853,7 @@ async def process_log(process_id: str):
 @app.get("/processes")
 async def process_list():
     from services.process_manager import get_process_manager
+
     pm = get_process_manager()
     return {"processes": pm.list_processes()}
 
@@ -3563,6 +3869,7 @@ class LogAnalyzeRequest(BaseModel):
 @app.post("/logs/analyze")
 async def logs_analyze(req: LogAnalyzeRequest):
     from services.log_analyzer import get_log_analyzer
+
     analyzer = get_log_analyzer()
     result = analyzer.analyze(req.log_text, use_llm=req.use_llm)
     return result.to_dict()
@@ -3571,6 +3878,7 @@ async def logs_analyze(req: LogAnalyzeRequest):
 @app.get("/logs/statistics")
 async def logs_statistics():
     from services.log_analyzer import get_log_analyzer
+
     analyzer = get_log_analyzer()
     return analyzer.get_statistics()
 
@@ -3590,10 +3898,14 @@ class HealRequest(BaseModel):
 @app.post("/healing/start")
 async def healing_start(req: HealRequest):
     from services.self_healing_service import get_healing_engine
+
     engine = get_healing_engine()
     session = engine.detect_and_heal(
-        req.job_id, req.runtime_id, req.log_text,
-        project_dir=req.project_dir, max_retries=req.max_retries,
+        req.job_id,
+        req.runtime_id,
+        req.log_text,
+        project_dir=req.project_dir,
+        max_retries=req.max_retries,
         confidence_threshold=req.confidence_threshold,
     )
     return {"session_id": session.id, "status": session.status.value}
@@ -3602,6 +3914,7 @@ async def healing_start(req: HealRequest):
 @app.get("/healing/{session_id}")
 async def healing_status(session_id: str):
     from services.self_healing_service import get_healing_engine
+
     engine = get_healing_engine()
     session = engine.get_session(session_id)
     if not session:
@@ -3612,6 +3925,7 @@ async def healing_status(session_id: str):
 @app.post("/healing/rollback/{session_id}")
 async def healing_rollback(session_id: str):
     from services.self_healing_service import get_healing_engine
+
     engine = get_healing_engine()
     ok = engine.rollback(session_id)
     return {"session_id": session_id, "rolled_back": ok}
@@ -3620,6 +3934,7 @@ async def healing_rollback(session_id: str):
 @app.get("/healings")
 async def healing_list(job_id: str | None = None):
     from services.self_healing_service import get_healing_engine
+
     engine = get_healing_engine()
     return {"sessions": engine.list_sessions(job_id=job_id)}
 
@@ -3638,6 +3953,7 @@ class DeployOrchestrateRequest(BaseModel):
 @app.post("/deployment/start")
 async def deployment_start(req: DeployOrchestrateRequest):
     from services.deployment_orchestrator import get_deployment_orchestrator
+
     orch = get_deployment_orchestrator()
     session = orch.deploy(req.job_id, req.project_dir, req.target, req.health_check_url, req.run_browser_validation)
     return {"session_id": session.id, "status": session.status.value, "target": session.target.value}
@@ -3646,6 +3962,7 @@ async def deployment_start(req: DeployOrchestrateRequest):
 @app.get("/deployment/{session_id}")
 async def deployment_status(session_id: str):
     from services.deployment_orchestrator import get_deployment_orchestrator
+
     orch = get_deployment_orchestrator()
     session = orch.get_session(session_id)
     if not session:
@@ -3656,6 +3973,7 @@ async def deployment_status(session_id: str):
 @app.post("/deployment/rollback/{session_id}")
 async def deployment_rollback(session_id: str):
     from services.deployment_orchestrator import get_deployment_orchestrator
+
     orch = get_deployment_orchestrator()
     ok = orch.rollback(session_id)
     return {"session_id": session_id, "rolled_back": ok}
@@ -3664,6 +3982,7 @@ async def deployment_rollback(session_id: str):
 @app.get("/deployments")
 async def deployment_list(job_id: str | None = None):
     from services.deployment_orchestrator import get_deployment_orchestrator
+
     orch = get_deployment_orchestrator()
     return {"sessions": orch.list_sessions(job_id=job_id)}
 
@@ -3679,6 +3998,7 @@ class MonitorStartRequest(BaseModel):
 @app.post("/monitor/start")
 async def monitor_start(req: MonitorStartRequest):
     from services.runtime_monitor import get_monitor
+
     monitor = get_monitor()
     monitor.start_collecting(req.runtime_id, interval=req.interval)
     return {"runtime_id": req.runtime_id, "collecting": True}
@@ -3687,6 +4007,7 @@ async def monitor_start(req: MonitorStartRequest):
 @app.post("/monitor/stop/{runtime_id}")
 async def monitor_stop(runtime_id: str):
     from services.runtime_monitor import get_monitor
+
     monitor = get_monitor()
     monitor.stop_collecting(runtime_id)
     return {"runtime_id": runtime_id, "collecting": False}
@@ -3695,6 +4016,7 @@ async def monitor_stop(runtime_id: str):
 @app.get("/monitor/{runtime_id}/metrics")
 async def monitor_metrics(runtime_id: str, since: float | None = None, limit: int = 100):
     from services.runtime_monitor import get_monitor
+
     monitor = get_monitor()
     return {"runtime_id": runtime_id, "metrics": monitor.get_metrics(runtime_id, since=since, limit=limit)}
 
@@ -3702,6 +4024,7 @@ async def monitor_metrics(runtime_id: str, since: float | None = None, limit: in
 @app.get("/monitor/{runtime_id}/aggregate")
 async def monitor_aggregate(runtime_id: str):
     from services.runtime_monitor import get_monitor
+
     monitor = get_monitor()
     return {"runtime_id": runtime_id, "aggregate": monitor.get_aggregate(runtime_id)}
 
@@ -3709,6 +4032,7 @@ async def monitor_aggregate(runtime_id: str):
 @app.get("/monitor/{runtime_id}/trend")
 async def monitor_trend(runtime_id: str, window: int = 10):
     from services.runtime_monitor import get_monitor
+
     monitor = get_monitor()
     return {"runtime_id": runtime_id, "trend": monitor.get_trend(runtime_id, window=window)}
 
@@ -3716,6 +4040,7 @@ async def monitor_trend(runtime_id: str, window: int = 10):
 @app.get("/monitor/anomalies")
 async def monitor_anomalies(limit: int = 50):
     from services.runtime_monitor import get_monitor
+
     monitor = get_monitor()
     return {"anomalies": monitor.get_anomalies(limit=limit)}
 
@@ -3723,6 +4048,7 @@ async def monitor_anomalies(limit: int = 50):
 @app.get("/monitor/summary")
 async def monitor_summary():
     from services.runtime_monitor import get_monitor
+
     monitor = get_monitor()
     return monitor.get_summary()
 
@@ -3739,6 +4065,7 @@ class SDLCStartRequest(BaseModel):
 @app.post("/sdlc/start")
 async def sdlc_start(req: SDLCStartRequest):
     from services.sdlc_pipeline import get_sdlc_engine
+
     engine = get_sdlc_engine()
     pipeline = engine.run_pipeline(req.job_id, req.prompt, req.model)
     return {"pipeline_id": pipeline.id, "job_id": req.job_id, "stage": pipeline.stage.value, "status": pipeline.status}
@@ -3747,6 +4074,7 @@ async def sdlc_start(req: SDLCStartRequest):
 @app.get("/sdlc/{pipeline_id}")
 async def sdlc_status(pipeline_id: str):
     from services.sdlc_pipeline import get_sdlc_engine
+
     engine = get_sdlc_engine()
     pipeline = engine.get_pipeline(pipeline_id)
     if not pipeline:
@@ -3757,6 +4085,7 @@ async def sdlc_status(pipeline_id: str):
 @app.post("/sdlc/resume/{pipeline_id}")
 async def sdlc_resume(pipeline_id: str):
     from services.sdlc_pipeline import get_sdlc_engine
+
     engine = get_sdlc_engine()
     pipeline = engine.resume(pipeline_id)
     if not pipeline:
@@ -3767,6 +4096,7 @@ async def sdlc_resume(pipeline_id: str):
 @app.get("/sdlcs")
 async def sdlc_list(job_id: str | None = None):
     from services.sdlc_pipeline import get_sdlc_engine
+
     engine = get_sdlc_engine()
     return {"pipelines": engine.list_pipelines(job_id=job_id)}
 
@@ -3784,6 +4114,7 @@ class SessionCreateRequest(BaseModel):
 @app.post("/sessions/create")
 async def session_create(req: SessionCreateRequest):
     from services.session_manager import get_session_manager
+
     sm = get_session_manager()
     session = sm.create_session(req.job_id, name=req.name, session_type=req.session_type, tasks=req.tasks)
     return {"session_id": session.id, "status": session.status.value}
@@ -3792,6 +4123,7 @@ async def session_create(req: SessionCreateRequest):
 @app.get("/sessions/{session_id}")
 async def session_status(session_id: str):
     from services.session_manager import get_session_manager
+
     sm = get_session_manager()
     session = sm.get_session(session_id)
     if not session:
@@ -3802,6 +4134,7 @@ async def session_status(session_id: str):
 @app.post("/sessions/{session_id}/pause")
 async def session_pause(session_id: str):
     from services.session_manager import get_session_manager
+
     sm = get_session_manager()
     session = sm.pause_session(session_id)
     if not session:
@@ -3812,6 +4145,7 @@ async def session_pause(session_id: str):
 @app.post("/sessions/{session_id}/resume")
 async def session_resume(session_id: str):
     from services.session_manager import get_session_manager
+
     sm = get_session_manager()
     session = sm.resume_session(session_id)
     if not session:
@@ -3822,6 +4156,7 @@ async def session_resume(session_id: str):
 @app.post("/sessions/{session_id}/complete")
 async def session_complete(session_id: str):
     from services.session_manager import get_session_manager
+
     sm = get_session_manager()
     session = sm.complete_session(session_id)
     if not session:
@@ -3832,6 +4167,7 @@ async def session_complete(session_id: str):
 @app.get("/sessions")
 async def session_list(job_id: str | None = None):
     from services.session_manager import get_session_manager
+
     sm = get_session_manager()
     return {"sessions": sm.list_sessions(job_id=job_id)}
 
@@ -3850,6 +4186,7 @@ class LearnFixRequest(BaseModel):
 @app.post("/learning/learn-fix")
 async def learning_learn_fix(req: LearnFixRequest):
     from services.learning_engine import get_learning_engine
+
     engine = get_learning_engine()
     engine.learn_fix(req.error_type, req.error_text, req.fix, req.file_pattern, req.job_id)
     return {"learned": True}
@@ -3858,6 +4195,7 @@ async def learning_learn_fix(req: LearnFixRequest):
 @app.get("/learning/fixes")
 async def learning_fixes(error_type: str | None = None, limit: int = 10):
     from services.learning_engine import get_learning_engine
+
     engine = get_learning_engine()
     return {"fixes": engine.retrieve_fixes(error_type=error_type, limit=limit)}
 
@@ -3866,6 +4204,7 @@ async def learning_fixes(error_type: str | None = None, limit: int = 10):
 async def learning_recommend(tech_stack: str | None = None):
     tags = tech_stack.split(",") if tech_stack else None
     from services.learning_engine import get_learning_engine
+
     engine = get_learning_engine()
     return {
         "architectures": engine.recommend_architecture(tags),
@@ -3877,6 +4216,7 @@ async def learning_recommend(tech_stack: str | None = None):
 @app.get("/learning/context/{job_id}")
 async def learning_context(job_id: str):
     from services.learning_engine import get_learning_engine
+
     engine = get_learning_engine()
     return engine.get_context_for_job(job_id)
 
@@ -3884,6 +4224,7 @@ async def learning_context(job_id: str):
 @app.get("/learning/statistics")
 async def learning_statistics():
     from services.learning_engine import get_learning_engine
+
     engine = get_learning_engine()
     return engine.get_statistics()
 
@@ -3894,6 +4235,7 @@ async def learning_statistics():
 @app.get("/dashboard/runtimes")
 async def dashboard_runtimes():
     from services.runtime_orchestrator import get_orchestrator
+
     orch = get_orchestrator()
     return {"runtimes": orch.list_runtimes()}
 
@@ -3901,6 +4243,7 @@ async def dashboard_runtimes():
 @app.get("/dashboard/deployments")
 async def dashboard_deployments():
     from services.deployment_orchestrator import get_deployment_orchestrator
+
     orch = get_deployment_orchestrator()
     return {"deployments": orch.list_sessions()}
 
@@ -3908,6 +4251,7 @@ async def dashboard_deployments():
 @app.get("/dashboard/healings")
 async def dashboard_healings():
     from services.self_healing_service import get_healing_engine
+
     engine = get_healing_engine()
     return {"healings": engine.list_sessions()}
 
@@ -3915,6 +4259,7 @@ async def dashboard_healings():
 @app.get("/dashboard/learning")
 async def dashboard_learning():
     from services.learning_engine import get_learning_engine
+
     engine = get_learning_engine()
     return engine.get_statistics()
 
@@ -3922,6 +4267,7 @@ async def dashboard_learning():
 @app.get("/dashboard/infrastructure")
 async def dashboard_infrastructure():
     from services.runtime_monitor import get_monitor
+
     monitor = get_monitor()
     return monitor.get_summary()
 
@@ -3947,14 +4293,21 @@ class BenchmarkReportRequest(BaseModel):
 
 
 LIST_SUPPORTED_DOMAINS = [
-    "hotel_booking", "ecommerce", "blog_cms", "task_manager",
-    "expense_tracker", "chat_app", "lms", "property_management",
+    "hotel_booking",
+    "ecommerce",
+    "blog_cms",
+    "task_manager",
+    "expense_tracker",
+    "chat_app",
+    "lms",
+    "property_management",
 ]
 
 
 @app.get("/benchmarks/domains")
 async def benchmark_domains():
     from services.benchmark_service import get_benchmark_service
+
     svc = get_benchmark_service()
     return {"domains": svc.list_domains()}
 
@@ -3962,6 +4315,7 @@ async def benchmark_domains():
 @app.get("/benchmarks/domain/{domain}")
 async def benchmark_domain_info(domain: str):
     from services.benchmark_service import get_benchmark_service
+
     svc = get_benchmark_service()
     info = svc.get_domain_info(domain)
     if not info:
@@ -3972,6 +4326,7 @@ async def benchmark_domain_info(domain: str):
 @app.post("/benchmarks/run")
 async def benchmark_run(req: BenchmarkRunRequest):
     from services.benchmark_service import get_benchmark_service
+
     svc = get_benchmark_service()
     try:
         result = svc.run_benchmark(domain=req.domain, model=req.model, iteration=req.iteration)
@@ -3983,6 +4338,7 @@ async def benchmark_run(req: BenchmarkRunRequest):
 @app.get("/benchmarks/result/{run_id}")
 async def benchmark_result(run_id: str):
     from services.benchmark_service import get_benchmark_service
+
     svc = get_benchmark_service()
     result = svc.get_result(run_id)
     if not result:
@@ -3993,6 +4349,7 @@ async def benchmark_result(run_id: str):
 @app.get("/benchmarks/results")
 async def benchmark_results(domain: str | None = None, limit: int = 50):
     from services.benchmark_service import get_benchmark_service
+
     svc = get_benchmark_service()
     return {"results": svc.list_results(domain=domain, limit=limit)}
 
@@ -4000,6 +4357,7 @@ async def benchmark_results(domain: str | None = None, limit: int = 50):
 @app.get("/benchmarks/leaderboard")
 async def benchmark_leaderboard(domain: str | None = None, limit: int = 20):
     from services.benchmark_service import get_benchmark_service
+
     svc = get_benchmark_service()
     return {"leaderboard": svc.get_leaderboard(domain=domain, limit=limit)}
 
@@ -4007,6 +4365,7 @@ async def benchmark_leaderboard(domain: str | None = None, limit: int = 20):
 @app.post("/benchmarks/compare")
 async def benchmark_compare(req: BenchmarkCompareRequest):
     from services.benchmark_service import get_benchmark_service
+
     svc = get_benchmark_service()
     try:
         return svc.compare_runs(req.run_id_1, req.run_id_2)
@@ -4017,11 +4376,13 @@ async def benchmark_compare(req: BenchmarkCompareRequest):
 @app.get("/benchmarks/report/{run_id}")
 async def benchmark_report(run_id: str, format: str = "json"):
     from services.benchmark_service import get_benchmark_service
+
     svc = get_benchmark_service()
     try:
         report = svc.generate_report(run_id, format=format)
         media_type = "text/markdown" if format == "markdown" else "application/json"
         from fastapi.responses import PlainTextResponse
+
         return PlainTextResponse(report, media_type=media_type)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
@@ -4030,6 +4391,7 @@ async def benchmark_report(run_id: str, format: str = "json"):
 @app.get("/benchmarks/trends")
 async def benchmark_trends(domain: str | None = None):
     from services.benchmark_service import get_benchmark_service
+
     svc = get_benchmark_service()
     return svc.get_trend_data(domain=domain)
 
@@ -4037,6 +4399,7 @@ async def benchmark_trends(domain: str | None = None):
 @app.get("/benchmarks/statistics")
 async def benchmark_statistics():
     from services.benchmark_service import get_benchmark_service
+
     svc = get_benchmark_service()
     return svc.get_statistics()
 
@@ -4087,42 +4450,60 @@ class OrgValidateRequest(BaseModel):
 @app.post("/organization/create")
 async def organization_create(req: OrgCreateRequest):
     from services.org_graph_service import create_organization
+
     graph = create_organization(req.name, req.description)
-    mem_save_organization({
-        "id": graph.org.id,
-        "name": graph.org.name,
-        "description": graph.org.description,
-        "repo_count": 0,
-        "entity_count": 0,
-        "metadata": {},
-        "created_at": graph.org.created_at,
-        "updated_at": graph.org.updated_at,
-    })
+    mem_save_organization(
+        {
+            "id": graph.org.id,
+            "name": graph.org.name,
+            "description": graph.org.description,
+            "repo_count": 0,
+            "entity_count": 0,
+            "metadata": {},
+            "created_at": graph.org.created_at,
+            "updated_at": graph.org.updated_at,
+        }
+    )
     return {"organization_id": graph.org.id, "name": graph.org.name}
 
 
 @app.post("/organization/add-repo")
 async def organization_add_repo(req: OrgAddRepoRequest):
     from services.org_graph_service import get_organization
+
     graph = get_organization(req.org_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Organization not found")
     repo = graph.add_repository(
-        name=req.name, path=req.path, category=req.category,
-        language=req.language, url=req.url, description=req.description,
+        name=req.name,
+        path=req.path,
+        category=req.category,
+        language=req.language,
+        url=req.url,
+        description=req.description,
     )
-    mem_save_repository({
-        "id": repo.id, "org_id": req.org_id, "name": repo.name,
-        "path": repo.path, "category": repo.category, "language": repo.language,
-        "url": repo.url, "description": repo.description,
-        "file_count": 0, "indexed_at": None, "metadata": {},
-    })
+    mem_save_repository(
+        {
+            "id": repo.id,
+            "org_id": req.org_id,
+            "name": repo.name,
+            "path": repo.path,
+            "category": repo.category,
+            "language": repo.language,
+            "url": repo.url,
+            "description": repo.description,
+            "file_count": 0,
+            "indexed_at": None,
+            "metadata": {},
+        }
+    )
     return {"repository": repo.to_dict()}
 
 
 @app.post("/organization/index")
 async def organization_index(req: OrgAnalyzeRequest):
     from services.org_graph_service import get_organization
+
     graph = get_organization(req.org_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -4130,21 +4511,25 @@ async def organization_index(req: OrgAnalyzeRequest):
     for repo in graph.list_repositories():
         stats = graph.index_repository(repo.id)
         results[repo.name] = stats
-    mem_save_organization({
-        "id": graph.org.id, "name": graph.org.name,
-        "description": graph.org.description,
-        "repo_count": len(graph.list_repositories()),
-        "entity_count": len(graph.org.entities),
-        "metadata": {},
-        "created_at": graph.org.created_at,
-        "updated_at": graph.org.updated_at,
-    })
+    mem_save_organization(
+        {
+            "id": graph.org.id,
+            "name": graph.org.name,
+            "description": graph.org.description,
+            "repo_count": len(graph.list_repositories()),
+            "entity_count": len(graph.org.entities),
+            "metadata": {},
+            "created_at": graph.org.created_at,
+            "updated_at": graph.org.updated_at,
+        }
+    )
     return {"organization_id": req.org_id, "index_results": results}
 
 
 @app.get("/organization/graph")
 async def organization_graph(org_id: str):
     from services.org_graph_service import get_organization
+
     graph = get_organization(org_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -4154,6 +4539,7 @@ async def organization_graph(org_id: str):
 @app.get("/organization/repositories")
 async def organization_repositories(org_id: str):
     from services.org_graph_service import get_organization
+
     graph = get_organization(org_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -4164,6 +4550,7 @@ async def organization_repositories(org_id: str):
 @app.post("/organization/analyze")
 async def organization_analyze(req: OrgAnalyzeRequest):
     from services.org_graph_service import OrgGraphAnalyzer, get_organization
+
     graph = get_organization(req.org_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -4178,19 +4565,25 @@ async def organization_analyze(req: OrgAnalyzeRequest):
 @app.post("/organization/impact")
 async def organization_impact(req: OrgImpactRequest):
     from services.org_graph_service import get_organization
+
     graph = get_organization(req.org_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Organization not found")
     report = graph.analyze_impact(req.query)
-    mem_save_impact_report({
-        "id": report.id, "org_id": req.org_id, "query": report.query,
-        "affected_repos": report.affected_repos,
-        "affected_files": report.affected_files,
-        "impact_score": report.impact_score, "risk_level": report.risk_level,
-        "recommendations": report.recommendations,
-        "report_markdown": report.report_markdown,
-        "created_at": report.created_at,
-    })
+    mem_save_impact_report(
+        {
+            "id": report.id,
+            "org_id": req.org_id,
+            "query": report.query,
+            "affected_repos": report.affected_repos,
+            "affected_files": report.affected_files,
+            "impact_score": report.impact_score,
+            "risk_level": report.risk_level,
+            "recommendations": report.recommendations,
+            "report_markdown": report.report_markdown,
+            "created_at": report.created_at,
+        }
+    )
     return report.to_dict()
 
 
@@ -4198,6 +4591,7 @@ async def organization_impact(req: OrgImpactRequest):
 async def organization_modify(req: OrgModifyRequest):
     from services.multi_repo_editor import get_multi_repo_editor
     from services.org_graph_service import get_organization
+
     graph = get_organization(req.org_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -4230,6 +4624,7 @@ async def organization_changes(org_id: str):
 @app.get("/organization/health")
 async def organization_health(org_id: str):
     from services.org_graph_service import get_organization
+
     graph = get_organization(org_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -4240,6 +4635,7 @@ async def organization_health(org_id: str):
 async def organization_validate(req: OrgValidateRequest):
     from services.cross_repo_validation import get_cross_repo_validator
     from services.org_graph_service import get_organization
+
     graph = get_organization(req.org_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -4259,26 +4655,37 @@ async def organization_validate(req: OrgValidateRequest):
 @app.get("/organization/list")
 async def organization_list():
     from services.org_graph_service import list_organizations
+
     return {"organizations": list_organizations()}
 
 
 @app.post("/organization/dependency")
 async def organization_add_dependency(
-    org_id: str = Body(...), source_repo: str = Body(...),
-    target_repo: str = Body(...), relationship: str = Body("depends_on"),
+    org_id: str = Body(...),
+    source_repo: str = Body(...),
+    target_repo: str = Body(...),
+    relationship: str = Body("depends_on"),
     weight: float = Body(1.0),
 ):
     from services.org_graph_service import get_organization
+
     graph = get_organization(org_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Organization not found")
     dep = graph.add_manual_dependency(source_repo, target_repo, relationship, weight)
-    save_repository_relationship({
-        "id": dep.id, "org_id": org_id, "source_repo": dep.source_repo,
-        "target_repo": dep.target_repo, "source_file": dep.source_file,
-        "target_file": dep.target_file, "relationship": dep.relationship,
-        "weight": dep.weight, "verified": dep.verified,
-    })
+    save_repository_relationship(
+        {
+            "id": dep.id,
+            "org_id": org_id,
+            "source_repo": dep.source_repo,
+            "target_repo": dep.target_repo,
+            "source_file": dep.source_file,
+            "target_file": dep.target_file,
+            "relationship": dep.relationship,
+            "weight": dep.weight,
+            "verified": dep.verified,
+        }
+    )
     return {"dependency": dep.to_dict()}
 
 
@@ -4290,6 +4697,7 @@ async def organization_dependencies(org_id: str):
 @app.delete("/organization/repo")
 async def organization_delete_repo(org_id: str = Body(...), repo_id: str = Body(...)):
     from services.org_graph_service import get_organization
+
     graph = get_organization(org_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -4301,6 +4709,7 @@ async def organization_delete_repo(org_id: str = Body(...), repo_id: str = Body(
 @app.delete("/organization/{org_id}")
 async def organization_delete(org_id: str):
     from services.org_graph_service import get_organization
+
     graph = get_organization(org_id)
     if graph:
         graph._save()
@@ -4316,6 +4725,7 @@ async def organization_delete(org_id: str):
 # v11.1 — Plugin & Agent SDK Ecosystem
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 @app.post("/plugins/install")
 async def plugin_install(
     source: str = Body(...),
@@ -4330,6 +4740,7 @@ async def plugin_install(
     manifest = None
     if name:
         from sdk.plugin_sdk.base_plugin import PluginManifest
+
         manifest = PluginManifest(
             name=name,
             version=version or "1.0.0",
@@ -4406,8 +4817,12 @@ async def plugin_marketplace_search(
 ):
     mkt = get_marketplace_service()
     results = mkt.search_packages(
-        query=query, package_type=package_type, tag=tag,
-        author=author, sort_by=sort_by, limit=limit,
+        query=query,
+        package_type=package_type,
+        tag=tag,
+        author=author,
+        sort_by=sort_by,
+        limit=limit,
     )
     return {"packages": [p.to_dict() for p in results], "count": len(results)}
 
@@ -4425,16 +4840,25 @@ async def marketplace_publish(
     compatibility: str = Body(">=11.0.0"),
 ):
     from sdk.plugin_sdk.base_plugin import PluginManifest
+
     manifest = PluginManifest(
-        name=name, version=version, author=author,
-        description=description, compatibility=compatibility,
+        name=name,
+        version=version,
+        author=author,
+        description=description,
+        compatibility=compatibility,
     )
     mkt = get_marketplace_service()
     pkg = mkt.publish_package(
-        name=name, version=version, author=author,
-        description=description, source_path=source_path,
-        package_type=package_type, tags=tags or [],
-        readme=readme, manifest=manifest,
+        name=name,
+        version=version,
+        author=author,
+        description=description,
+        source_path=source_path,
+        package_type=package_type,
+        tags=tags or [],
+        readme=readme,
+        manifest=manifest,
     )
     db_data = pkg.to_dict()
     db_data["manifest_json"] = manifest.to_dict()
@@ -4478,6 +4902,7 @@ async def marketplace_list(package_type: str | None = None, verified_only: bool 
 
 
 # ── Custom Agents ─────────────────────────────────────────────────────────
+
 
 @app.post("/agents/register")
 async def agent_register(
@@ -4523,6 +4948,7 @@ async def agent_delete(data: dict = Body(...)):
 
 # ── Custom Workflows ──────────────────────────────────────────────────────
 
+
 @app.post("/workflows/register")
 async def workflow_register(
     name: str = Body(...),
@@ -4566,6 +4992,7 @@ async def workflow_delete(data: dict = Body(...)):
 
 # ── Ecosystem Health ──────────────────────────────────────────────────────
 
+
 @app.get("/ecosystem/health")
 async def ecosystem_health():
     registry = get_plugin_registry()
@@ -4587,9 +5014,11 @@ async def ecosystem_health():
 
 # ===================== v12 — Continuous Autonomous Evaluation =====================
 
+
 @app.post("/evaluation/run")
 def trigger_evaluation_run(data: dict = Body(...)):
     from services.evaluation_scheduler import get_evaluation_scheduler
+
     scheduler = get_evaluation_scheduler()
     trigger_type = data.get("trigger_type", "on_demand")
     result = scheduler.trigger_run(schedule=trigger_type, triggered_by="api")
@@ -4632,8 +5061,7 @@ def get_version_comparison(
     to_version: str | None = None,
     limit: int = 20,
 ):
-    comparisons = mem_get_version_comparisons(
-        from_version=from_version, to_version=to_version, limit=limit)
+    comparisons = mem_get_version_comparisons(from_version=from_version, to_version=to_version, limit=limit)
     return {"comparisons": comparisons}
 
 
@@ -4644,8 +5072,7 @@ def list_regressions(
     dismissed: bool | None = None,
     limit: int = 100,
 ):
-    regressions = mem_list_regressions(
-        category=category, severity=severity, dismissed=dismissed, limit=limit)
+    regressions = mem_list_regressions(category=category, severity=severity, dismissed=dismissed, limit=limit)
     return {"regressions": regressions}
 
 
@@ -4655,6 +5082,7 @@ def list_regressions(
 @app.post("/learning/ingest")
 def ingest_learning_data(data: dict = Body(...)):
     from services.learning_feedback_service import get_learning_feedback_service
+
     service = get_learning_feedback_service()
     feedback_type = data.get("feedback_type", "evaluation")
     if feedback_type == "evaluation":
@@ -4680,8 +5108,10 @@ def get_learning_patterns(
     limit: int = 100,
 ):
     patterns = mem_list_learning_patterns(
-        pattern_type=pattern_type, category=category,
-        min_confidence=min_confidence, limit=limit,
+        pattern_type=pattern_type,
+        category=category,
+        min_confidence=min_confidence,
+        limit=limit,
     )
     return {"patterns": patterns}
 
@@ -4695,7 +5125,9 @@ def get_learning_recommendations(
 ):
     recs = mem_list_learning_recommendations(
         recommendation_type=recommendation_type,
-        category=category, status=status, limit=limit,
+        category=category,
+        status=status,
+        limit=limit,
     )
     return {"recommendations": recs}
 
@@ -4716,6 +5148,7 @@ def get_learning_insights_api(
 def campaign_run(data: dict = Body(...)):
     """Create and execute a benchmark campaign."""
     from services.benchmark_campaign_service import get_benchmark_campaign_service
+
     service = get_benchmark_campaign_service()
     domains = data.get("domains")
     runs_per_domain = data.get("runs_per_domain", 10)
@@ -4744,6 +5177,7 @@ def campaign_run(data: dict = Body(...)):
 def campaign_status(campaign_id: str):
     """Get campaign status with run details."""
     from services.benchmark_campaign_service import get_benchmark_campaign_service
+
     service = get_benchmark_campaign_service()
     campaign = service.get_campaign_status(campaign_id)
     if campaign is None:
@@ -4758,6 +5192,7 @@ def campaign_results(
 ):
     """Get campaign run results."""
     from services.benchmark_campaign_service import get_benchmark_campaign_service
+
     service = get_benchmark_campaign_service()
     results = service.get_campaign_results(campaign_id, domain=domain)
     return {"success": True, "results": results}
@@ -4770,6 +5205,7 @@ def campaign_report(
 ):
     """Get campaign report (aggregate, leaderboard, or domain report)."""
     from services.benchmark_campaign_service import get_benchmark_campaign_service
+
     service = get_benchmark_campaign_service()
     if report_type == "leaderboard":
         report = service.get_campaign_leaderboard(campaign_id)
@@ -4786,6 +5222,7 @@ def campaign_report(
 def campaign_resume(data: dict = Body(...)):
     """Resume an interrupted campaign."""
     from services.benchmark_campaign_service import get_benchmark_campaign_service
+
     service = get_benchmark_campaign_service()
     campaign_id = data.get("campaign_id")
     if not campaign_id:
@@ -4801,6 +5238,7 @@ def campaign_resume(data: dict = Body(...)):
 def campaign_list(limit: int = 50):
     """List all campaigns."""
     from services.benchmark_campaign_service import get_benchmark_campaign_service
+
     service = get_benchmark_campaign_service()
     campaigns = service.list_campaigns(limit=limit)
     return {"success": True, "campaigns": campaigns}
@@ -4810,6 +5248,7 @@ def campaign_list(limit: int = 50):
 def campaign_detect_interrupted():
     """Detect interrupted campaigns."""
     from services.benchmark_campaign_service import get_benchmark_campaign_service
+
     service = get_benchmark_campaign_service()
     interrupted = service.detect_interrupted_campaigns()
     return {"success": True, "interrupted_campaigns": interrupted}
@@ -4817,10 +5256,12 @@ def campaign_detect_interrupted():
 
 # ===================== v12 — Continuous Autonomous Evaluation =====================
 
+
 def _init_evaluation():
     """Register evaluation completion handler, recover state, check missed runs."""
     from services.evaluation_reporter import get_evaluation_reporter
     from services.evaluation_scheduler import get_evaluation_scheduler
+
     scheduler = get_evaluation_scheduler()
 
     # Phase 4 — recover unfinished runs and check for missed scheduled runs
@@ -4879,6 +5320,7 @@ def _init_evaluation():
         # v12.5 — Feed evaluation results into Learning Feedback Service
         try:
             from services.learning_feedback_service import get_learning_feedback_service
+
             learning = get_learning_feedback_service()
             learning.ingest_evaluation_result(run_dict)
             # Generate recommendations for the run's categories

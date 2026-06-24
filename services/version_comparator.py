@@ -1,4 +1,5 @@
 """Version Comparator — compare evaluation metrics across platform versions."""
+
 import json
 import logging
 import uuid
@@ -78,10 +79,14 @@ class VersionComparator:
                     data = json.loads(sp.read_text(encoding="utf-8"))
                     for item in data:
                         if key == "snapshots":
-                            obj = VersionSnapshot(**{k: v for k, v in item.items() if k in VersionSnapshot.__dataclass_fields__})
+                            obj = VersionSnapshot(
+                                **{k: v for k, v in item.items() if k in VersionSnapshot.__dataclass_fields__}
+                            )
                             self._snapshots[obj.id] = obj
                         else:
-                            obj = VersionComparison(**{k: v for k, v in item.items() if k in VersionComparison.__dataclass_fields__})
+                            obj = VersionComparison(
+                                **{k: v for k, v in item.items() if k in VersionComparison.__dataclass_fields__}
+                            )
                             self._comparisons[obj.id] = obj
                 except Exception as e:
                     self._logger.warning("Failed to load %s: %s", sp.name, e)
@@ -165,14 +170,23 @@ class VersionComparator:
     def _generate_summary(self, from_v: str, to_v: str, f: VersionSnapshot, t: VersionSnapshot) -> str:
         parts = [f"Comparison: {from_v} → {to_v}"]
         if t.autonomy_score > f.autonomy_score:
-            parts.append(f"Autonomy improved {((t.autonomy_score - f.autonomy_score) / max(f.autonomy_score, 0.001)) * 100:.1f}%")
+            parts.append(
+                f"Autonomy improved {((t.autonomy_score - f.autonomy_score) / max(f.autonomy_score, 0.001)) * 100:.1f}%"
+            )
         else:
-            parts.append(f"Autonomy declined {((f.autonomy_score - t.autonomy_score) / max(f.autonomy_score, 0.001)) * 100:.1f}%")
+            parts.append(
+                f"Autonomy declined {((f.autonomy_score - t.autonomy_score) / max(f.autonomy_score, 0.001)) * 100:.1f}%"
+            )
         if t.cost_efficiency > f.cost_efficiency:
             parts.append("Cost efficiency improved")
         else:
             parts.append("Cost efficiency declined")
-        overall = "improved" if t.autonomy_score + t.deployment_success_rate + t.cost_efficiency > f.autonomy_score + f.deployment_success_rate + f.cost_efficiency else "declined"
+        overall = (
+            "improved"
+            if t.autonomy_score + t.deployment_success_rate + t.cost_efficiency
+            > f.autonomy_score + f.deployment_success_rate + f.cost_efficiency
+            else "declined"
+        )
         parts.append(f"Overall performance {overall}")
         return ". ".join(parts)
 

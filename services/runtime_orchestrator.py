@@ -1,4 +1,5 @@
 """Runtime Orchestrator — execution environment lifecycle, monitoring, checkpointing, recovery."""
+
 import json
 import logging
 import os
@@ -92,6 +93,7 @@ class RuntimeOrchestrator:
                                 session.error = f"Runtime timeout after {timeout}s"
                                 logger.warning("Runtime %s timed out", sid[:8])
                 time.sleep(10)
+
         self._running = True
         t = threading.Thread(target=_monitor, daemon=True)
         t.start()
@@ -138,6 +140,7 @@ class RuntimeOrchestrator:
 
     def _start_docker(self, session: RuntimeSession) -> None:
         from services.container_manager import ContainerManager
+
         cm = ContainerManager()
         container = cm.create_container(
             image=session.environment.image,
@@ -156,6 +159,7 @@ class RuntimeOrchestrator:
 
     def _start_subprocess(self, session: RuntimeSession) -> None:
         from services.process_manager import ProcessManager
+
         pm = ProcessManager()
         workdir = session.environment.working_dir or str(RUNTIME_DIR / session.id)
         Path(workdir).mkdir(parents=True, exist_ok=True)
@@ -174,9 +178,11 @@ class RuntimeOrchestrator:
         try:
             if session.runtime_type == RuntimeType.DOCKER and session.container_id:
                 from services.container_manager import ContainerManager
+
                 ContainerManager().stop_container(session.container_id)
             elif session.pid:
                 from services.process_manager import ProcessManager
+
                 pm = ProcessManager()
                 if pm.is_running(session.pid):
                     pm.terminate(session.pid)
@@ -200,9 +206,11 @@ class RuntimeOrchestrator:
         try:
             if session.runtime_type == RuntimeType.DOCKER and session.container_id:
                 from services.container_manager import ContainerManager
+
                 ContainerManager().destroy_container(session.container_id)
             elif session.pid:
                 from services.process_manager import ProcessManager
+
                 ProcessManager().terminate(session.pid)
         except Exception as exc:
             logger.warning("Runtime %s destroy cleanup failed: %s", session_id[:8], exc)
@@ -242,6 +250,7 @@ class RuntimeOrchestrator:
         if session.container_id:
             try:
                 from services.container_manager import ContainerManager
+
                 stats = ContainerManager().get_stats(session.container_id)
                 metrics.update(stats)
             except Exception:
@@ -249,6 +258,7 @@ class RuntimeOrchestrator:
         elif session.pid:
             try:
                 import psutil
+
                 proc = psutil.Process(session.pid)
                 metrics["cpu_percent"] = proc.cpu_percent()
                 metrics["memory_mb"] = proc.memory_info().rss / 1024 / 1024
@@ -291,12 +301,14 @@ class RuntimeOrchestrator:
         try:
             data = json.loads(path.read_text())
             session = RuntimeSession(
-                id=data["id"], job_id=data.get("job_id", ""),
+                id=data["id"],
+                job_id=data.get("job_id", ""),
                 name=data.get("name", ""),
                 status=RuntimeStatus(data.get("status", "created")),
                 runtime_type=RuntimeType(data.get("runtime_type", "subprocess")),
                 container_id=data.get("container_id"),
-                pid=data.get("pid"), port=data.get("port"),
+                pid=data.get("pid"),
+                port=data.get("port"),
                 host=data.get("host", "localhost"),
                 started_at=data.get("started_at"),
                 stopped_at=data.get("stopped_at"),

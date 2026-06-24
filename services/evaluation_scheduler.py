@@ -8,6 +8,7 @@ Phase 4 adds:
   - Per-domain execution timeout
   - Parallel benchmark execution where safe
 """
+
 import logging
 import random
 import threading
@@ -88,6 +89,7 @@ class EvaluationScheduler:
 
     def _load_runs_from_db(self) -> None:
         from database.memory_store import mem_list_evaluation_runs
+
         try:
             db_runs = mem_list_evaluation_runs(limit=500)
             for item in db_runs:
@@ -112,6 +114,7 @@ class EvaluationScheduler:
 
     def _persist_run(self, run: EvaluationRun) -> None:
         from database.memory_store import mem_save_evaluation_run
+
         try:
             db_run = {
                 "id": run.id,
@@ -137,6 +140,7 @@ class EvaluationScheduler:
 
     def _update_run_status(self, run: EvaluationRun, updates: dict) -> None:
         from database.memory_store import mem_update_evaluation_run
+
         for key, val in updates.items():
             if hasattr(run, key):
                 setattr(run, key, val)
@@ -187,6 +191,7 @@ class EvaluationScheduler:
         self._update_run_status(run, {"status": "running"})
         try:
             from services.benchmark_service import BenchmarkService
+
             bsvc = BenchmarkService()
             domains = run.benchmark_domains or bsvc.list_domains()
             domain_results = []
@@ -196,17 +201,13 @@ class EvaluationScheduler:
             domain_count = 0
 
             if parallel and len(domains) > 1:
-                futures = {
-                    self._executor.submit(
-                        self._run_domain, d, bsvc, timeout_seconds
-                    ): d for d in domains
-                }
+                futures = {self._executor.submit(self._run_domain, d, bsvc, timeout_seconds): d for d in domains}
                 for future in as_completed(futures):
                     dname, result, error = future.result()
                     if result and result.metrics:
                         total_score += compute_autonomy_score(result.metrics)
-                        total_cost += result.metrics.token_cost if hasattr(result.metrics, 'token_cost') else 0
-                        total_runtime += result.metrics.total_time_ms if hasattr(result.metrics, 'total_time_ms') else 0
+                        total_cost += result.metrics.token_cost if hasattr(result.metrics, "token_cost") else 0
+                        total_runtime += result.metrics.total_time_ms if hasattr(result.metrics, "total_time_ms") else 0
                         domain_count += 1
                         domain_results.append({dname: result.to_dict()})
                     elif error:
@@ -216,8 +217,8 @@ class EvaluationScheduler:
                     dname, result, error = self._run_domain(domain, bsvc, timeout_seconds)
                     if result and result.metrics:
                         total_score += compute_autonomy_score(result.metrics)
-                        total_cost += result.metrics.token_cost if hasattr(result.metrics, 'token_cost') else 0
-                        total_runtime += result.metrics.total_time_ms if hasattr(result.metrics, 'total_time_ms') else 0
+                        total_cost += result.metrics.token_cost if hasattr(result.metrics, "token_cost") else 0
+                        total_runtime += result.metrics.total_time_ms if hasattr(result.metrics, "total_time_ms") else 0
                         domain_count += 1
                         domain_results.append({dname: result.to_dict()})
                     elif error:
@@ -238,17 +239,20 @@ class EvaluationScheduler:
             }
             run.status = RunStatus.COMPLETED.value
             run.completed_at = datetime.now(UTC).isoformat()
-            self._update_run_status(run, {
-                "status": "completed",
-                "autonomy_score": run.autonomy_score,
-                "success_rate": run.success_rate,
-                "total_cost": run.total_cost,
-                "total_runtime": run.avg_runtime_ms,
-                "healing_rate": run.healing_rate,
-                "deployment_success_rate": run.deployment_success_rate,
-                "benchmark_score": run.autonomy_score,
-                "completed_at": run.completed_at,
-            })
+            self._update_run_status(
+                run,
+                {
+                    "status": "completed",
+                    "autonomy_score": run.autonomy_score,
+                    "success_rate": run.success_rate,
+                    "total_cost": run.total_cost,
+                    "total_runtime": run.avg_runtime_ms,
+                    "healing_rate": run.healing_rate,
+                    "deployment_success_rate": run.deployment_success_rate,
+                    "benchmark_score": run.autonomy_score,
+                    "completed_at": run.completed_at,
+                },
+            )
 
             for handler in self._handlers.values():
                 try:
@@ -260,11 +264,14 @@ class EvaluationScheduler:
             run.status = RunStatus.FAILED.value
             run.error = str(e)
             run.completed_at = datetime.now(UTC).isoformat()
-            self._update_run_status(run, {
-                "status": "failed",
-                "error_log": str(e),
-                "completed_at": run.completed_at,
-            })
+            self._update_run_status(
+                run,
+                {
+                    "status": "failed",
+                    "error_log": str(e),
+                    "completed_at": run.completed_at,
+                },
+            )
             self._logger.error("Evaluation run failed: %s", e)
 
     # ── Recovery ───────────────────────────────────────────────────────────────
@@ -272,6 +279,7 @@ class EvaluationScheduler:
     def recover_state(self) -> dict[str, Any]:
         """On startup: detect pending/running runs, mark stale, return recovery summary."""
         from database.memory_store import mem_list_evaluation_runs, mem_update_evaluation_run
+
         now = time.time()
         recovery = {
             "pending_found": 0,
@@ -287,29 +295,43 @@ class EvaluationScheduler:
             recovery["running_found"] = len(running)
 
             for item in pending:
-                mem_update_evaluation_run(item["id"], {"status": "failed", "error_log": "Stale on restart", "completed_at": now})
+                mem_update_evaluation_run(
+                    item["id"], {"status": "failed", "error_log": "Stale on restart", "completed_at": now}
+                )
                 recovery["marked_stale"] += 1
 
             for item in running:
                 started = item.get("started_at")
                 if started:
                     try:
-                        started_ts = float(started) if isinstance(started, (int, float)) else datetime.fromisoformat(str(started)).timestamp()
+                        started_ts = (
+                            float(started)
+                            if isinstance(started, (int, float))
+                            else datetime.fromisoformat(str(started)).timestamp()
+                        )
                     except (ValueError, TypeError):
                         started_ts = 0
                     elapsed = now - started_ts
                     if elapsed > STALE_TIMEOUT_SECONDS:
-                        mem_update_evaluation_run(item["id"], {
-                            "status": "failed",
-                            "error_log": f"Stale after {elapsed:.0f}s on restart",
-                            "completed_at": now,
-                        })
+                        mem_update_evaluation_run(
+                            item["id"],
+                            {
+                                "status": "failed",
+                                "error_log": f"Stale after {elapsed:.0f}s on restart",
+                                "completed_at": now,
+                            },
+                        )
                         recovery["marked_stale"] += 1
                     else:
-                        mem_update_evaluation_run(item["id"], {"status": "failed", "error_log": "Interrupted by restart", "completed_at": now})
+                        mem_update_evaluation_run(
+                            item["id"], {"status": "failed", "error_log": "Interrupted by restart", "completed_at": now}
+                        )
                         recovery["marked_stale"] += 1
                 else:
-                    mem_update_evaluation_run(item["id"], {"status": "failed", "error_log": "Stale on restart (no start time)", "completed_at": now})
+                    mem_update_evaluation_run(
+                        item["id"],
+                        {"status": "failed", "error_log": "Stale on restart (no start time)", "completed_at": now},
+                    )
                     recovery["marked_stale"] += 1
 
             self._load_runs_from_db()
@@ -326,6 +348,7 @@ class EvaluationScheduler:
             mem_get_scheduler_metadata,
             mem_save_scheduler_metadata,
         )
+
         now = datetime.now(UTC)
         now_ts = now.timestamp()
         triggered = []
@@ -374,6 +397,7 @@ class EvaluationScheduler:
     ) -> bool:
         """Persist schedule configuration to SQLite (deterministic id per type)."""
         from database.memory_store import mem_get_scheduler_metadata, mem_save_scheduler_metadata
+
         now = datetime.now(UTC).timestamp()
         existing = mem_get_scheduler_metadata(schedule_type)
         meta = {
@@ -430,7 +454,9 @@ class EvaluationScheduler:
                     if now < target_today:
                         sleep_seconds = (target_today - now).total_seconds()
                     else:
-                        sleep_seconds = (7 * interval_weeks * 86400) - (now - target_today).total_seconds() % (7 * 86400)
+                        sleep_seconds = (7 * interval_weeks * 86400) - (now - target_today).total_seconds() % (
+                            7 * 86400
+                        )
                 else:
                     next_run = now + timedelta(days=days_ahead)
                     next_run = next_run.replace(hour=target_hour, minute=target_minute, second=0, microsecond=0)
@@ -453,9 +479,7 @@ class EvaluationScheduler:
     def get_run(self, run_id: str) -> EvaluationRun | None:
         return self._runs.get(run_id)
 
-    def list_runs(
-        self, limit: int = 50, schedule: str | None = None, status: str | None = None
-    ) -> list[EvaluationRun]:
+    def list_runs(self, limit: int = 50, schedule: str | None = None, status: str | None = None) -> list[EvaluationRun]:
         results = list(self._runs.values())
         if schedule:
             results = [r for r in results if r.schedule == schedule]

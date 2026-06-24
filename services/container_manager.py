@@ -1,4 +1,5 @@
 """Container Manager — Docker container lifecycle, resource limits, monitoring."""
+
 import logging
 import subprocess
 import threading
@@ -108,7 +109,11 @@ class ContainerManager:
             container.status = "created"
             with self._lock:
                 self.containers[container.id] = container
-            logger.info("Container %s created (docker=%s)", container.id[:8], container.docker_id[:12] if container.docker_id else "N/A")
+            logger.info(
+                "Container %s created (docker=%s)",
+                container.id[:8],
+                container.docker_id[:12] if container.docker_id else "N/A",
+            )
         except Exception as exc:
             container.status = "failed"
             container.error = str(exc)
@@ -169,7 +174,9 @@ class ContainerManager:
         try:
             r = subprocess.run(
                 ["docker", "logs", "--tail", str(tail), container.docker_id],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
             return (r.stdout + r.stderr).splitlines()
         except Exception as exc:
@@ -181,9 +188,17 @@ class ContainerManager:
             return {"cpu_percent": 0.0, "memory_mb": 0.0, "status": container.status}
         try:
             r = subprocess.run(
-                ["docker", "stats", "--no-stream", "--format", "{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}\t{{.BlockIO}}",
-                 container.docker_id],
-                capture_output=True, text=True, timeout=10,
+                [
+                    "docker",
+                    "stats",
+                    "--no-stream",
+                    "--format",
+                    "{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}\t{{.BlockIO}}",
+                    container.docker_id,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
             parts = r.stdout.strip().split("\t")
             cpu = float(parts[0].replace("%", "")) if parts else 0.0
@@ -200,7 +215,9 @@ class ContainerManager:
         try:
             r = subprocess.run(
                 ["docker", "inspect", "--format", "{{.State.Status}}", container.docker_id],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
             return r.stdout.strip() == "running"
         except Exception:

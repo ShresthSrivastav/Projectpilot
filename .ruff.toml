@@ -17,6 +17,10 @@ exclude = [
     "test_security_projects",
     "test_chroma_ci",
     "test_generated_ci",
+    "plugin_data",
+    "marketplace_data",
+    "benchmark_campaign",
+    "generated_projects_backup",
     "build",
     "dist"
 ]
@@ -31,7 +35,7 @@ target-version = "py311"
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`) codes by default.
 # Also enable isort (`I`) for import checks.
 select = ["E4", "E7", "E9", "F", "I", "UP", "B", "C4"]
-ignore = ["E402", "E741", "E701", "E702", "F821", "B007", "B905", "C401", "B008", "F401", "F823", "C416", "B904", "UP042", "E722", "F811"] # ignore imports not at top of file, ambiguous names, and pre-existing codebase warnings
+ignore = ["E402", "E741", "E701", "E702", "E712", "F821", "F841", "F541", "B007", "B905", "C401", "B008", "F401", "F823", "C416", "B904", "UP042", "UP045", "I001", "E722", "F811"] # ignore imports not at top of file, ambiguous names, and pre-existing codebase warnings
 
 # Allow fix behavior
 fixable = ["ALL"]

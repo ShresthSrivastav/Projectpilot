@@ -4,6 +4,7 @@ Ingests evaluation results, benchmark scores, regression reports, deployment
 outcomes, and healing statistics. Extracts patterns, generates insights, and
 produces recommendations to improve future autonomous behavior.
 """
+
 import logging
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -11,8 +12,14 @@ from datetime import UTC, datetime
 from typing import Any
 
 LEARNING_CATEGORIES = [
-    "architecture", "code_quality", "testing", "deployment",
-    "healing", "benchmark_performance", "cost_efficiency", "execution_speed",
+    "architecture",
+    "code_quality",
+    "testing",
+    "deployment",
+    "healing",
+    "benchmark_performance",
+    "cost_efficiency",
+    "execution_speed",
 ]
 
 
@@ -53,6 +60,7 @@ class LearningFeedbackService:
     def ingest_evaluation_result(self, run: dict) -> dict[str, Any]:
         """Ingest a completed evaluation run result."""
         from database.memory_store import mem_save_learning_feedback
+
         now = datetime.now(UTC).timestamp()
         run_id = run.get("id", "")
         score = run.get("autonomy_score", 0.0)
@@ -82,19 +90,21 @@ class LearningFeedbackService:
         # Extract patterns from this evaluation result
         patterns = self._extract_patterns_from_run(run)
         for p in patterns:
-            mem_save_learning_feedback({
-                "id": p["id"],
-                "feedback_type": "pattern",
-                "source": "evaluation",
-                "category": p["category"],
-                "score": p.get("confidence", 0.0),
-                "metric_name": "pattern_extracted",
-                "metric_value": 1.0,
-                "context": {"pattern": p},
-                "run_id": run_id,
-                "version": "13.0.0",
-                "created_at": now,
-            })
+            mem_save_learning_feedback(
+                {
+                    "id": p["id"],
+                    "feedback_type": "pattern",
+                    "source": "evaluation",
+                    "category": p["category"],
+                    "score": p.get("confidence", 0.0),
+                    "metric_name": "pattern_extracted",
+                    "metric_value": 1.0,
+                    "context": {"pattern": p},
+                    "run_id": run_id,
+                    "version": "13.0.0",
+                    "created_at": now,
+                }
+            )
             self.store_pattern(p)
 
         return {"run_id": run_id, "score": score, "patterns_extracted": len(patterns)}
@@ -102,6 +112,7 @@ class LearningFeedbackService:
     def ingest_benchmark_score(self, benchmark_data: dict) -> dict[str, Any]:
         """Ingest a benchmark score result."""
         from database.memory_store import mem_save_learning_feedback
+
         now = datetime.now(UTC).timestamp()
         fb_id = f"bench_{benchmark_data.get('id', str(uuid.uuid4()))}"
         feedback = {
@@ -123,8 +134,15 @@ class LearningFeedbackService:
     def ingest_regression_report(self, report: dict) -> dict[str, Any]:
         """Ingest a regression detection report."""
         from database.memory_store import mem_save_learning_feedback
+
         now = datetime.now(UTC).timestamp()
-        regressions = report.get("regressions", []) if isinstance(report, dict) else report.regressions if hasattr(report, "regressions") else []
+        regressions = (
+            report.get("regressions", [])
+            if isinstance(report, dict)
+            else report.regressions
+            if hasattr(report, "regressions")
+            else []
+        )
         ingested = []
         for reg in regressions:
             reg_dict = reg if isinstance(reg, dict) else reg.to_dict() if hasattr(reg, "to_dict") else {}
@@ -132,7 +150,9 @@ class LearningFeedbackService:
             feedback = {
                 "id": fb_id,
                 "feedback_type": "regression",
-                "source": report.get("source", "regression_detector") if isinstance(report, dict) else "regression_detector",
+                "source": report.get("source", "regression_detector")
+                if isinstance(report, dict)
+                else "regression_detector",
                 "category": reg_dict.get("category", "general"),
                 "score": -abs(reg_dict.get("change_pct", 0.0)),
                 "metric_name": reg_dict.get("metric", ""),
@@ -153,6 +173,7 @@ class LearningFeedbackService:
     def ingest_deployment_outcome(self, deployment: dict) -> dict[str, Any]:
         """Ingest a deployment outcome."""
         from database.memory_store import mem_save_learning_feedback
+
         now = datetime.now(UTC).timestamp()
         fb_id = f"deploy_{deployment.get('id', str(uuid.uuid4()))}"
         success = deployment.get("success", False)
@@ -176,23 +197,26 @@ class LearningFeedbackService:
         mem_save_learning_feedback(feedback)
 
         if not success:
-            self.store_pattern({
-                "pattern_type": "failed_strategy",
-                "category": "deployment",
-                "title": "Deployment failure",
-                "description": deployment.get("error", "Unknown deployment error"),
-                "strategy": deployment.get("strategy", ""),
-                "outcome": "failed",
-                "confidence": 0.3,
-                "tags": ["deployment", "failure"],
-                "source_run_ids": [deployment.get("run_id", "")],
-            })
+            self.store_pattern(
+                {
+                    "pattern_type": "failed_strategy",
+                    "category": "deployment",
+                    "title": "Deployment failure",
+                    "description": deployment.get("error", "Unknown deployment error"),
+                    "strategy": deployment.get("strategy", ""),
+                    "outcome": "failed",
+                    "confidence": 0.3,
+                    "tags": ["deployment", "failure"],
+                    "source_run_ids": [deployment.get("run_id", "")],
+                }
+            )
 
         return {"id": fb_id, "success": success}
 
     def ingest_healing_statistics(self, healing: dict) -> dict[str, Any]:
         """Ingest healing statistics."""
         from database.memory_store import mem_save_learning_feedback
+
         now = datetime.now(UTC).timestamp()
         fb_id = f"heal_{healing.get('id', str(uuid.uuid4()))}"
         heal_rate = healing.get("healing_rate", 0.0)
@@ -232,102 +256,116 @@ class LearningFeedbackService:
         deploy = run_dict.get("deployment_success_rate", 0.0)
 
         if score >= 0.85:
-            patterns.append({
-                "id": f"pat_high_auto_{run_id}",
-                "pattern_type": "high_performing",
-                "category": "benchmark_performance",
-                "title": "High autonomy score",
-                "description": f"Evaluation achieved autonomy score of {score:.2f}",
-                "strategy": "Current configuration produces high autonomy scores",
-                "outcome": "success",
-                "confidence": min(1.0, score),
-                "tags": ["high_performing", "autonomy"],
-                "source_run_ids": [run_id],
-            })
+            patterns.append(
+                {
+                    "id": f"pat_high_auto_{run_id}",
+                    "pattern_type": "high_performing",
+                    "category": "benchmark_performance",
+                    "title": "High autonomy score",
+                    "description": f"Evaluation achieved autonomy score of {score:.2f}",
+                    "strategy": "Current configuration produces high autonomy scores",
+                    "outcome": "success",
+                    "confidence": min(1.0, score),
+                    "tags": ["high_performing", "autonomy"],
+                    "source_run_ids": [run_id],
+                }
+            )
         elif score < 0.5:
-            patterns.append({
-                "id": f"pat_low_auto_{run_id}",
-                "pattern_type": "low_performing",
-                "category": "benchmark_performance",
-                "title": "Low autonomy score",
-                "description": f"Evaluation scored only {score:.2f} autonomy",
-                "strategy": "Review benchmark domain selection and execution parameters",
-                "outcome": "needs_improvement",
-                "confidence": min(1.0, 1.0 - score),
-                "tags": ["low_performing", "autonomy"],
-                "source_run_ids": [run_id],
-            })
+            patterns.append(
+                {
+                    "id": f"pat_low_auto_{run_id}",
+                    "pattern_type": "low_performing",
+                    "category": "benchmark_performance",
+                    "title": "Low autonomy score",
+                    "description": f"Evaluation scored only {score:.2f} autonomy",
+                    "strategy": "Review benchmark domain selection and execution parameters",
+                    "outcome": "needs_improvement",
+                    "confidence": min(1.0, 1.0 - score),
+                    "tags": ["low_performing", "autonomy"],
+                    "source_run_ids": [run_id],
+                }
+            )
 
         if success_rate >= 0.9:
-            patterns.append({
-                "id": f"pat_high_sr_{run_id}",
-                "pattern_type": "high_performing",
-                "category": "code_quality",
-                "title": "High success rate",
-                "description": f"Task success rate of {success_rate:.1%}",
-                "strategy": "Current task execution approach is effective",
-                "outcome": "success",
-                "confidence": min(1.0, success_rate),
-                "tags": ["high_performing", "success_rate"],
-                "source_run_ids": [run_id],
-            })
+            patterns.append(
+                {
+                    "id": f"pat_high_sr_{run_id}",
+                    "pattern_type": "high_performing",
+                    "category": "code_quality",
+                    "title": "High success rate",
+                    "description": f"Task success rate of {success_rate:.1%}",
+                    "strategy": "Current task execution approach is effective",
+                    "outcome": "success",
+                    "confidence": min(1.0, success_rate),
+                    "tags": ["high_performing", "success_rate"],
+                    "source_run_ids": [run_id],
+                }
+            )
 
         if healing >= 0.85:
-            patterns.append({
-                "id": f"pat_high_heal_{run_id}",
-                "pattern_type": "successful_strategy",
-                "category": "healing",
-                "title": "Strong healing rate",
-                "description": f"Self-healing rate of {healing:.1%}",
-                "strategy": "Auto-healing mechanisms are performing well",
-                "outcome": "success",
-                "confidence": min(1.0, healing),
-                "tags": ["healing", "self_healing"],
-                "source_run_ids": [run_id],
-            })
+            patterns.append(
+                {
+                    "id": f"pat_high_heal_{run_id}",
+                    "pattern_type": "successful_strategy",
+                    "category": "healing",
+                    "title": "Strong healing rate",
+                    "description": f"Self-healing rate of {healing:.1%}",
+                    "strategy": "Auto-healing mechanisms are performing well",
+                    "outcome": "success",
+                    "confidence": min(1.0, healing),
+                    "tags": ["healing", "self_healing"],
+                    "source_run_ids": [run_id],
+                }
+            )
         elif healing < 0.6:
-            patterns.append({
-                "id": f"pat_low_heal_{run_id}",
-                "pattern_type": "failed_strategy",
-                "category": "healing",
-                "title": "Weak healing rate",
-                "description": f"Self-healing rate only {healing:.1%}",
-                "strategy": "Improve auto-healing mechanisms and fallback strategies",
-                "outcome": "needs_improvement",
-                "confidence": min(1.0, 1.0 - healing),
-                "tags": ["healing", "needs_improvement"],
-                "source_run_ids": [run_id],
-            })
+            patterns.append(
+                {
+                    "id": f"pat_low_heal_{run_id}",
+                    "pattern_type": "failed_strategy",
+                    "category": "healing",
+                    "title": "Weak healing rate",
+                    "description": f"Self-healing rate only {healing:.1%}",
+                    "strategy": "Improve auto-healing mechanisms and fallback strategies",
+                    "outcome": "needs_improvement",
+                    "confidence": min(1.0, 1.0 - healing),
+                    "tags": ["healing", "needs_improvement"],
+                    "source_run_ids": [run_id],
+                }
+            )
 
         if deploy >= 0.9:
-            patterns.append({
-                "id": f"pat_high_deploy_{run_id}",
-                "pattern_type": "successful_strategy",
-                "category": "deployment",
-                "title": "High deployment success",
-                "description": f"Deployment success rate of {deploy:.1%}",
-                "strategy": "Current deployment pipeline is reliable",
-                "outcome": "success",
-                "confidence": min(1.0, deploy),
-                "tags": ["deployment", "reliable"],
-                "source_run_ids": [run_id],
-            })
+            patterns.append(
+                {
+                    "id": f"pat_high_deploy_{run_id}",
+                    "pattern_type": "successful_strategy",
+                    "category": "deployment",
+                    "title": "High deployment success",
+                    "description": f"Deployment success rate of {deploy:.1%}",
+                    "strategy": "Current deployment pipeline is reliable",
+                    "outcome": "success",
+                    "confidence": min(1.0, deploy),
+                    "tags": ["deployment", "reliable"],
+                    "source_run_ids": [run_id],
+                }
+            )
 
         if cost > 0 and runtime > 0:
             efficiency = max(0, 1.0 - (cost * runtime) / 1_000_000)
             if efficiency >= 0.8:
-                patterns.append({
-                    "id": f"pat_cost_eff_{run_id}",
-                    "pattern_type": "successful_strategy",
-                    "category": "cost_efficiency",
-                    "title": "Cost-efficient execution",
-                    "description": f"Cost efficiency score of {efficiency:.2f}",
-                    "strategy": "Current resource allocation is cost-effective",
-                    "outcome": "success",
-                    "confidence": efficiency,
-                    "tags": ["cost_efficiency", "optimization"],
-                    "source_run_ids": [run_id],
-                })
+                patterns.append(
+                    {
+                        "id": f"pat_cost_eff_{run_id}",
+                        "pattern_type": "successful_strategy",
+                        "category": "cost_efficiency",
+                        "title": "Cost-efficient execution",
+                        "description": f"Cost efficiency score of {efficiency:.2f}",
+                        "strategy": "Current resource allocation is cost-effective",
+                        "outcome": "success",
+                        "confidence": efficiency,
+                        "tags": ["cost_efficiency", "optimization"],
+                        "source_run_ids": [run_id],
+                    }
+                )
 
         return patterns
 
@@ -339,6 +377,7 @@ class LearningFeedbackService:
             mem_list_learning_patterns,
             mem_save_learning_pattern,
         )
+
         now = datetime.now(UTC).timestamp()
         pattern_id = pattern.get("id", str(uuid.uuid4()))
 
@@ -363,8 +402,12 @@ class LearningFeedbackService:
                 "description": pattern.get("description", match.get("description", "")),
                 "strategy": pattern.get("strategy", match.get("strategy", "")),
                 "outcome": pattern.get("outcome", match.get("outcome", "")),
-                "success_count": (match.get("success_count", 0) + 1) if pattern.get("outcome") == "success" else match.get("success_count", 0),
-                "failure_count": (match.get("failure_count", 0) + 1) if pattern.get("outcome") in ("failed", "needs_improvement") else match.get("failure_count", 0),
+                "success_count": (match.get("success_count", 0) + 1)
+                if pattern.get("outcome") == "success"
+                else match.get("success_count", 0),
+                "failure_count": (match.get("failure_count", 0) + 1)
+                if pattern.get("outcome") in ("failed", "needs_improvement")
+                else match.get("failure_count", 0),
                 "confidence": min(1.0, pattern.get("confidence", match.get("confidence", 0.5)) * 1.05),
                 "tags": list(set(match.get("tags", []) + pattern.get("tags", []))),
                 "source_run_ids": list(set(match.get("source_run_ids", []) + pattern.get("source_run_ids", []))),
@@ -400,6 +443,7 @@ class LearningFeedbackService:
             mem_list_learning_patterns,
             mem_save_learning_recommendation,
         )
+
         generated = []
 
         patterns = mem_list_learning_patterns(min_confidence=0.3, limit=200)
@@ -413,10 +457,22 @@ class LearningFeedbackService:
             by_category.setdefault(cat, []).append(p)
 
         for cat, cat_patterns in by_category.items():
-            high_perf = [p for p in cat_patterns if p.get("pattern_type") == "high_performing" and p.get("confidence", 0) >= 0.7]
-            low_perf = [p for p in cat_patterns if p.get("pattern_type") in ("low_performing", "failed_strategy") and p.get("confidence", 0) >= 0.3]
-            successful = [p for p in cat_patterns if p.get("pattern_type") == "successful_strategy" and p.get("confidence", 0) >= 0.6]
-            failed = [p for p in cat_patterns if p.get("pattern_type") == "failed_strategy" and p.get("confidence", 0) >= 0.3]
+            high_perf = [
+                p for p in cat_patterns if p.get("pattern_type") == "high_performing" and p.get("confidence", 0) >= 0.7
+            ]
+            low_perf = [
+                p
+                for p in cat_patterns
+                if p.get("pattern_type") in ("low_performing", "failed_strategy") and p.get("confidence", 0) >= 0.3
+            ]
+            successful = [
+                p
+                for p in cat_patterns
+                if p.get("pattern_type") == "successful_strategy" and p.get("confidence", 0) >= 0.6
+            ]
+            failed = [
+                p for p in cat_patterns if p.get("pattern_type") == "failed_strategy" and p.get("confidence", 0) >= 0.3
+            ]
 
             if high_perf:
                 pids = [p["id"] for p in high_perf]
@@ -502,6 +558,7 @@ class LearningFeedbackService:
     def generate_insights(self, category: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
         """Generate learning insights from feedback, patterns, and recommendations."""
         from database.memory_store import mem_get_learning_insights
+
         return mem_get_learning_insights(category=category, limit=limit)
 
     # ── Query ──────────────────────────────────────────────────────────────────
@@ -514,9 +571,12 @@ class LearningFeedbackService:
         limit: int = 100,
     ) -> list[dict]:
         from database.memory_store import mem_list_learning_patterns
+
         return mem_list_learning_patterns(
-            pattern_type=pattern_type, category=category,
-            min_confidence=min_confidence, limit=limit,
+            pattern_type=pattern_type,
+            category=category,
+            min_confidence=min_confidence,
+            limit=limit,
         )
 
     def get_recommendations(
@@ -527,13 +587,17 @@ class LearningFeedbackService:
         limit: int = 100,
     ) -> list[dict]:
         from database.memory_store import mem_list_learning_recommendations
+
         return mem_list_learning_recommendations(
             recommendation_type=recommendation_type,
-            category=category, status=status, limit=limit,
+            category=category,
+            status=status,
+            limit=limit,
         )
 
     def get_insights(self, category: str | None = None, limit: int = 20) -> list[dict]:
         from database.memory_store import mem_get_learning_insights
+
         return mem_get_learning_insights(category=category, limit=limit)
 
 

@@ -11,6 +11,7 @@ On each iteration:
 
 Records fix patterns for future learning.
 """
+
 import logging
 import os
 import re
@@ -50,29 +51,40 @@ def run_autofix(
         passed = pr.get("passed", False)
         failures = pr.get("failures", [])
         collected = pr.get("collected", 0)
-        history.append({
-            "attempt": attempt,
-            "passed": passed,
-            "collected": collected,
-            "failures": len(failures),
-            "output_preview": output[:500],
-        })
+        history.append(
+            {
+                "attempt": attempt,
+                "passed": passed,
+                "collected": collected,
+                "failures": len(failures),
+                "output_preview": output[:500],
+            }
+        )
 
-        update_job_status(job_id, "running", current_agent="AutoFixAgent",
-                          progress_pct=min(100, int(attempt / max_attempts * 100)),
-                          test_total=collected,
-                          test_passed=collected - len(failures),
-                          test_failed=len(failures),
-                          test_summary=f"Auto-fix attempt {attempt}/{max_attempts}: "
-                                       f"{collected - len(failures)} passed, {len(failures)} failed.")
+        update_job_status(
+            job_id,
+            "running",
+            current_agent="AutoFixAgent",
+            progress_pct=min(100, int(attempt / max_attempts * 100)),
+            test_total=collected,
+            test_passed=collected - len(failures),
+            test_failed=len(failures),
+            test_summary=f"Auto-fix attempt {attempt}/{max_attempts}: "
+            f"{collected - len(failures)} passed, {len(failures)} failed.",
+        )
 
         if passed:
             logger.info("Auto-fix succeeded on attempt %d/%d", attempt, max_attempts)
-            update_job_status(job_id, "complete", current_agent="AutoFixAgent",
-                              progress_pct=100,
-                              test_total=collected, test_passed=collected,
-                              test_failed=0,
-                              test_summary=f"All tests pass after {attempt} attempt(s).")
+            update_job_status(
+                job_id,
+                "complete",
+                current_agent="AutoFixAgent",
+                progress_pct=100,
+                test_total=collected,
+                test_passed=collected,
+                test_failed=0,
+                test_summary=f"All tests pass after {attempt} attempt(s).",
+            )
             return {
                 "job_id": job_id,
                 "status": "passed",
@@ -89,12 +101,16 @@ def run_autofix(
             logger.warning("Auto-fix attempt %d: LLM made no changes, stopping.", attempt)
             break
 
-    update_job_status(job_id, "complete", current_agent="AutoFixAgent",
-                      progress_pct=100,
-                      test_total=history[-1].get("collected", 0),
-                      test_passed=history[-1].get("collected", 0) - history[-1].get("failures", 0),
-                      test_failed=history[-1].get("failures", 0),
-                      test_summary=f"Auto-fix exhausted after {len(history)} attempt(s).")
+    update_job_status(
+        job_id,
+        "complete",
+        current_agent="AutoFixAgent",
+        progress_pct=100,
+        test_total=history[-1].get("collected", 0),
+        test_passed=history[-1].get("collected", 0) - history[-1].get("failures", 0),
+        test_failed=history[-1].get("failures", 0),
+        test_summary=f"Auto-fix exhausted after {len(history)} attempt(s).",
+    )
     return {
         "job_id": job_id,
         "status": "failed",
@@ -126,12 +142,8 @@ def _fix_failing_tests(
             rel = str(fp.relative_to(test_dir))
             test_files[rel] = fp.read_text(encoding="utf-8")
 
-    source_block = "\n\n".join(
-        f"--- {k} ---\n{v}\n--- END {k}" for k, v in sorted(source_file_map.items())
-    )
-    test_block = "\n\n".join(
-        f"--- tests/{k} ---\n{v}\n--- END tests/{k}" for k, v in sorted(test_files.items())
-    )
+    source_block = "\n\n".join(f"--- {k} ---\n{v}\n--- END {k}" for k, v in sorted(source_file_map.items()))
+    test_block = "\n\n".join(f"--- tests/{k} ---\n{v}\n--- END tests/{k}" for k, v in sorted(test_files.items()))
 
     prompt = (
         f"The project at {job_id} has failing tests.\n\n"
@@ -154,8 +166,7 @@ def _fix_failing_tests(
     )
 
     try:
-        result = call_model(prompt, system_prompt=system, model=model,
-                            job_id=job_id, agent="AutoFixAgent")
+        result = call_model(prompt, system_prompt=system, model=model, job_id=job_id, agent="AutoFixAgent")
     except RuntimeError as exc:
         logger.error("Auto-fix LLM call failed: %s", exc)
         return []
@@ -177,7 +188,8 @@ def _fix_failing_tests(
         block_text = "\n".join(lines[1:])
         content_match = re.search(
             r"---\s*CONTENT\s*:\s*\n?(.*?)(?:\n---\s*END|$)",
-            block_text, re.DOTALL,
+            block_text,
+            re.DOTALL,
         )
         content = content_match.group(1).strip() if content_match else ""
         if not content:
@@ -201,7 +213,6 @@ def _fix_failing_tests(
                 logger.warning("Auto-fix introduced syntax error in %s: %s", fp, sr.get("error"))
 
     if modified:
-        record_successful_fix(test_output[:500], ", ".join(modified),
-                              f"Auto-fix attempt {attempt}")
+        record_successful_fix(test_output[:500], ", ".join(modified), f"Auto-fix attempt {attempt}")
 
     return modified

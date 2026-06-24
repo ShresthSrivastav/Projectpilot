@@ -1,4 +1,5 @@
 """Log Analysis Engine — parse logs, classify errors, detect root causes, suggest fixes."""
+
 import json
 import logging
 import re
@@ -212,8 +213,8 @@ class LogAnalyzer:
     def _find_file_path(self, log_text: str, char_pos: int) -> str | None:
         file_patterns = [
             r'File "([^"]+)"',
-            r'in ([a-zA-Z_][\w./]*)\.py',
-            r'at ([a-zA-Z_][\w./]*\.[a-z]+)',
+            r"in ([a-zA-Z_][\w./]*)\.py",
+            r"at ([a-zA-Z_][\w./]*\.[a-z]+)",
         ]
         for pattern in file_patterns:
             for m in re.finditer(pattern, log_text):

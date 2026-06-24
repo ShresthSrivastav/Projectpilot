@@ -1,4 +1,5 @@
 """Organization Graph Service — multi-repository knowledge graph, dependency mapping, impact analysis."""
+
 import json
 import logging
 import os
@@ -190,7 +191,9 @@ class OrganizationGraph:
 
     # ── Repository Management ───────────────────────────────────────────────────
 
-    def add_repository(self, name: str, path: str, category: str = "", language: str = "", url: str = "", description: str = "") -> RepositoryNode:
+    def add_repository(
+        self, name: str, path: str, category: str = "", language: str = "", url: str = "", description: str = ""
+    ) -> RepositoryNode:
         if not category:
             category = self._detect_category(name, path)
         repo = RepositoryNode(
@@ -213,10 +216,10 @@ class OrganizationGraph:
             if repo_id not in self.org.repositories:
                 return False
             del self.org.repositories[repo_id]
-            self.org.dependencies = {k: v for k, v in self.org.dependencies.items()
-                                     if v.source_repo != repo_id and v.target_repo != repo_id}
-            self.org.entities = {k: v for k, v in self.org.entities.items()
-                                 if v.repo != repo_id}
+            self.org.dependencies = {
+                k: v for k, v in self.org.dependencies.items() if v.source_repo != repo_id and v.target_repo != repo_id
+            }
+            self.org.entities = {k: v for k, v in self.org.entities.items() if v.repo != repo_id}
             self.org.updated_at = time.time()
         self._save()
         return True
@@ -285,7 +288,9 @@ class OrganizationGraph:
 
         self._detect_dependencies()
         self._save()
-        logger.info("Indexed repo %s: %d files, %d entities", repo.name, stats["files_scanned"], stats["entities_found"])
+        logger.info(
+            "Indexed repo %s: %d files, %d entities", repo.name, stats["files_scanned"], stats["entities_found"]
+        )
         return stats
 
     def _parse_entities(self, content: str, repo_name: str, rel_path: str, suffix: str) -> list[OrgEntity]:
@@ -293,25 +298,27 @@ class OrganizationGraph:
         # Parse imports
         imports = []
         if suffix == ".py":
-            for match in re.finditer(r'^(?:from\s+(\S+)\s+)?import\s+(\S+)', content, re.MULTILINE):
+            for match in re.finditer(r"^(?:from\s+(\S+)\s+)?import\s+(\S+)", content, re.MULTILINE):
                 if match.group(1):
                     imports.append(f"{match.group(1)}.{match.group(2)}")
                 else:
                     imports.append(match.group(2))
         elif suffix in (".js", ".ts", ".tsx", ".jsx"):
-            for match in re.finditer(r'(?:import\s+\S+\s+from\s+[\'"]([^\'"]+)[\'"]|require\([\'"]([^\'"]+)[\'"]\))', content):
+            for match in re.finditer(
+                r'(?:import\s+\S+\s+from\s+[\'"]([^\'"]+)[\'"]|require\([\'"]([^\'"]+)[\'"]\))', content
+            ):
                 imports.append(match.group(1) or match.group(2))
 
         # Parse classes
         class_patterns = {
-            ".py": r'^class\s+(\w+)(?:\(([^)]*)\))?\s*:',
-            ".java": r'^(?:public\s+)?(?:abstract\s+)?class\s+(\w+)',
-            ".ts": r'^(?:export\s+)?(?:abstract\s+)?class\s+(\w+)',
-            ".js": r'^class\s+(\w+)',
+            ".py": r"^class\s+(\w+)(?:\(([^)]*)\))?\s*:",
+            ".java": r"^(?:public\s+)?(?:abstract\s+)?class\s+(\w+)",
+            ".ts": r"^(?:export\s+)?(?:abstract\s+)?class\s+(\w+)",
+            ".js": r"^class\s+(\w+)",
         }
-        pattern = class_patterns.get(suffix, r'^class\s+(\w+)')
+        pattern = class_patterns.get(suffix, r"^class\s+(\w+)")
         for match in re.finditer(pattern, content, re.MULTILINE):
-            line_no = content[:match.start()].count("\n") + 1
+            line_no = content[: match.start()].count("\n") + 1
             class_name = match.group(1)
             extends = []
             if match.lastindex >= 2 and match.group(2):
@@ -319,7 +326,7 @@ class OrganizationGraph:
 
             # Find docstring
             docstring = ""
-            doc_match = re.search(r'"""(.*?)"""', content[match.end():], re.DOTALL)
+            doc_match = re.search(r'"""(.*?)"""', content[match.end() :], re.DOTALL)
             if doc_match:
                 docstring = doc_match.group(1).strip()
 
@@ -338,20 +345,22 @@ class OrganizationGraph:
 
         # Parse functions
         func_patterns = {
-            ".py": r'^(?:async\s+)?def\s+(\w+)\s*\(',
-            ".js": r'^(?:async\s+)?(?:export\s+)?(?:function\s+(\w+)|const\s+(\w+)\s*=\s*(?:async\s+)?\(|const\s+(\w+)\s*=\s*function)',
-            ".ts": r'^(?:async\s+)?(?:export\s+)?(?:function\s+(\w+)|const\s+(\w+)\s*=\s*(?:async\s+)?\()',
-            ".java": r'^(?:public|private|protected)\s+\S+\s+(\w+)\s*\(',
+            ".py": r"^(?:async\s+)?def\s+(\w+)\s*\(",
+            ".js": r"^(?:async\s+)?(?:export\s+)?(?:function\s+(\w+)|const\s+(\w+)\s*=\s*(?:async\s+)?\(|const\s+(\w+)\s*=\s*function)",
+            ".ts": r"^(?:async\s+)?(?:export\s+)?(?:function\s+(\w+)|const\s+(\w+)\s*=\s*(?:async\s+)?\()",
+            ".java": r"^(?:public|private|protected)\s+\S+\s+(\w+)\s*\(",
         }
-        func_pattern = func_patterns.get(suffix, r'^(?:async\s+)?def\s+(\w+)\s*\(')
+        func_pattern = func_patterns.get(suffix, r"^(?:async\s+)?def\s+(\w+)\s*\(")
         for match in re.finditer(func_pattern, content, re.MULTILINE):
-            line_no = content[:match.start()].count("\n") + 1
+            line_no = content[: match.start()].count("\n") + 1
             func_name = next(g for g in match.groups() if g)
 
             # Skip if inside a class (handled above)
-            class_line = max([0] + [content[:match.start()].rfind("\nclass "), content[:match.start()].rfind("\nclass\t")])
+            class_line = max(
+                [0] + [content[: match.start()].rfind("\nclass "), content[: match.start()].rfind("\nclass\t")]
+            )
             if class_line > 0:
-                after_class = content[class_line:match.start()]
+                after_class = content[class_line : match.start()]
                 if after_class.count("\n") < 50:
                     continue
 
@@ -381,11 +390,15 @@ class OrganizationGraph:
             if entity.entity_type != "class":
                 continue
             for ext in entity.extends:
-                dep = self._find_cross_repo_dependency(entity.repo, entity.file_path, entity.name, ext, repos, entities, "extends")
+                dep = self._find_cross_repo_dependency(
+                    entity.repo, entity.file_path, entity.name, ext, repos, entities, "extends"
+                )
                 if dep:
                     new_deps[dep.id] = dep
             for imp in entity.imports:
-                dep = self._find_cross_repo_dependency(entity.repo, entity.file_path, entity.name, imp, repos, entities, "imports")
+                dep = self._find_cross_repo_dependency(
+                    entity.repo, entity.file_path, entity.name, imp, repos, entities, "imports"
+                )
                 if dep:
                     new_deps[dep.id] = dep
 
@@ -394,8 +407,13 @@ class OrganizationGraph:
             self.org.updated_at = time.time()
 
     def _find_cross_repo_dependency(
-        self, source_repo: str, source_file: str, source_symbol: str,
-        target_text: str, repos: dict[str, str], entities: list[OrgEntity],
+        self,
+        source_repo: str,
+        source_file: str,
+        source_symbol: str,
+        target_text: str,
+        repos: dict[str, str],
+        entities: list[OrgEntity],
         rel_type: str,
     ) -> CrossRepoDependency | None:
         target_repo = ""
@@ -417,7 +435,9 @@ class OrganizationGraph:
 
         # Try to find matching entity in target repo
         for ent in entities:
-            if ent.repo == target_repo and (ent.name.lower() in target_text.lower() or target_text.lower() in ent.name.lower()):
+            if ent.repo == target_repo and (
+                ent.name.lower() in target_text.lower() or target_text.lower() in ent.name.lower()
+            ):
                 target_file = ent.file_path
                 target_symbol = ent.name
                 break
@@ -434,8 +454,11 @@ class OrganizationGraph:
         return dep
 
     def add_manual_dependency(
-        self, source_repo: str, target_repo: str,
-        relationship: str = "depends_on", weight: float = 1.0,
+        self,
+        source_repo: str,
+        target_repo: str,
+        relationship: str = "depends_on",
+        weight: float = 1.0,
     ) -> CrossRepoDependency:
         dep = CrossRepoDependency(
             source_repo=source_repo,
@@ -476,13 +499,15 @@ class OrganizationGraph:
             if match_score > 0:
                 affected_repos.add(entity.repo)
                 affected_entities.append(entity.to_dict())
-                affected_files.append({
-                    "repo": entity.repo,
-                    "file": entity.file_path,
-                    "entity": entity.name,
-                    "type": entity.entity_type,
-                    "match_score": match_score,
-                })
+                affected_files.append(
+                    {
+                        "repo": entity.repo,
+                        "file": entity.file_path,
+                        "entity": entity.name,
+                        "type": entity.entity_type,
+                        "match_score": match_score,
+                    }
+                )
 
         # Phase 2: Find dependencies of matched entities
         matched_symbols = {e["entity"] for e in affected_entities}
@@ -495,45 +520,53 @@ class OrganizationGraph:
                 affected_repos.add(dep.target_repo)
                 if dep.source_symbol in matched_symbols or dep.target_symbol in matched_symbols:
                     weight = dep.weight * 0.8
-                    affected_files.append({
-                        "repo": dep.target_repo,
-                        "file": dep.target_file,
-                        "entity": dep.target_symbol,
-                        "type": "dependency",
-                        "match_score": weight,
-                    })
+                    affected_files.append(
+                        {
+                            "repo": dep.target_repo,
+                            "file": dep.target_file,
+                            "entity": dep.target_symbol,
+                            "type": "dependency",
+                            "match_score": weight,
+                        }
+                    )
 
         # Phase 3: Find tests and docs for affected repos
         for entity in entities:
             if entity.repo in affected_repos:
                 if "test" in entity.file_path.lower():
-                    affected_files.append({
-                        "repo": entity.repo,
-                        "file": entity.file_path,
-                        "entity": entity.name,
-                        "type": "test",
-                        "match_score": 0.5,
-                    })
+                    affected_files.append(
+                        {
+                            "repo": entity.repo,
+                            "file": entity.file_path,
+                            "entity": entity.name,
+                            "type": "test",
+                            "match_score": 0.5,
+                        }
+                    )
                 if "doc" in entity.file_path.lower() or entity.file_path.endswith(".md"):
-                    affected_files.append({
-                        "repo": entity.repo,
-                        "file": entity.file_path,
-                        "entity": entity.name,
-                        "type": "documentation",
-                        "match_score": 0.3,
-                    })
+                    affected_files.append(
+                        {
+                            "repo": entity.repo,
+                            "file": entity.file_path,
+                            "entity": entity.name,
+                            "type": "documentation",
+                            "match_score": 0.3,
+                        }
+                    )
 
         # Phase 4: Find infrastructure files
         for repo in repos:
             if repo.name in affected_repos:
                 if repo.category in ("infrastructure", "deploy"):
-                    affected_files.append({
-                        "repo": repo.name,
-                        "file": "deployment/",
-                        "entity": repo.name,
-                        "type": "infrastructure",
-                        "match_score": 0.4,
-                    })
+                    affected_files.append(
+                        {
+                            "repo": repo.name,
+                            "file": "deployment/",
+                            "entity": repo.name,
+                            "type": "infrastructure",
+                            "match_score": 0.4,
+                        }
+                    )
 
         report.affected_repos = list(affected_repos)
         report.affected_files = affected_files
@@ -558,28 +591,142 @@ class OrganizationGraph:
         report.report_markdown = self._generate_impact_markdown(report)
 
         self._save_impact_report(report)
-        logger.info("Impact analysis: query='%s' Score=%.1f Risk=%s Repos=%d",
-                     query, report.impact_score, report.risk_level, len(affected_repos))
+        logger.info(
+            "Impact analysis: query='%s' Score=%.1f Risk=%s Repos=%d",
+            query,
+            report.impact_score,
+            report.risk_level,
+            len(affected_repos),
+        )
         return report
 
     def _extract_keywords(self, query: str) -> list[str]:
-        keywords = re.findall(r'\b[a-zA-Z_]\w+\b', query.lower())
-        stopwords = {"the", "a", "an", "is", "are", "was", "were", "be", "been",
-                     "has", "have", "had", "do", "does", "did", "will", "would",
-                     "could", "should", "may", "might", "can", "shall", "to", "of",
-                     "in", "for", "on", "with", "at", "by", "from", "as", "into",
-                     "through", "during", "before", "after", "above", "below",
-                     "between", "out", "off", "over", "under", "again", "further",
-                     "then", "once", "here", "there", "when", "where", "why",
-                     "how", "all", "each", "every", "both", "few", "more", "most",
-                     "other", "some", "such", "no", "nor", "not", "only", "own",
-                     "same", "so", "than", "too", "very", "just", "because", "but",
-                     "and", "or", "if", "while", "about", "up", "it", "its", "this",
-                     "that", "these", "those", "i", "me", "my", "we", "our", "you",
-                     "your", "he", "him", "his", "she", "her", "they", "them",
-                     "their", "what", "which", "who", "whom", "change", "modify",
-                     "update", "add", "remove", "delete", "fix", "implement",
-                     "need", "want", "please", "make", "create", "new"}
+        keywords = re.findall(r"\b[a-zA-Z_]\w+\b", query.lower())
+        stopwords = {
+            "the",
+            "a",
+            "an",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "has",
+            "have",
+            "had",
+            "do",
+            "does",
+            "did",
+            "will",
+            "would",
+            "could",
+            "should",
+            "may",
+            "might",
+            "can",
+            "shall",
+            "to",
+            "of",
+            "in",
+            "for",
+            "on",
+            "with",
+            "at",
+            "by",
+            "from",
+            "as",
+            "into",
+            "through",
+            "during",
+            "before",
+            "after",
+            "above",
+            "below",
+            "between",
+            "out",
+            "off",
+            "over",
+            "under",
+            "again",
+            "further",
+            "then",
+            "once",
+            "here",
+            "there",
+            "when",
+            "where",
+            "why",
+            "how",
+            "all",
+            "each",
+            "every",
+            "both",
+            "few",
+            "more",
+            "most",
+            "other",
+            "some",
+            "such",
+            "no",
+            "nor",
+            "not",
+            "only",
+            "own",
+            "same",
+            "so",
+            "than",
+            "too",
+            "very",
+            "just",
+            "because",
+            "but",
+            "and",
+            "or",
+            "if",
+            "while",
+            "about",
+            "up",
+            "it",
+            "its",
+            "this",
+            "that",
+            "these",
+            "those",
+            "i",
+            "me",
+            "my",
+            "we",
+            "our",
+            "you",
+            "your",
+            "he",
+            "him",
+            "his",
+            "she",
+            "her",
+            "they",
+            "them",
+            "their",
+            "what",
+            "which",
+            "who",
+            "whom",
+            "change",
+            "modify",
+            "update",
+            "add",
+            "remove",
+            "delete",
+            "fix",
+            "implement",
+            "need",
+            "want",
+            "please",
+            "make",
+            "create",
+            "new",
+        }
         return [k for k in keywords if k not in stopwords and len(k) > 2][:20]
 
     def _match_keywords(self, entity: OrgEntity, keywords: list[str]) -> float:
@@ -689,14 +836,16 @@ class OrganizationGraph:
         for f in sorted(report_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)[:limit]:
             try:
                 data = json.loads(f.read_text(encoding="utf-8"))
-                reports.append({
-                    "id": data.get("id", ""),
-                    "query": data.get("query", ""),
-                    "impact_score": data.get("impact_score", 0),
-                    "risk_level": data.get("risk_level", ""),
-                    "affected_repos": data.get("affected_repos", []),
-                    "created_at": data.get("created_at", 0),
-                })
+                reports.append(
+                    {
+                        "id": data.get("id", ""),
+                        "query": data.get("query", ""),
+                        "impact_score": data.get("impact_score", 0),
+                        "risk_level": data.get("risk_level", ""),
+                        "affected_repos": data.get("affected_repos", []),
+                        "created_at": data.get("created_at", 0),
+                    }
+                )
             except Exception:
                 continue
         return reports
@@ -707,20 +856,26 @@ class OrganizationGraph:
             repos = list(self.org.repositories.values())
             deps = list(self.org.dependencies.values())
 
-        nodes = [{
-            "id": r.id[:8],
-            "label": r.name,
-            "category": r.category,
-            "file_count": r.file_count,
-            "size": max(10, min(50, r.file_count // 10 + 5)),
-        } for r in repos]
+        nodes = [
+            {
+                "id": r.id[:8],
+                "label": r.name,
+                "category": r.category,
+                "file_count": r.file_count,
+                "size": max(10, min(50, r.file_count // 10 + 5)),
+            }
+            for r in repos
+        ]
 
-        edges = [{
-            "source": d.source_repo,
-            "target": d.target_repo,
-            "label": d.relationship,
-            "weight": d.weight,
-        } for d in deps]
+        edges = [
+            {
+                "source": d.source_repo,
+                "target": d.target_repo,
+                "label": d.relationship,
+                "weight": d.weight,
+            }
+            for d in deps
+        ]
 
         return {"nodes": nodes, "edges": edges}
 
@@ -738,7 +893,9 @@ class OrganizationGraph:
             "indexed_count": indexed_count,
             "dependency_count": dep_count,
             "entity_count": entity_count,
-            "health_score": min(100.0, (indexed_count / max(repo_count, 1)) * 50.0 + (dep_count / max(repo_count, 1)) * 25.0 + 25.0),
+            "health_score": min(
+                100.0, (indexed_count / max(repo_count, 1)) * 50.0 + (dep_count / max(repo_count, 1)) * 25.0 + 25.0
+            ),
         }
 
 
@@ -755,11 +912,13 @@ class OrgGraphAnalyzer:
         shared = []
         for target, sources in dep_map.items():
             if len(sources) >= 2:
-                shared.append({
-                    "target": target,
-                    "sources": sources,
-                    "count": len(sources),
-                })
+                shared.append(
+                    {
+                        "target": target,
+                        "sources": sources,
+                        "count": len(sources),
+                    }
+                )
         return sorted(shared, key=lambda x: x["count"], reverse=True)
 
     def find_orphan_repos(self) -> list[str]:
@@ -833,14 +992,16 @@ def list_organizations() -> list[dict[str, Any]]:
     for f in ORG_DATA_DIR.glob("org_*.json"):
         try:
             data = json.loads(f.read_text(encoding="utf-8"))
-            orgs.append({
-                "id": data.get("id", ""),
-                "name": data.get("name", ""),
-                "description": data.get("description", ""),
-                "repo_count": len(data.get("repositories", [])),
-                "entity_count": data.get("entity_count", 0),
-                "created_at": data.get("created_at", 0),
-            })
+            orgs.append(
+                {
+                    "id": data.get("id", ""),
+                    "name": data.get("name", ""),
+                    "description": data.get("description", ""),
+                    "repo_count": len(data.get("repositories", [])),
+                    "entity_count": data.get("entity_count", 0),
+                    "created_at": data.get("created_at", 0),
+                }
+            )
         except Exception:
             continue
     return sorted(orgs, key=lambda x: x.get("created_at", 0), reverse=True)

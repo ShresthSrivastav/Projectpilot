@@ -1,4 +1,5 @@
 """RAG Service — document upload, chunking, embedding, and retrieval."""
+
 import json
 import logging
 import re
@@ -15,10 +16,10 @@ CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 MAX_CHUNKS_PER_DOC = 200
 
-_rag_client: chromadb.EphemeralClient | None = None
+_rag_client: Any = None
 
 
-def _get_client() -> chromadb.EphemeralClient:
+def _get_client() -> Any:
     global _rag_client
     if _rag_client is None:
         _rag_client = chromadb.EphemeralClient(
@@ -58,7 +59,7 @@ def _chunk_text(text: str, source: str) -> list[dict[str, Any]]:
 
     if len(chunks) == 0 and text.strip():
         for i in range(0, len(text), CHUNK_SIZE - CHUNK_OVERLAP):
-            chunk_text = text[i:i + CHUNK_SIZE]
+            chunk_text = text[i : i + CHUNK_SIZE]
             if chunk_text.strip():
                 chunks.append({"text": chunk_text, "source": source})
                 if len(chunks) >= MAX_CHUNKS_PER_DOC:
@@ -83,6 +84,7 @@ def _extract_text_from_file(file_path: Path) -> str:
     elif ext == ".pdf":
         try:
             from pypdf import PdfReader
+
             reader = PdfReader(str(file_path))
             return "\n".join(page.extract_text() or "" for page in reader.pages)
         except ImportError:
@@ -132,12 +134,14 @@ def upload_document(
             ids=[cid],
             embeddings=_embed(1),
             documents=[chunk["text"]],
-            metadatas=[{
-                "doc_id": doc_id,
-                "source": chunk["source"],
-                "chunk_index": i,
-                "tags": json.dumps(tags or []),
-            }],
+            metadatas=[
+                {
+                    "doc_id": doc_id,
+                    "source": chunk["source"],
+                    "chunk_index": i,
+                    "tags": json.dumps(tags or []),
+                }
+            ],
         )
 
     logger.info("RAG: uploaded %s (%d chunks)", file_path.name, len(chunks))
@@ -150,13 +154,15 @@ def list_documents() -> list[dict[str, Any]]:
         docs = []
         for doc, meta in zip(r["documents"], r["metadatas"]):
             parsed = json.loads(doc) if doc else {}
-            docs.append({
-                "doc_id": meta.get("doc_id", ""),
-                "source": meta.get("source", ""),
-                "tags": json.loads(meta.get("tags", "[]")),
-                "total_chunks": meta.get("total_chunks", 0),
-                "text_length": parsed.get("text_length", 0),
-            })
+            docs.append(
+                {
+                    "doc_id": meta.get("doc_id", ""),
+                    "source": meta.get("source", ""),
+                    "tags": json.loads(meta.get("tags", "[]")),
+                    "total_chunks": meta.get("total_chunks", 0),
+                    "text_length": parsed.get("text_length", 0),
+                }
+            )
         return docs
     except Exception as exc:
         logger.warning("RAG list failed: %s", exc)
@@ -179,12 +185,14 @@ def query(query_text: str, top_k: int = 5, tags: list[str] | None = None) -> lis
             scored.sort(key=lambda x: x[0], reverse=True)
             results = []
             for score, doc_text, meta in scored[:top_k]:
-                results.append({
-                    "text": doc_text[:1000],
-                    "source": meta.get("source", ""),
-                    "score": score,
-                    "doc_id": meta.get("doc_id", ""),
-                })
+                results.append(
+                    {
+                        "text": doc_text[:1000],
+                        "source": meta.get("source", ""),
+                        "score": score,
+                        "doc_id": meta.get("doc_id", ""),
+                    }
+                )
             return results
         else:
             r = _col("rag_chunks").get(include=["documents", "metadatas"])
@@ -196,12 +204,14 @@ def query(query_text: str, top_k: int = 5, tags: list[str] | None = None) -> lis
             scored.sort(key=lambda x: x[0], reverse=True)
             results = []
             for score, doc_text, meta in scored[:top_k]:
-                results.append({
-                    "text": doc_text[:1000],
-                    "source": meta.get("source", ""),
-                    "score": score,
-                    "doc_id": meta.get("doc_id", ""),
-                })
+                results.append(
+                    {
+                        "text": doc_text[:1000],
+                        "source": meta.get("source", ""),
+                        "score": score,
+                        "doc_id": meta.get("doc_id", ""),
+                    }
+                )
             return results
     except Exception as exc:
         logger.warning("RAG query failed: %s", exc)

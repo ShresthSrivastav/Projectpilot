@@ -6,7 +6,9 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 logger = logging.getLogger(__name__)
 
-MEMORY_DIR = os.getenv("MEMORY_STORE_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "memory_store"))
+MEMORY_DIR = os.getenv(
+    "MEMORY_STORE_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "memory_store")
+)
 DB_PATH = os.path.join(MEMORY_DIR, "projectpilot.db")
 os.makedirs(MEMORY_DIR, exist_ok=True)
 
@@ -40,9 +42,9 @@ def _run_migrations():
     try:
         # Migration 1: Remove UNIQUE constraint from workspaces.owner_id
         # SQLite doesn't support ALTER TABLE DROP CONSTRAINT, so we check if unique index exists
-        result = conn.execute(text(
-            "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='workspaces' AND name like '%owner%'"
-        ))
+        result = conn.execute(
+            text("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='workspaces' AND name like '%owner%'")
+        )
         idx = result.fetchone()
         if idx:
             # Drop the unique index on owner_id
@@ -58,5 +60,6 @@ def _run_migrations():
 
 def init_db():
     import database.models  # noqa: F401
+
     Base.metadata.create_all(bind=engine)
     _run_migrations()

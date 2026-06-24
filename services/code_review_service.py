@@ -1,4 +1,5 @@
 """Code Review Service — multi-agent code review with parallel reviewers."""
+
 import logging
 import threading
 from pathlib import Path
@@ -27,49 +28,59 @@ def _quality_review(file_path: Path, content: str) -> list[dict[str, Any]]:
             has_error_handling = True
 
     if not has_docstrings and len(lines) > 5:
-        findings.append({
-            "reviewer": "quality",
-            "severity": "LOW",
-            "file": str(file_path.name),
-            "finding": "Missing docstrings",
-            "recommendation": "Add module-level and function-level docstrings",
-        })
+        findings.append(
+            {
+                "reviewer": "quality",
+                "severity": "LOW",
+                "file": str(file_path.name),
+                "finding": "Missing docstrings",
+                "recommendation": "Add module-level and function-level docstrings",
+            }
+        )
     if not has_type_hints and len([l for l in lines if "def " in l]) > 0:
-        findings.append({
-            "reviewer": "quality",
-            "severity": "MEDIUM",
-            "file": str(file_path.name),
-            "finding": "Missing type hints",
-            "recommendation": "Add type hints to all function signatures",
-        })
+        findings.append(
+            {
+                "reviewer": "quality",
+                "severity": "MEDIUM",
+                "file": str(file_path.name),
+                "finding": "Missing type hints",
+                "recommendation": "Add type hints to all function signatures",
+            }
+        )
     if not has_error_handling and len(lines) > 20:
-        findings.append({
-            "reviewer": "quality",
-            "severity": "LOW",
-            "file": str(file_path.name),
-            "finding": "No error handling (try/except)",
-            "recommendation": "Wrap I/O and external calls in try/except blocks",
-        })
+        findings.append(
+            {
+                "reviewer": "quality",
+                "severity": "LOW",
+                "file": str(file_path.name),
+                "finding": "No error handling (try/except)",
+                "recommendation": "Wrap I/O and external calls in try/except blocks",
+            }
+        )
 
     long_lines = [(i + 1, l) for i, l in enumerate(lines) if len(l) > 100]
     for line_no, line in long_lines[:3]:
-        findings.append({
-            "reviewer": "quality",
-            "severity": "LOW",
-            "file": str(file_path.name),
-            "finding": f"Line too long ({len(line)} chars)",
-            "recommendation": f"Break line {line_no} into multiple lines",
-            "line": line_no,
-        })
+        findings.append(
+            {
+                "reviewer": "quality",
+                "severity": "LOW",
+                "file": str(file_path.name),
+                "finding": f"Line too long ({len(line)} chars)",
+                "recommendation": f"Break line {line_no} into multiple lines",
+                "line": line_no,
+            }
+        )
 
     if "print(" in content and file_path.name != "__init__.py":
-        findings.append({
-            "reviewer": "quality",
-            "severity": "LOW",
-            "file": str(file_path.name),
-            "finding": "Using print() instead of logging",
-            "recommendation": "Replace print() with logger.info()",
-        })
+        findings.append(
+            {
+                "reviewer": "quality",
+                "severity": "LOW",
+                "file": str(file_path.name),
+                "finding": "Using print() instead of logging",
+                "recommendation": "Replace print() with logger.info()",
+            }
+        )
 
     return findings
 
@@ -87,14 +98,16 @@ def _security_review(file_path: Path, content: str) -> list[dict[str, Any]]:
         for i, line in enumerate(content.splitlines(), 1):
             for kw in keywords:
                 if kw in line and not line.strip().startswith("#"):
-                    findings.append({
-                        "reviewer": "security",
-                        "severity": "HIGH" if kw in ("execute(", "eval(", "exec(", "pickle.") else "MEDIUM",
-                        "file": str(file_path.name),
-                        "finding": finding,
-                        "recommendation": f"Review and sanitize at line {i}",
-                        "line": i,
-                    })
+                    findings.append(
+                        {
+                            "reviewer": "security",
+                            "severity": "HIGH" if kw in ("execute(", "eval(", "exec(", "pickle.") else "MEDIUM",
+                            "file": str(file_path.name),
+                            "finding": finding,
+                            "recommendation": f"Review and sanitize at line {i}",
+                            "line": i,
+                        }
+                    )
                     break
             if len(findings) > 10:
                 break
@@ -138,22 +151,27 @@ def run(
         if sev in severity_counts:
             severity_counts[sev] += 1
 
-    log_to_db(job_id, "CodeReviewService",
-              f"Review complete: {len(all_findings)} finding(s) "
-              f"({severity_counts['HIGH']} high, {severity_counts['MEDIUM']} medium, {severity_counts['LOW']} low).")
+    log_to_db(
+        job_id,
+        "CodeReviewService",
+        f"Review complete: {len(all_findings)} finding(s) "
+        f"({severity_counts['HIGH']} high, {severity_counts['MEDIUM']} medium, {severity_counts['LOW']} low).",
+    )
 
     project_dir = (BASE_DIR / job_id).resolve()
     report_path = project_dir / "CODE_REVIEW.md"
     report_path.parent.mkdir(parents=True, exist_ok=True)
-    lines = ["# Code Review Report\n\n",
-             f"**Files reviewed:** {len(py_files)}\n",
-             f"**Findings:** {len(all_findings)}\n\n",
-             "## Severity Summary\n\n| Severity | Count |\n|----------|-------|\n"]
+    lines = [
+        "# Code Review Report\n\n",
+        f"**Files reviewed:** {len(py_files)}\n",
+        f"**Findings:** {len(all_findings)}\n\n",
+        "## Severity Summary\n\n| Severity | Count |\n|----------|-------|\n",
+    ]
     for sev in ("HIGH", "MEDIUM", "LOW"):
         lines.append(f"| {sev} | {severity_counts[sev]} |\n")
     lines.append("\n## Findings\n\n")
     for idx, f in enumerate(all_findings, 1):
-        lines.append(f"### {idx}. [{f.get('reviewer','').upper()}] {f['finding']} ({f['severity']})\n")
+        lines.append(f"### {idx}. [{f.get('reviewer', '').upper()}] {f['finding']} ({f['severity']})\n")
         lines.append(f"- **File:** `{f['file']}`")
         if f.get("line"):
             lines.append(f":{f['line']}")

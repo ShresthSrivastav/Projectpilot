@@ -1,4 +1,5 @@
 """Analytics Service — tracks agent activity, execution time, token usage."""
+
 import json
 import logging
 import time
@@ -61,7 +62,11 @@ def get_agent_leaderboard(limit: int = 10) -> list[dict[str, Any]]:
     completed = sum(1 for p in all_projects if p.get("status") == "complete")
     return [
         {"metric": "Projects Completed", "value": completed, "detail": f"out of {len(all_projects)} total"},
-        {"metric": "Avg Duration", "value": f"{total_duration // max(len(all_projects), 1) // 1000}s", "detail": "per project"},
+        {
+            "metric": "Avg Duration",
+            "value": f"{total_duration // max(len(all_projects), 1) // 1000}s",
+            "detail": "per project",
+        },
         {"metric": "Avg Files/Project", "value": round(total_files / max(len(all_projects), 1), 1), "detail": "files"},
         {"metric": "Total Tokens", "value": total_tokens, "detail": "across all projects"},
     ]

@@ -56,15 +56,18 @@ ANTHROPIC_BASE_URL: str = os.getenv("ANTHROPIC_BASE_URL", "https://openrouter.ai
 ANTHROPIC_MODEL: str = os.getenv("ANTHROPIC_MODEL", "anthropic/claude-3.5-sonnet")
 
 MODEL_PRESETS: dict[str, str] = {
-    "local":      os.getenv("MODEL_LOCAL",      "gemma4:12b"),
-    "cloud":      CLOUD_MODEL,
-    "anthropic":  ANTHROPIC_MODEL,
+    "local": os.getenv("MODEL_LOCAL", "gemma4:12b"),
+    "cloud": CLOUD_MODEL,
+    "anthropic": ANTHROPIC_MODEL,
 }
 
 CONTEXT_SETUP: dict[str, str] = {
-    "local":      os.getenv("CONTEXT_LOCAL",     "You are an expert software architect powered by Gemma 4 12B. Produce comprehensive, well-documented code."),
-    "cloud":      "You are an expert software architect powered by Gemma 4 31B. Produce comprehensive, well-documented, production-ready Python code.",
-    "anthropic":  "You are an expert software architect powered by Claude 3.5 Sonnet. Produce comprehensive, well-documented, production-ready Python code.",
+    "local": os.getenv(
+        "CONTEXT_LOCAL",
+        "You are an expert software architect powered by Gemma 4 12B. Produce comprehensive, well-documented code.",
+    ),
+    "cloud": "You are an expert software architect powered by Gemma 4 31B. Produce comprehensive, well-documented, production-ready Python code.",
+    "anthropic": "You are an expert software architect powered by Claude 3.5 Sonnet. Produce comprehensive, well-documented, production-ready Python code.",
 }
 
 _pull_status: dict[str, str] = {}
@@ -195,14 +198,16 @@ def diagnose_google_credentials() -> dict[str, Any]:
 
     # Update global diagnostics cache
     global GOOGLE_CREDENTIAL_DIAGNOSTICS
-    GOOGLE_CREDENTIAL_DIAGNOSTICS.update({
-        "api_key_configured": diag["api_key_configured"],
-        "api_key_format_valid": diag["api_key_format_valid"],
-        "api_key_prefix": diag["api_key_prefix"],
-        "base_url_configured": diag["base_url_configured"],
-        "last_diagnostic_error": diag["errors"][-1] if diag["errors"] else "",
-        "diagnostic_timestamp": now,
-    })
+    GOOGLE_CREDENTIAL_DIAGNOSTICS.update(
+        {
+            "api_key_configured": diag["api_key_configured"],
+            "api_key_format_valid": diag["api_key_format_valid"],
+            "api_key_prefix": diag["api_key_prefix"],
+            "base_url_configured": diag["base_url_configured"],
+            "last_diagnostic_error": diag["errors"][-1] if diag["errors"] else "",
+            "diagnostic_timestamp": now,
+        }
+    )
 
     return diag
 
@@ -345,7 +350,7 @@ def _call_local(
 ) -> str:
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user",   "content": prompt},
+        {"role": "user", "content": prompt},
     ]
     last_exc: Exception = RuntimeError("No attempts made")
     for attempt in range(1, MAX_RETRIES + 1):
@@ -359,24 +364,40 @@ def _call_local(
                 timeout=TIMEOUT,
             )
             text = (resp.choices[0].message.content or "").strip()
-            text = re.sub(r'<thought>.*?</thought>', '', text, flags=re.DOTALL).strip()
+            text = re.sub(r"<thought>.*?</thought>", "", text, flags=re.DOTALL).strip()
             if not text:
                 raise ValueError("Model returned an empty response.")
             duration_ms = int((time.monotonic() - t0) * 1000)
             tokens = resp.usage.total_tokens if resp.usage else None
             _add_tokens(tokens)
-            _log_structured("INFO", "llm_call_ok", model=model_name, tokens=tokens,
-                            duration_ms=duration_ms, attempt=attempt,
-                            provider="local", job_id=job_id, agent=agent)
+            _log_structured(
+                "INFO",
+                "llm_call_ok",
+                model=model_name,
+                tokens=tokens,
+                duration_ms=duration_ms,
+                attempt=attempt,
+                provider="local",
+                job_id=job_id,
+                agent=agent,
+            )
             return text
         except (APIConnectionError, APITimeoutError) as exc:
             last_exc = exc
             duration_ms = int((time.monotonic() - t0) * 1000)
-            _log_structured("WARNING", "llm_call_retry", model=model_name,
-                            duration_ms=duration_ms, attempt=attempt,
-                            error=str(exc), provider="local", job_id=job_id, agent=agent)
+            _log_structured(
+                "WARNING",
+                "llm_call_retry",
+                model=model_name,
+                duration_ms=duration_ms,
+                attempt=attempt,
+                error=str(exc),
+                provider="local",
+                job_id=job_id,
+                agent=agent,
+            )
             if attempt < MAX_RETRIES:
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
         except ValueError as exc:
             raise RuntimeError(str(exc)) from exc
         except Exception as exc:
@@ -393,7 +414,7 @@ def _call_cloud(
 ) -> str:
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user",   "content": prompt},
+        {"role": "user", "content": prompt},
     ]
     last_exc: Exception = RuntimeError("No attempts made")
     for attempt in range(1, MAX_RETRIES + 1):
@@ -407,31 +428,57 @@ def _call_cloud(
                 timeout=TIMEOUT,
             )
             text = (resp.choices[0].message.content or "").strip()
-            text = re.sub(r'<thought>.*?</thought>', '', text, flags=re.DOTALL).strip()
+            text = re.sub(r"<thought>.*?</thought>", "", text, flags=re.DOTALL).strip()
             if not text:
                 raise ValueError("Cloud model returned an empty response.")
             duration_ms = int((time.monotonic() - t0) * 1000)
             tokens = resp.usage.total_tokens if resp.usage else None
             _add_tokens(tokens)
-            _log_structured("INFO", "llm_call_ok", model=model_name, tokens=tokens,
-                            duration_ms=duration_ms, attempt=attempt,
-                            provider="cloud_google", job_id=job_id, agent=agent)
+            _log_structured(
+                "INFO",
+                "llm_call_ok",
+                model=model_name,
+                tokens=tokens,
+                duration_ms=duration_ms,
+                attempt=attempt,
+                provider="cloud_google",
+                job_id=job_id,
+                agent=agent,
+            )
             return text
         except (APIConnectionError, APITimeoutError) as exc:
             last_exc = exc
             duration_ms = int((time.monotonic() - t0) * 1000)
-            _log_structured("WARNING", "llm_call_retry", model=model_name,
-                            duration_ms=duration_ms, attempt=attempt,
-                            error=str(exc), provider="cloud_google", job_id=job_id, agent=agent)
+            _log_structured(
+                "WARNING",
+                "llm_call_retry",
+                model=model_name,
+                duration_ms=duration_ms,
+                attempt=attempt,
+                error=str(exc),
+                provider="cloud_google",
+                job_id=job_id,
+                agent=agent,
+            )
             if attempt < MAX_RETRIES:
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
         except ValueError as exc:
             raise RuntimeError(str(exc)) from exc
         except Exception as exc:
             error_str = str(exc)
             # Auth errors — fall back to local model
-            if any(kw in error_str for kw in ("401", "UNAUTHENTICATED", "ACCESS_TOKEN_TYPE_UNSUPPORTED",
-                                                "403", "authentication", "api key", "unauthorized")):
+            if any(
+                kw in error_str
+                for kw in (
+                    "401",
+                    "UNAUTHENTICATED",
+                    "ACCESS_TOKEN_TYPE_UNSUPPORTED",
+                    "403",
+                    "authentication",
+                    "api key",
+                    "unauthorized",
+                )
+            ):
                 diagnose_google_credentials()
                 logger.error("Cloud auth error, falling back to local: %s", error_str[:200])
                 return _call_local(prompt, resolve_model("local"), system_prompt, job_id, agent)
@@ -448,7 +495,7 @@ def _call_anthropic(
 ) -> str:
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user",   "content": prompt},
+        {"role": "user", "content": prompt},
     ]
     last_exc: Exception = RuntimeError("No attempts made")
     for attempt in range(1, MAX_RETRIES + 1):
@@ -462,30 +509,47 @@ def _call_anthropic(
                 timeout=TIMEOUT,
             )
             text = (resp.choices[0].message.content or "").strip()
-            text = re.sub(r'<thought>.*?</thought>', '', text, flags=re.DOTALL).strip()
+            text = re.sub(r"<thought>.*?</thought>", "", text, flags=re.DOTALL).strip()
             if not text:
                 raise ValueError("Anthropic model returned an empty response.")
             duration_ms = int((time.monotonic() - t0) * 1000)
             tokens = resp.usage.total_tokens if resp.usage else None
             _add_tokens(tokens)
-            _log_structured("INFO", "llm_call_ok", model=model_name, tokens=tokens,
-                            duration_ms=duration_ms, attempt=attempt,
-                            provider="anthropic_openrouter", job_id=job_id, agent=agent)
+            _log_structured(
+                "INFO",
+                "llm_call_ok",
+                model=model_name,
+                tokens=tokens,
+                duration_ms=duration_ms,
+                attempt=attempt,
+                provider="anthropic_openrouter",
+                job_id=job_id,
+                agent=agent,
+            )
             return text
         except (APIConnectionError, APITimeoutError) as exc:
             last_exc = exc
             duration_ms = int((time.monotonic() - t0) * 1000)
-            _log_structured("WARNING", "llm_call_retry", model=model_name,
-                            duration_ms=duration_ms, attempt=attempt,
-                            error=str(exc), provider="anthropic_openrouter", job_id=job_id, agent=agent)
+            _log_structured(
+                "WARNING",
+                "llm_call_retry",
+                model=model_name,
+                duration_ms=duration_ms,
+                attempt=attempt,
+                error=str(exc),
+                provider="anthropic_openrouter",
+                job_id=job_id,
+                agent=agent,
+            )
             if attempt < MAX_RETRIES:
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
         except ValueError as exc:
             raise RuntimeError(str(exc)) from exc
         except Exception as exc:
             error_str = str(exc)
-            if any(kw in error_str for kw in ("401", "UNAUTHENTICATED", "403",
-                                                "authentication", "api key", "unauthorized")):
+            if any(
+                kw in error_str for kw in ("401", "UNAUTHENTICATED", "403", "authentication", "api key", "unauthorized")
+            ):
                 logger.error("Anthropic auth error, falling back to local: %s", error_str[:200])
                 return _call_local(prompt, resolve_model("local"), system_prompt, job_id, agent)
             raise RuntimeError(f"Anthropic LLM call failed: {exc}") from exc
@@ -494,9 +558,9 @@ def _call_anthropic(
 
 def get_available_providers() -> list[dict[str, bool]]:
     return [
-        {"name": "local",      "available": is_available()},
-        {"name": "cloud",      "available": bool(GOOGLE_API_KEY.strip())},
-        {"name": "anthropic",  "available": bool(ANTHROPIC_API_KEY.strip())},
+        {"name": "local", "available": is_available()},
+        {"name": "cloud", "available": bool(GOOGLE_API_KEY.strip())},
+        {"name": "anthropic", "available": bool(ANTHROPIC_API_KEY.strip())},
     ]
 
 

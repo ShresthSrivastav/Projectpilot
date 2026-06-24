@@ -1,6 +1,7 @@
 """Example Validator — API Schema Validator.
 Shows how any developer can create a custom validator without modifying platform source code.
 """
+
 from typing import Any
 
 from sdk.validation_sdk.base_validator import BaseValidator, ValidationReport, ValidationRule

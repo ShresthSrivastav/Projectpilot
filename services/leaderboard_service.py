@@ -1,4 +1,5 @@
 """Leaderboard Service — track and rank models, workflows, agents, and benchmark packs by autonomy, reliability, and cost efficiency."""
+
 import json
 import logging
 import uuid
@@ -53,7 +54,9 @@ class LeaderboardService:
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
                 for item in data:
-                    entry = LeaderboardEntry(**{k: v for k, v in item.items() if k in LeaderboardEntry.__dataclass_fields__})
+                    entry = LeaderboardEntry(
+                        **{k: v for k, v in item.items() if k in LeaderboardEntry.__dataclass_fields__}
+                    )
                     self._entries[entry.id] = entry
             except Exception as e:
                 self._logger.warning("Failed to load leaderboard: %s", e)
@@ -72,14 +75,24 @@ class LeaderboardService:
         cost_efficiency_score: float = 0.0,
         metadata: dict[str, Any] | None = None,
     ) -> LeaderboardEntry:
-        overall = (autonomy_score * 0.4 + reliability_score * 0.35 + cost_efficiency_score * 0.25)
+        overall = autonomy_score * 0.4 + reliability_score * 0.35 + cost_efficiency_score * 0.25
 
         existing = self._find_entry(category, name)
         if existing:
-            existing.autonomy_score = (existing.autonomy_score * existing.run_count + autonomy_score) / (existing.run_count + 1)
-            existing.reliability_score = (existing.reliability_score * existing.run_count + reliability_score) / (existing.run_count + 1)
-            existing.cost_efficiency_score = (existing.cost_efficiency_score * existing.run_count + cost_efficiency_score) / (existing.run_count + 1)
-            existing.overall_score = (existing.autonomy_score * 0.4 + existing.reliability_score * 0.35 + existing.cost_efficiency_score * 0.25)
+            existing.autonomy_score = (existing.autonomy_score * existing.run_count + autonomy_score) / (
+                existing.run_count + 1
+            )
+            existing.reliability_score = (existing.reliability_score * existing.run_count + reliability_score) / (
+                existing.run_count + 1
+            )
+            existing.cost_efficiency_score = (
+                existing.cost_efficiency_score * existing.run_count + cost_efficiency_score
+            ) / (existing.run_count + 1)
+            existing.overall_score = (
+                existing.autonomy_score * 0.4
+                + existing.reliability_score * 0.35
+                + existing.cost_efficiency_score * 0.25
+            )
             existing.run_count += 1
             existing.last_run = datetime.utcnow().isoformat()
             if metadata:

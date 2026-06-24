@@ -1,4 +1,5 @@
 """Base Agent SDK — interface for creating custom agents."""
+
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -34,24 +35,19 @@ class BaseAgent(ABC):
         self._logger = logging.getLogger(f"agent.{self.name}")
 
     @abstractmethod
-    def initialize(self) -> bool:
-        ...
+    def initialize(self) -> bool: ...
 
     @abstractmethod
-    def plan(self, context: dict[str, Any]) -> dict[str, Any]:
-        ...
+    def plan(self, context: dict[str, Any]) -> dict[str, Any]: ...
 
     @abstractmethod
-    def execute(self, plan: dict[str, Any]) -> dict[str, Any]:
-        ...
+    def execute(self, plan: dict[str, Any]) -> dict[str, Any]: ...
 
     @abstractmethod
-    def validate(self, result: dict[str, Any]) -> bool:
-        ...
+    def validate(self, result: dict[str, Any]) -> bool: ...
 
     @abstractmethod
-    def cleanup(self) -> None:
-        ...
+    def cleanup(self) -> None: ...
 
     def get_manifest(self) -> dict[str, Any]:
         return {

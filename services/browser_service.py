@@ -8,6 +8,7 @@ Capabilities:
   - Record and replay browser actions
   - Secure URL validation with allowlist/blocklist
 """
+
 import json
 import logging
 import os
@@ -29,6 +30,7 @@ BLOCKED_DOMAINS = os.getenv("BROWSER_BLOCKED_DOMAINS", "localhost:11434,169.254.
 
 try:
     from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
+
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
@@ -59,7 +61,9 @@ def _validate_url(url: str) -> str:
     for blocked in BLOCKED_DOMAINS:
         if blocked and (host == blocked.strip() or host.endswith("." + blocked.strip())):
             raise ValueError(f"Domain '{host}' is blocked for security.")
-    if ALLOWED_DOMAINS and not any(host == d.strip() or host.endswith("." + d.strip()) for d in ALLOWED_DOMAINS if d.strip()):
+    if ALLOWED_DOMAINS and not any(
+        host == d.strip() or host.endswith("." + d.strip()) for d in ALLOWED_DOMAINS if d.strip()
+    ):
         raise ValueError(f"Domain '{host}' is not in the allowed list.")
     return url
 
@@ -115,7 +119,12 @@ def get_session(session_id: str) -> BrowserSession | None:
 
 def list_sessions() -> list[dict]:
     return [
-        {"session_id": s.session_id, "created_at": s.created_at, "current_url": s.current_url, "actions": len(s.actions)}
+        {
+            "session_id": s.session_id,
+            "created_at": s.created_at,
+            "current_url": s.current_url,
+            "actions": len(s.actions),
+        }
         for s in _sessions.values()
     ]
 
@@ -253,6 +262,7 @@ def _execute_test_step(session: BrowserSession, action: str, args: list[str]) ->
             return {"status": "ok"}
         elif action == "wait" and args:
             import time as _time
+
             _time.sleep(float(args[0]))
             return {"status": "ok"}
         elif action == "screenshot":

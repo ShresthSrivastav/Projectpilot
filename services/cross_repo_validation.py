@@ -1,4 +1,5 @@
 """Cross-Repository Validation — API compatibility, shared library compatibility, schema consistency."""
+
 import json
 import logging
 import re
@@ -61,30 +62,35 @@ class CrossRepoValidator:
 
         for route, consumers in route_map.items():
             if len(consumers) > 1:
-                issues.append({
-                    "severity": "warning",
-                    "type": "duplicate_route",
-                    "message": f"Route {route} defined in multiple repos: {', '.join(consumers)}",
-                    "repos": consumers,
-                })
+                issues.append(
+                    {
+                        "severity": "warning",
+                        "type": "duplicate_route",
+                        "message": f"Route {route} defined in multiple repos: {', '.join(consumers)}",
+                        "repos": consumers,
+                    }
+                )
 
         for repo_name in api_endpoints:
             deps = [
-                d for d in self.graph.org.dependencies.values()
+                d
+                for d in self.graph.org.dependencies.values()
                 if d.source_repo == repo_name or d.target_repo == repo_name
             ]
             for dep in deps:
                 target = dep.target_repo if dep.source_repo == repo_name else dep.source_repo
                 if target in api_endpoints:
-                    methods = {ep['method'] for ep in api_endpoints[repo_name]}
-                    target_methods = {ep['method'] for ep in api_endpoints[target]}
-                    if 'GET' in target_methods and 'GET' not in methods:
-                        issues.append({
-                            "severity": "info",
-                            "type": "missing_method",
-                            "message": f"{repo_name} depends on {target} but doesn't expose GET",
-                            "repos": [repo_name, target],
-                        })
+                    methods = {ep["method"] for ep in api_endpoints[repo_name]}
+                    target_methods = {ep["method"] for ep in api_endpoints[target]}
+                    if "GET" in target_methods and "GET" not in methods:
+                        issues.append(
+                            {
+                                "severity": "info",
+                                "type": "missing_method",
+                                "message": f"{repo_name} depends on {target} but doesn't expose GET",
+                                "repos": [repo_name, target],
+                            }
+                        )
 
         result.issues = issues
         result.passed = len(issues) == 0
@@ -127,12 +133,14 @@ class CrossRepoValidator:
                                 used_exports.add(exp)
                     unused = exports - used_exports
                     if unused:
-                        issues.append({
-                            "severity": "info",
-                            "type": "unused_export",
-                            "message": f"{consumer.name} imports {lib_name} but doesn't use: {', '.join(list(unused)[:5])}",
-                            "repos": [consumer.name, lib_name],
-                        })
+                        issues.append(
+                            {
+                                "severity": "info",
+                                "type": "unused_export",
+                                "message": f"{consumer.name} imports {lib_name} but doesn't use: {', '.join(list(unused)[:5])}",
+                                "repos": [consumer.name, lib_name],
+                            }
+                        )
 
         result.issues = issues
         result.passed = len(issues) == 0
@@ -152,12 +160,8 @@ class CrossRepoValidator:
         for dep in self.graph.org.dependencies.values():
             if dep.relationship != "depends_on":
                 continue
-            source_repo = next(
-                (r for r in repos if r.name == dep.source_repo), None
-            )
-            target_repo = next(
-                (r for r in repos if r.name == dep.target_repo), None
-            )
+            source_repo = next((r for r in repos if r.name == dep.source_repo), None)
+            target_repo = next((r for r in repos if r.name == dep.target_repo), None)
             if not source_repo or not target_repo:
                 continue
 
@@ -169,12 +173,14 @@ class CrossRepoValidator:
                     target_fields = target_schemas[name]
                     missing = [f for f in fields if f not in target_fields]
                     if missing:
-                        issues.append({
-                            "severity": "warning",
-                            "type": "schema_mismatch",
-                            "message": f"Schema '{name}' in {dep.target_repo} missing fields: {', '.join(missing)}",
-                            "repos": [dep.source_repo, dep.target_repo],
-                        })
+                        issues.append(
+                            {
+                                "severity": "warning",
+                                "type": "schema_mismatch",
+                                "message": f"Schema '{name}' in {dep.target_repo} missing fields: {', '.join(missing)}",
+                                "repos": [dep.source_repo, dep.target_repo],
+                            }
+                        )
 
         result.issues = issues
         result.passed = len(issues) == 0
@@ -200,21 +206,25 @@ class CrossRepoValidator:
                 docker_repos.append(repo.name)
 
         if len(docker_repos) > 1:
-            issues.append({
-                "severity": "info",
-                "type": "multi_docker",
-                "message": f"{len(docker_repos)} repos have Docker configs: {', '.join(docker_repos)}",
-                "repos": docker_repos,
-            })
+            issues.append(
+                {
+                    "severity": "info",
+                    "type": "multi_docker",
+                    "message": f"{len(docker_repos)} repos have Docker configs: {', '.join(docker_repos)}",
+                    "repos": docker_repos,
+                }
+            )
 
         for dep in self.graph.org.dependencies.values():
             if dep.source_repo in docker_repos and dep.target_repo not in docker_repos:
-                issues.append({
-                    "severity": "warning",
-                    "type": "deployment_gap",
-                    "message": f"{dep.source_repo} has Docker but its dependency {dep.target_repo} doesn't",
-                    "repos": [dep.source_repo, dep.target_repo],
-                })
+                issues.append(
+                    {
+                        "severity": "warning",
+                        "type": "deployment_gap",
+                        "message": f"{dep.source_repo} has Docker but its dependency {dep.target_repo} doesn't",
+                        "repos": [dep.source_repo, dep.target_repo],
+                    }
+                )
 
         result.issues = issues
         result.passed = len(issues) == 0
@@ -235,20 +245,24 @@ class CrossRepoValidator:
                 continue
             readme = repo_path / "README.md"
             if not readme.exists():
-                issues.append({
-                    "severity": "warning",
-                    "type": "missing_readme",
-                    "message": f"{repo.name} missing README.md",
-                    "repos": [repo.name],
-                })
+                issues.append(
+                    {
+                        "severity": "warning",
+                        "type": "missing_readme",
+                        "message": f"{repo.name} missing README.md",
+                        "repos": [repo.name],
+                    }
+                )
             docs_dir = repo_path / "docs"
             if not docs_dir.exists():
-                issues.append({
-                    "severity": "info",
-                    "type": "missing_docs_dir",
-                    "message": f"{repo.name} missing docs/ directory",
-                    "repos": [repo.name],
-                })
+                issues.append(
+                    {
+                        "severity": "info",
+                        "type": "missing_docs_dir",
+                        "message": f"{repo.name} missing docs/ directory",
+                        "repos": [repo.name],
+                    }
+                )
 
         result.issues = issues
         result.passed = len(issues) == 0
@@ -271,10 +285,7 @@ class CrossRepoValidator:
             return self._results.get(result_id)
 
     def list_results(self, org_id: str) -> list[dict]:
-        return [
-            r.to_dict() for r in self._results.values()
-            if r.org_id == org_id
-        ]
+        return [r.to_dict() for r in self._results.values() if r.org_id == org_id]
 
     def _save_result(self, result: ValidationResult) -> None:
         with self._lock:
@@ -311,7 +322,7 @@ class CrossRepoValidator:
                 continue
             try:
                 content = py_file.read_text(encoding="utf-8", errors="replace")
-                for match in re.finditer(r'^(?:async\s+)?def\s+(\w+)|^class\s+(\w+)', content, re.MULTILINE):
+                for match in re.finditer(r"^(?:async\s+)?def\s+(\w+)|^class\s+(\w+)", content, re.MULTILINE):
                     name = match.group(1) or match.group(2)
                     if not name.startswith("_"):
                         exports.add(name)
@@ -326,7 +337,7 @@ class CrossRepoValidator:
                 continue
             try:
                 content = py_file.read_text(encoding="utf-8", errors="replace")
-                for match in re.finditer(r'^(?:from\s+(\S+)\s+)?import\s+(\S+)', content, re.MULTILINE):
+                for match in re.finditer(r"^(?:from\s+(\S+)\s+)?import\s+(\S+)", content, re.MULTILINE):
                     if match.group(1):
                         imports.add(match.group(1))
                     imports.add(match.group(2))
@@ -341,14 +352,14 @@ class CrossRepoValidator:
                 continue
             try:
                 content = py_file.read_text(encoding="utf-8", errors="replace")
-                for match in re.finditer(r'class\s+(\w+)\(.*BaseModel.*\)\s*:', content):
+                for match in re.finditer(r"class\s+(\w+)\(.*BaseModel.*\)\s*:", content):
                     schema_name = match.group(1)
                     class_start = match.end()
                     class_end = content.find("\nclass ", class_start)
                     if class_end == -1:
                         class_end = len(content)
                     class_body = content[class_start:class_end]
-                    fields = re.findall(r'^\s+(\w+)\s*:', class_body, re.MULTILINE)
+                    fields = re.findall(r"^\s+(\w+)\s*:", class_body, re.MULTILINE)
                     schemas[schema_name] = fields
             except Exception:
                 continue
@@ -364,6 +375,7 @@ def get_cross_repo_validator(graph: OrganizationGraph | None = None) -> CrossRep
     with _validator_lock:
         if key not in _validators:
             from services.org_graph_service import get_org_graph_service
+
             g = graph or get_org_graph_service()
             _validators[key] = CrossRepoValidator(g)
         return _validators[key]

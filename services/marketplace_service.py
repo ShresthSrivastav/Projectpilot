@@ -1,4 +1,5 @@
 """Marketplace Service — publish, search, install, rate, and manage packages."""
+
 import json
 import logging
 import shutil
@@ -69,7 +70,9 @@ class MarketplaceService:
                 data = json.loads(path.read_text(encoding="utf-8"))
                 for item in data:
                     manifest_data = item.pop("manifest", None)
-                    pkg = MarketplacePackage(**{k: v for k, v in item.items() if k in MarketplacePackage.__dataclass_fields__})
+                    pkg = MarketplacePackage(
+                        **{k: v for k, v in item.items() if k in MarketplacePackage.__dataclass_fields__}
+                    )
                     if manifest_data:
                         try:
                             pkg.manifest = PluginManifest.from_dict(manifest_data)
@@ -81,9 +84,7 @@ class MarketplaceService:
 
     def _save_index(self) -> None:
         data = [pkg.to_dict() for pkg in self._packages.values()]
-        self._index_path().write_text(
-            json.dumps(data, indent=2, default=str), encoding="utf-8"
-        )
+        self._index_path().write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
 
     def publish_package(
         self,
@@ -111,9 +112,7 @@ class MarketplaceService:
                         shutil.copy2(str(item), str(pkg_dir / item.name))
 
         if manifest is None:
-            manifest = PluginManifest(
-                name=name, version=version, author=author, description=description
-            )
+            manifest = PluginManifest(name=name, version=version, author=author, description=description)
 
         pkg = MarketplacePackage(
             id=pkg_id,
@@ -153,10 +152,7 @@ class MarketplaceService:
             results = [
                 p
                 for p in results
-                if q in p.name.lower()
-                or q in p.description.lower()
-                or q in p.author.lower()
-                or q in p.tags
+                if q in p.name.lower() or q in p.description.lower() or q in p.author.lower() or q in p.tags
             ]
 
         if package_type:
@@ -229,9 +225,7 @@ class MarketplaceService:
             pkg.downloads += 1
             self._save_index()
 
-    def install_package(
-        self, package_id: str, target_dir: str = "plugins"
-    ) -> str | None:
+    def install_package(self, package_id: str, target_dir: str = "plugins") -> str | None:
         pkg = self._packages.get(package_id)
         if pkg is None:
             return None
@@ -257,9 +251,7 @@ class MarketplaceService:
         self.record_download(package_id)
         return str(install_path)
 
-    def list_packages(
-        self, package_type: str | None = None, verified_only: bool = False
-    ) -> list[MarketplacePackage]:
+    def list_packages(self, package_type: str | None = None, verified_only: bool = False) -> list[MarketplacePackage]:
         results = list(self._packages.values())
         if package_type:
             results = [p for p in results if p.package_type == package_type]

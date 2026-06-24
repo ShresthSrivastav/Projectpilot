@@ -1,4 +1,5 @@
 """Plugin Registry — manage installation, lifecycle, and sandboxing of plugins."""
+
 import hashlib
 import importlib
 import inspect
@@ -87,9 +88,7 @@ class PluginRegistry:
 
     def _save_index(self) -> None:
         data = [entry.to_dict() for entry in self._plugins.values()]
-        self._index_path().write_text(
-            json.dumps(data, indent=2, default=str), encoding="utf-8"
-        )
+        self._index_path().write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
 
     def _compute_checksum(self, source_path: str) -> str:
         path = Path(source_path)
@@ -129,6 +128,7 @@ class PluginRegistry:
             dest = plugin_dir / source_path.name
             if not dest.exists():
                 import shutil
+
                 shutil.copy2(str(source_path), str(dest))
             source = str(dest)
 
@@ -149,7 +149,7 @@ class PluginRegistry:
             installed_at=datetime.now(UTC).isoformat(),
             updated_at=datetime.now(UTC).isoformat(),
             permissions_granted=permissions or manifest.permissions,
-            checksum=checksum if 'checksum' in dir() else self._compute_checksum(source),
+            checksum=checksum if "checksum" in dir() else self._compute_checksum(source),
         )
         self._plugins[entry.id] = entry
         self._save_index()
@@ -251,6 +251,7 @@ class PluginRegistry:
         if source_path.exists():
             try:
                 import shutil
+
                 parent = source_path.parent
                 if parent.name == Path(entry.source).stem:
                     shutil.rmtree(str(parent), ignore_errors=True)
@@ -286,9 +287,7 @@ class PluginRegistry:
         self._save_index()
         return True
 
-    def update_plugin(
-        self, plugin_id: str, source: str, manifest: PluginManifest | None = None
-    ) -> PluginEntry | None:
+    def update_plugin(self, plugin_id: str, source: str, manifest: PluginManifest | None = None) -> PluginEntry | None:
         entry = self._plugins.get(plugin_id)
         if entry is None:
             return None
@@ -348,9 +347,7 @@ class PluginRegistry:
     def get_plugin(self, plugin_id: str) -> PluginEntry | None:
         return self._plugins.get(plugin_id)
 
-    def list_plugins(
-        self, plugin_type: str | None = None, enabled_only: bool = False
-    ) -> list[PluginEntry]:
+    def list_plugins(self, plugin_type: str | None = None, enabled_only: bool = False) -> list[PluginEntry]:
         results = list(self._plugins.values())
         if plugin_type:
             results = [p for p in results if p.manifest.plugin_type == plugin_type]

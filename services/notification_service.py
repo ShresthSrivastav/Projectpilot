@@ -41,21 +41,20 @@ def _ensure_table():
         init_notifications_db()
 
 
-def create_notification(user_id: str, workspace_id: str, notification_type: str,
-                        title: str, message: str = "", data: dict = None) -> None:
+def create_notification(
+    user_id: str, workspace_id: str, notification_type: str, title: str, message: str = "", data: dict = None
+) -> None:
     _ensure_table()
     conn = _get_conn()
     conn.execute(
         "INSERT INTO notifications (id, user_id, workspace_id, type, title, message, data) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (str(uuid.uuid4()), user_id, workspace_id, notification_type, title, message,
-         json.dumps(data or {})),
+        (str(uuid.uuid4()), user_id, workspace_id, notification_type, title, message, json.dumps(data or {})),
     )
     conn.commit()
 
 
-def get_notifications(user_id: str, workspace_id: str = "", limit: int = 20,
-                      unread_only: bool = False) -> list[dict]:
+def get_notifications(user_id: str, workspace_id: str = "", limit: int = 20, unread_only: bool = False) -> list[dict]:
     _ensure_table()
     conn = _get_conn()
     where = ["user_id = ?"]

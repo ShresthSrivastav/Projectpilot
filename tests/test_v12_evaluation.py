@@ -1,4 +1,5 @@
 """v12.0 Continuous Autonomous Evaluation — tests for Phase 1: API fixes, scheduler wiring, report persistence."""
+
 import os
 import sys
 from unittest.mock import patch
@@ -45,6 +46,7 @@ def reset_db():
 @pytest.fixture
 def client():
     from backend.main import app
+
     with TestClient(app) as c:
         yield c
 
@@ -52,6 +54,7 @@ def client():
 # ═══════════════════════════════════════════════════════════════════════════
 # API Route Registration Tests
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestEvaluationAPIRoutes:
     """Verify all 6 evaluation endpoints are registered and respond."""
@@ -85,6 +88,7 @@ class TestEvaluationAPIRoutes:
 # ═══════════════════════════════════════════════════════════════════════════
 # Evaluation Run Creation Tests
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestEvaluationRunCreation:
     """Test that runs are created, executed, and persisted correctly."""
@@ -152,15 +156,25 @@ class TestEvaluationRunCreation:
         assert resp.status_code == 200
         run = resp.json()["run"]
         # Verify all expected keys present
-        for key in ("id", "schedule", "status", "autonomy_score", "total_cost",
-                     "avg_runtime_ms", "healing_rate", "deployment_success_rate",
-                     "started_at", "completed_at"):
+        for key in (
+            "id",
+            "schedule",
+            "status",
+            "autonomy_score",
+            "total_cost",
+            "avg_runtime_ms",
+            "healing_rate",
+            "deployment_success_rate",
+            "started_at",
+            "completed_at",
+        ):
             assert key in run, f"Missing key: {key}"
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # History API Tests
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestEvaluationHistory:
     """Test that evaluation history is queryable."""
@@ -202,6 +216,7 @@ class TestEvaluationHistory:
 # ═══════════════════════════════════════════════════════════════════════════
 # Report Persistence Tests
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestReportPersistence:
     """Test that reports are generated and persisted for scheduled runs."""
@@ -261,8 +276,16 @@ class TestReportPersistence:
         resp = client.get("/evaluation/reports?report_type=daily")
         data = resp.json()
         report = data["reports"][0]
-        for key in ("id", "report_type", "title", "summary", "report_markdown",
-                     "period_start", "period_end", "created_at"):
+        for key in (
+            "id",
+            "report_type",
+            "title",
+            "summary",
+            "report_markdown",
+            "period_start",
+            "period_end",
+            "created_at",
+        ):
             assert key in report, f"Missing report key: {key}"
 
 
@@ -270,17 +293,20 @@ class TestReportPersistence:
 # Scheduler Unit Tests
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class TestSchedulerUnit:
     """Direct unit tests on EvaluationScheduler (no HTTP)."""
 
     def test_scheduler_singleton(self):
         from services.evaluation_scheduler import EvaluationScheduler
+
         s1 = EvaluationScheduler()
         s2 = EvaluationScheduler()
         assert s1 is s2
 
     def test_trigger_run_defaults(self):
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         scheduler = get_evaluation_scheduler()
         with patch("services.benchmark_service.BenchmarkService") as mock_bsvc:
             mock_bsvc.return_value = MockBenchmarkService()
@@ -290,6 +316,7 @@ class TestSchedulerUnit:
 
     def test_trigger_run_schedule_types(self):
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         scheduler = get_evaluation_scheduler()
         with patch("services.benchmark_service.BenchmarkService") as mock_bsvc:
             mock_bsvc.return_value = MockBenchmarkService()
@@ -300,6 +327,7 @@ class TestSchedulerUnit:
 
     def test_register_and_run_handlers(self):
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         scheduler = get_evaluation_scheduler()
         handler_called = []
 
@@ -315,6 +343,7 @@ class TestSchedulerUnit:
 
     def test_list_runs(self):
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         scheduler = get_evaluation_scheduler()
         with patch("services.benchmark_service.BenchmarkService") as mock_bsvc:
             mock_bsvc.return_value = MockBenchmarkService()
@@ -325,6 +354,7 @@ class TestSchedulerUnit:
 
     def test_list_runs_filter_schedule(self):
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         scheduler = get_evaluation_scheduler()
         with patch("services.benchmark_service.BenchmarkService") as mock_bsvc:
             mock_bsvc.return_value = MockBenchmarkService()
@@ -335,6 +365,7 @@ class TestSchedulerUnit:
 
     def test_list_runs_filter_status(self):
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         scheduler = get_evaluation_scheduler()
         with patch("services.benchmark_service.BenchmarkService") as mock_bsvc:
             mock_bsvc.return_value = MockBenchmarkService()
@@ -345,6 +376,7 @@ class TestSchedulerUnit:
 
     def test_get_run_by_id(self):
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         scheduler = get_evaluation_scheduler()
         with patch("services.benchmark_service.BenchmarkService") as mock_bsvc:
             mock_bsvc.return_value = MockBenchmarkService()
@@ -355,11 +387,13 @@ class TestSchedulerUnit:
 
     def test_get_run_nonexistent(self):
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         scheduler = get_evaluation_scheduler()
         assert scheduler.get_run("nonexistent") is None
 
     def test_compute_autonomy_score(self):
         from services.evaluation_scheduler import compute_autonomy_score
+
         metrics = MockMetrics()
         score = compute_autonomy_score(metrics)
         expected = (0.95 + 0.85 + 0.90 + 0.80) / 4
@@ -367,6 +401,7 @@ class TestSchedulerUnit:
 
     def test_evaluation_run_to_dict(self):
         from services.evaluation_scheduler import EvaluationRun
+
         run = EvaluationRun(schedule="nightly")
         d = run.to_dict()
         assert d["schedule"] == "nightly"
@@ -379,23 +414,38 @@ class TestSchedulerUnit:
 # Reporter Unit Tests
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class TestReporterUnit:
     """Direct unit tests on EvaluationReporter."""
 
     def test_reporter_singleton(self):
         from services.evaluation_reporter import EvaluationReporter
+
         r1 = EvaluationReporter()
         r2 = EvaluationReporter()
         assert r1 is r2
 
     def test_generate_daily_report(self):
         from services.evaluation_reporter import get_evaluation_reporter
+
         reporter = get_evaluation_reporter()
         runs = [
-            {"autonomy_score": 0.9, "success_rate": 0.95, "deployment_success_rate": 0.98,
-             "healing_rate": 0.85, "total_cost": 100, "avg_runtime_ms": 5000},
-            {"autonomy_score": 0.8, "success_rate": 0.85, "deployment_success_rate": 0.90,
-             "healing_rate": 0.75, "total_cost": 200, "avg_runtime_ms": 10000},
+            {
+                "autonomy_score": 0.9,
+                "success_rate": 0.95,
+                "deployment_success_rate": 0.98,
+                "healing_rate": 0.85,
+                "total_cost": 100,
+                "avg_runtime_ms": 5000,
+            },
+            {
+                "autonomy_score": 0.8,
+                "success_rate": 0.85,
+                "deployment_success_rate": 0.90,
+                "healing_rate": 0.75,
+                "total_cost": 200,
+                "avg_runtime_ms": 10000,
+            },
         ]
         report = reporter.generate_report(report_type="daily", runs=runs)
         assert report.report_type == "daily"
@@ -406,10 +456,17 @@ class TestReporterUnit:
 
     def test_generate_weekly_report(self):
         from services.evaluation_reporter import get_evaluation_reporter
+
         reporter = get_evaluation_reporter()
         runs = [
-            {"autonomy_score": 0.9, "success_rate": 0.95, "deployment_success_rate": 0.98,
-             "healing_rate": 0.85, "total_cost": 100, "avg_runtime_ms": 5000},
+            {
+                "autonomy_score": 0.9,
+                "success_rate": 0.95,
+                "deployment_success_rate": 0.98,
+                "healing_rate": 0.85,
+                "total_cost": 100,
+                "avg_runtime_ms": 5000,
+            },
         ]
         report = reporter.generate_report(report_type="weekly", runs=runs)
         assert report.report_type == "weekly"
@@ -417,10 +474,17 @@ class TestReporterUnit:
 
     def test_generate_release_report(self):
         from services.evaluation_reporter import get_evaluation_reporter
+
         reporter = get_evaluation_reporter()
         runs = [
-            {"autonomy_score": 0.9, "success_rate": 0.95, "deployment_success_rate": 0.98,
-             "healing_rate": 0.85, "total_cost": 100, "avg_runtime_ms": 5000},
+            {
+                "autonomy_score": 0.9,
+                "success_rate": 0.95,
+                "deployment_success_rate": 0.98,
+                "healing_rate": 0.85,
+                "total_cost": 100,
+                "avg_runtime_ms": 5000,
+            },
         ]
         report = reporter.generate_report(report_type="release", runs=runs)
         assert report.report_type == "release"
@@ -428,44 +492,84 @@ class TestReporterUnit:
 
     def test_report_detects_regressions(self):
         from services.evaluation_reporter import get_evaluation_reporter
+
         reporter = get_evaluation_reporter()
         runs = [
-            {"autonomy_score": 0.6, "success_rate": 0.70, "deployment_success_rate": 0.80,
-             "healing_rate": 0.70, "total_cost": 600, "avg_runtime_ms": 40000},
-            {"autonomy_score": 0.9, "success_rate": 0.95, "deployment_success_rate": 0.98,
-             "healing_rate": 0.90, "total_cost": 100, "avg_runtime_ms": 5000},
+            {
+                "autonomy_score": 0.6,
+                "success_rate": 0.70,
+                "deployment_success_rate": 0.80,
+                "healing_rate": 0.70,
+                "total_cost": 600,
+                "avg_runtime_ms": 40000,
+            },
+            {
+                "autonomy_score": 0.9,
+                "success_rate": 0.95,
+                "deployment_success_rate": 0.98,
+                "healing_rate": 0.90,
+                "total_cost": 100,
+                "avg_runtime_ms": 5000,
+            },
         ]
         report = reporter.generate_report(report_type="daily", runs=runs)
         assert len(report.regressions) > 0
 
     def test_report_detects_improvements(self):
         from services.evaluation_reporter import get_evaluation_reporter
+
         reporter = get_evaluation_reporter()
         runs = [
-            {"autonomy_score": 0.95, "success_rate": 0.98, "deployment_success_rate": 0.99,
-             "healing_rate": 0.95, "total_cost": 50, "avg_runtime_ms": 3000},
-            {"autonomy_score": 0.70, "success_rate": 0.75, "deployment_success_rate": 0.80,
-             "healing_rate": 0.70, "total_cost": 300, "avg_runtime_ms": 20000},
+            {
+                "autonomy_score": 0.95,
+                "success_rate": 0.98,
+                "deployment_success_rate": 0.99,
+                "healing_rate": 0.95,
+                "total_cost": 50,
+                "avg_runtime_ms": 3000,
+            },
+            {
+                "autonomy_score": 0.70,
+                "success_rate": 0.75,
+                "deployment_success_rate": 0.80,
+                "healing_rate": 0.70,
+                "total_cost": 300,
+                "avg_runtime_ms": 20000,
+            },
         ]
         report = reporter.generate_report(report_type="daily", runs=runs)
         assert len(report.improvements) > 0
 
     def test_report_has_recommendations(self):
         from services.evaluation_reporter import get_evaluation_reporter
+
         reporter = get_evaluation_reporter()
         runs = [
-            {"autonomy_score": 0.5, "success_rate": 0.60, "deployment_success_rate": 0.70,
-             "healing_rate": 0.60, "total_cost": 600, "avg_runtime_ms": 40000},
+            {
+                "autonomy_score": 0.5,
+                "success_rate": 0.60,
+                "deployment_success_rate": 0.70,
+                "healing_rate": 0.60,
+                "total_cost": 600,
+                "avg_runtime_ms": 40000,
+            },
         ]
         report = reporter.generate_report(report_type="daily", runs=runs)
         assert len(report.recommendations) > 0
 
     def test_report_no_improvements_when_single_run(self):
         from services.evaluation_reporter import get_evaluation_reporter
+
         reporter = get_evaluation_reporter()
         runs = [
-            {"autonomy_score": 0.9, "success_rate": 0.95, "deployment_success_rate": 0.98,
-             "healing_rate": 0.85, "total_cost": 100, "avg_runtime_ms": 5000},
+            {
+                "autonomy_score": 0.9,
+                "success_rate": 0.95,
+                "deployment_success_rate": 0.98,
+                "healing_rate": 0.85,
+                "total_cost": 100,
+                "avg_runtime_ms": 5000,
+            },
         ]
         report = reporter.generate_report(report_type="daily", runs=runs)
         assert len(report.improvements) == 0
@@ -473,6 +577,7 @@ class TestReporterUnit:
 
     def test_report_to_dict(self):
         from services.evaluation_reporter import EvaluationReport
+
         report = EvaluationReport(report_type="daily", title="Test Report")
         d = report.to_dict()
         assert d["report_type"] == "daily"
@@ -485,11 +590,13 @@ class TestReporterUnit:
 # Regression Detector Unit Tests
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class TestRegressionDetectorUnit:
     """Direct unit tests on RegressionDetector."""
 
     def test_check_autonomy_regression(self):
         from services.regression_detector import RegressionDetector
+
         detector = RegressionDetector()
         alert = detector.check_autonomy_score(previous=0.9, current=0.6)
         assert alert is not None
@@ -498,6 +605,7 @@ class TestRegressionDetectorUnit:
 
     def test_check_cost_regression(self):
         from services.regression_detector import RegressionDetector
+
         detector = RegressionDetector()
         alert = detector.check_cost_increase(previous=100, current=600)
         assert alert is not None
@@ -505,19 +613,29 @@ class TestRegressionDetectorUnit:
 
     def test_no_regression_when_improving(self):
         from services.regression_detector import RegressionDetector
+
         detector = RegressionDetector()
         alerts = detector.run_all_checks(
-            previous={"autonomy_score": 0.7, "success_rate": 0.8,
-                      "total_cost": 200, "avg_runtime_ms": 10000,
-                      "deployment_success_rate": 0.85},
-            current={"autonomy_score": 0.95, "success_rate": 0.98,
-                     "total_cost": 50, "avg_runtime_ms": 3000,
-                     "deployment_success_rate": 0.99},
+            previous={
+                "autonomy_score": 0.7,
+                "success_rate": 0.8,
+                "total_cost": 200,
+                "avg_runtime_ms": 10000,
+                "deployment_success_rate": 0.85,
+            },
+            current={
+                "autonomy_score": 0.95,
+                "success_rate": 0.98,
+                "total_cost": 50,
+                "avg_runtime_ms": 3000,
+                "deployment_success_rate": 0.99,
+            },
         )
         assert len(alerts) == 0
 
     def test_regression_severity_high(self):
         from services.regression_detector import RegressionDetector
+
         detector = RegressionDetector()
         alert = detector.check_autonomy_score(previous=0.9, current=0.3)
         assert alert is not None
@@ -528,20 +646,38 @@ class TestRegressionDetectorUnit:
 # Version Comparator Unit Tests
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class TestVersionComparatorUnit:
     """Direct unit tests on VersionComparator."""
 
     def test_record_and_compare_versions(self):
         from services.version_comparator import VersionComparator
+
         comp = VersionComparator()
-        comp.record_snapshot("v11.0", {"autonomy_score": 0.8, "avg_runtime_ms": 15000,
-                                       "healing_rate": 0.75, "deployment_success_rate": 0.90,
-                                       "cost_efficiency": 0.85, "success_rate": 0.88,
-                                       "benchmark_score": 0.80})
-        comp.record_snapshot("v12.0", {"autonomy_score": 0.9, "avg_runtime_ms": 10000,
-                                       "healing_rate": 0.85, "deployment_success_rate": 0.95,
-                                       "cost_efficiency": 0.90, "success_rate": 0.95,
-                                       "benchmark_score": 0.92})
+        comp.record_snapshot(
+            "v11.0",
+            {
+                "autonomy_score": 0.8,
+                "avg_runtime_ms": 15000,
+                "healing_rate": 0.75,
+                "deployment_success_rate": 0.90,
+                "cost_efficiency": 0.85,
+                "success_rate": 0.88,
+                "benchmark_score": 0.80,
+            },
+        )
+        comp.record_snapshot(
+            "v12.0",
+            {
+                "autonomy_score": 0.9,
+                "avg_runtime_ms": 10000,
+                "healing_rate": 0.85,
+                "deployment_success_rate": 0.95,
+                "cost_efficiency": 0.90,
+                "success_rate": 0.95,
+                "benchmark_score": 0.92,
+            },
+        )
         result = comp.compare_versions("v11.0", "v12.0")
         assert result is not None
         assert result.from_version == "v11.0"
@@ -550,21 +686,39 @@ class TestVersionComparatorUnit:
 
     def test_compare_empty_versions_returns_none(self):
         from services.version_comparator import VersionComparator
+
         comp = VersionComparator()
         result = comp.compare_versions("", "")
         assert result is None
 
     def test_compare_identifies_improvements(self):
         from services.version_comparator import VersionComparator
+
         comp = VersionComparator()
-        comp.record_snapshot("v11.0", {"autonomy_score": 0.7, "avg_runtime_ms": 20000,
-                                       "healing_rate": 0.70, "deployment_success_rate": 0.80,
-                                       "cost_efficiency": 0.75, "success_rate": 0.75,
-                                       "benchmark_score": 0.70})
-        comp.record_snapshot("v12.0", {"autonomy_score": 0.9, "avg_runtime_ms": 5000,
-                                       "healing_rate": 0.90, "deployment_success_rate": 0.98,
-                                       "cost_efficiency": 0.95, "success_rate": 0.95,
-                                       "benchmark_score": 0.95})
+        comp.record_snapshot(
+            "v11.0",
+            {
+                "autonomy_score": 0.7,
+                "avg_runtime_ms": 20000,
+                "healing_rate": 0.70,
+                "deployment_success_rate": 0.80,
+                "cost_efficiency": 0.75,
+                "success_rate": 0.75,
+                "benchmark_score": 0.70,
+            },
+        )
+        comp.record_snapshot(
+            "v12.0",
+            {
+                "autonomy_score": 0.9,
+                "avg_runtime_ms": 5000,
+                "healing_rate": 0.90,
+                "deployment_success_rate": 0.98,
+                "cost_efficiency": 0.95,
+                "success_rate": 0.95,
+                "benchmark_score": 0.95,
+            },
+        )
         result = comp.compare_versions("v11.0", "v12.0")
         assert result is not None
         assert result.autonomy_delta > 0
@@ -576,11 +730,13 @@ class TestVersionComparatorUnit:
 # Phase 4 — Reliability & Persistence Tests
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class TestSchedulerMetadataCRUD:
     """Test scheduler_metadata table persistence."""
 
     def test_save_and_get_metadata(self):
         from database.memory_store import mem_get_scheduler_metadata, mem_save_scheduler_metadata
+
         meta = {
             "id": "test-nightly-1",
             "schedule_type": "nightly",
@@ -605,10 +761,39 @@ class TestSchedulerMetadataCRUD:
 
     def test_list_metadata(self):
         from database.memory_store import mem_list_scheduler_metadata, mem_save_scheduler_metadata
+
         for stype in ("nightly", "weekly", "release"):
-            mem_save_scheduler_metadata({
-                "id": f"test-{stype}-1",
-                "schedule_type": stype,
+            mem_save_scheduler_metadata(
+                {
+                    "id": f"test-{stype}-1",
+                    "schedule_type": stype,
+                    "enabled": 1,
+                    "interval_hours": 24.0,
+                    "window_start_utc": "02:00",
+                    "day_of_week": 0,
+                    "execution_time_utc": "02:00",
+                    "domain_timeout_seconds": 300.0,
+                    "parallel_execution": 0,
+                    "last_run_at": None,
+                    "next_run_at": None,
+                    "recovery_window_hours": 6.0,
+                    "created_at": 2000.0,
+                    "updated_at": 2000.0,
+                }
+            )
+        all_meta = mem_list_scheduler_metadata()
+        types = {m["schedule_type"] for m in all_meta}
+        assert "nightly" in types
+        assert "weekly" in types
+        assert "release" in types
+
+    def test_list_enabled_only(self):
+        from database.memory_store import mem_list_scheduler_metadata, mem_save_scheduler_metadata
+
+        mem_save_scheduler_metadata(
+            {
+                "id": "enabled-test",
+                "schedule_type": "nightly",
                 "enabled": 1,
                 "interval_hours": 24.0,
                 "window_start_utc": "02:00",
@@ -619,49 +804,28 @@ class TestSchedulerMetadataCRUD:
                 "last_run_at": None,
                 "next_run_at": None,
                 "recovery_window_hours": 6.0,
-                "created_at": 2000.0,
-                "updated_at": 2000.0,
-            })
-        all_meta = mem_list_scheduler_metadata()
-        types = {m["schedule_type"] for m in all_meta}
-        assert "nightly" in types
-        assert "weekly" in types
-        assert "release" in types
-
-    def test_list_enabled_only(self):
-        from database.memory_store import mem_list_scheduler_metadata, mem_save_scheduler_metadata
-        mem_save_scheduler_metadata({
-            "id": "enabled-test",
-            "schedule_type": "nightly",
-            "enabled": 1,
-            "interval_hours": 24.0,
-            "window_start_utc": "02:00",
-            "day_of_week": 0,
-            "execution_time_utc": "02:00",
-            "domain_timeout_seconds": 300.0,
-            "parallel_execution": 0,
-            "last_run_at": None,
-            "next_run_at": None,
-            "recovery_window_hours": 6.0,
-            "created_at": 3000.0,
-            "updated_at": 3000.0,
-        })
-        mem_save_scheduler_metadata({
-            "id": "disabled-test",
-            "schedule_type": "disabled_sched",
-            "enabled": 0,
-            "interval_hours": 24.0,
-            "window_start_utc": "02:00",
-            "day_of_week": 0,
-            "execution_time_utc": "02:00",
-            "domain_timeout_seconds": 300.0,
-            "parallel_execution": 0,
-            "last_run_at": None,
-            "next_run_at": None,
-            "recovery_window_hours": 6.0,
-            "created_at": 3001.0,
-            "updated_at": 3001.0,
-        })
+                "created_at": 3000.0,
+                "updated_at": 3000.0,
+            }
+        )
+        mem_save_scheduler_metadata(
+            {
+                "id": "disabled-test",
+                "schedule_type": "disabled_sched",
+                "enabled": 0,
+                "interval_hours": 24.0,
+                "window_start_utc": "02:00",
+                "day_of_week": 0,
+                "execution_time_utc": "02:00",
+                "domain_timeout_seconds": 300.0,
+                "parallel_execution": 0,
+                "last_run_at": None,
+                "next_run_at": None,
+                "recovery_window_hours": 6.0,
+                "created_at": 3001.0,
+                "updated_at": 3001.0,
+            }
+        )
         enabled = mem_list_scheduler_metadata(enabled_only=True)
         for m in enabled:
             assert m["enabled"] == 1
@@ -672,22 +836,25 @@ class TestSchedulerMetadataCRUD:
             mem_get_scheduler_metadata,
             mem_save_scheduler_metadata,
         )
-        mem_save_scheduler_metadata({
-            "id": "delete-test",
-            "schedule_type": "to_delete",
-            "enabled": 1,
-            "interval_hours": 24.0,
-            "window_start_utc": "02:00",
-            "day_of_week": 0,
-            "execution_time_utc": "02:00",
-            "domain_timeout_seconds": 300.0,
-            "parallel_execution": 0,
-            "last_run_at": None,
-            "next_run_at": None,
-            "recovery_window_hours": 6.0,
-            "created_at": 4000.0,
-            "updated_at": 4000.0,
-        })
+
+        mem_save_scheduler_metadata(
+            {
+                "id": "delete-test",
+                "schedule_type": "to_delete",
+                "enabled": 1,
+                "interval_hours": 24.0,
+                "window_start_utc": "02:00",
+                "day_of_week": 0,
+                "execution_time_utc": "02:00",
+                "domain_timeout_seconds": 300.0,
+                "parallel_execution": 0,
+                "last_run_at": None,
+                "next_run_at": None,
+                "recovery_window_hours": 6.0,
+                "created_at": 4000.0,
+                "updated_at": 4000.0,
+            }
+        )
         assert mem_delete_scheduler_metadata("to_delete") is True
         assert mem_get_scheduler_metadata("to_delete") is None
 
@@ -698,6 +865,7 @@ class TestSQLitePersistence:
     @patch("services.benchmark_service.BenchmarkService")
     def test_run_persisted_to_db(self, mock_bsvc, client):
         from database.memory_store import mem_count_evaluation_runs
+
         mock_bsvc.return_value = MockBenchmarkService()
         before = mem_count_evaluation_runs()
         client.post("/evaluation/run", json={"trigger_type": "nightly"})
@@ -707,6 +875,7 @@ class TestSQLitePersistence:
     @patch("services.benchmark_service.BenchmarkService")
     def test_run_data_roundtrip(self, mock_bsvc, client):
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         mock_bsvc.return_value = MockBenchmarkService()
         scheduler = get_evaluation_scheduler()
         run = scheduler.trigger_run(schedule="nightly", triggered_by="test")
@@ -717,25 +886,28 @@ class TestSQLitePersistence:
     def test_load_runs_from_db_on_init(self):
         from database.memory_store import mem_save_evaluation_run
         from services.evaluation_scheduler import EvaluationScheduler
+
         # Save a run directly to DB
-        mem_save_evaluation_run({
-            "id": "pre-existing-run",
-            "trigger_type": "nightly",
-            "status": "completed",
-            "autonomy_score": 0.85,
-            "success_rate": 0.9,
-            "total_cost": 100.0,
-            "total_runtime": 5000.0,
-            "healing_rate": 0.8,
-            "deployment_success_rate": 0.95,
-            "benchmark_score": 0.85,
-            "tasks_completed": 5,
-            "tasks_failed": 0,
-            "error_log": "",
-            "started_at": 1000.0,
-            "completed_at": 2000.0,
-            "created_at": 1000.0,
-        })
+        mem_save_evaluation_run(
+            {
+                "id": "pre-existing-run",
+                "trigger_type": "nightly",
+                "status": "completed",
+                "autonomy_score": 0.85,
+                "success_rate": 0.9,
+                "total_cost": 100.0,
+                "total_runtime": 5000.0,
+                "healing_rate": 0.8,
+                "deployment_success_rate": 0.95,
+                "benchmark_score": 0.85,
+                "tasks_completed": 5,
+                "tasks_failed": 0,
+                "error_log": "",
+                "started_at": 1000.0,
+                "completed_at": 2000.0,
+                "created_at": 1000.0,
+            }
+        )
         # Re-create singleton to force reload from DB
         EvaluationScheduler._instance = None
         if hasattr(EvaluationScheduler, "_instance_lock"):
@@ -754,24 +926,27 @@ class TestRestartRecovery:
     def test_recover_pending_runs_marked_stale(self):
         from database.memory_store import mem_list_evaluation_runs, mem_save_evaluation_run
         from services.evaluation_scheduler import get_evaluation_scheduler
-        mem_save_evaluation_run({
-            "id": "pending-stale-1",
-            "trigger_type": "nightly",
-            "status": "pending",
-            "autonomy_score": 0.0,
-            "success_rate": 0.0,
-            "total_cost": 0.0,
-            "total_runtime": 0.0,
-            "healing_rate": 0.0,
-            "deployment_success_rate": 0.0,
-            "benchmark_score": 0.0,
-            "tasks_completed": 0,
-            "tasks_failed": 0,
-            "error_log": "",
-            "started_at": 1000.0,
-            "completed_at": None,
-            "created_at": 1000.0,
-        })
+
+        mem_save_evaluation_run(
+            {
+                "id": "pending-stale-1",
+                "trigger_type": "nightly",
+                "status": "pending",
+                "autonomy_score": 0.0,
+                "success_rate": 0.0,
+                "total_cost": 0.0,
+                "total_runtime": 0.0,
+                "healing_rate": 0.0,
+                "deployment_success_rate": 0.0,
+                "benchmark_score": 0.0,
+                "tasks_completed": 0,
+                "tasks_failed": 0,
+                "error_log": "",
+                "started_at": 1000.0,
+                "completed_at": None,
+                "created_at": 1000.0,
+            }
+        )
         scheduler = get_evaluation_scheduler()
         recovery = scheduler.recover_state()
         assert recovery["pending_found"] >= 1
@@ -786,25 +961,28 @@ class TestRestartRecovery:
 
         from database.memory_store import mem_list_evaluation_runs, mem_save_evaluation_run
         from services.evaluation_scheduler import STALE_TIMEOUT_SECONDS, get_evaluation_scheduler
+
         old_ts = time.time() - STALE_TIMEOUT_SECONDS - 100
-        mem_save_evaluation_run({
-            "id": "running-stale-1",
-            "trigger_type": "nightly",
-            "status": "running",
-            "autonomy_score": 0.0,
-            "success_rate": 0.0,
-            "total_cost": 0.0,
-            "total_runtime": 0.0,
-            "healing_rate": 0.0,
-            "deployment_success_rate": 0.0,
-            "benchmark_score": 0.0,
-            "tasks_completed": 0,
-            "tasks_failed": 0,
-            "error_log": "",
-            "started_at": old_ts,
-            "completed_at": None,
-            "created_at": old_ts,
-        })
+        mem_save_evaluation_run(
+            {
+                "id": "running-stale-1",
+                "trigger_type": "nightly",
+                "status": "running",
+                "autonomy_score": 0.0,
+                "success_rate": 0.0,
+                "total_cost": 0.0,
+                "total_runtime": 0.0,
+                "healing_rate": 0.0,
+                "deployment_success_rate": 0.0,
+                "benchmark_score": 0.0,
+                "tasks_completed": 0,
+                "tasks_failed": 0,
+                "error_log": "",
+                "started_at": old_ts,
+                "completed_at": None,
+                "created_at": old_ts,
+            }
+        )
         scheduler = get_evaluation_scheduler()
         recovery = scheduler.recover_state()
         assert recovery["running_found"] >= 1
@@ -814,6 +992,7 @@ class TestRestartRecovery:
 
     def test_recovery_summary_structure(self):
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         scheduler = get_evaluation_scheduler()
         recovery = scheduler.recover_state()
         for key in ("pending_found", "running_found", "marked_stale", "resumed", "errors"):
@@ -831,35 +1010,40 @@ class TestMissedRunRecovery:
             mem_save_scheduler_metadata,
         )
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         mock_bsvc.return_value = MockBenchmarkService()
         import time
+
         old_ts = time.time() - 48 * 3600
         # Delete old metadata and existing nightly runs to ensure clean test
         mem_delete_scheduler_metadata("nightly")
         for r in mem_list_evaluation_runs(trigger_type="nightly", limit=200):
             try:
                 from database.memory_store import _get_conn
+
                 conn = _get_conn()
                 conn.execute("DELETE FROM evaluation_runs WHERE id=?", (r["id"],))
                 conn.commit()
             except Exception:
                 pass
-        mem_save_scheduler_metadata({
-            "id": "nightly",
-            "schedule_type": "nightly",
-            "enabled": 1,
-            "interval_hours": 24.0,
-            "window_start_utc": "02:00",
-            "day_of_week": 0,
-            "execution_time_utc": "02:00",
-            "domain_timeout_seconds": 300.0,
-            "parallel_execution": 0,
-            "last_run_at": old_ts,
-            "next_run_at": None,
-            "recovery_window_hours": 6.0,
-            "created_at": old_ts,
-            "updated_at": old_ts,
-        })
+        mem_save_scheduler_metadata(
+            {
+                "id": "nightly",
+                "schedule_type": "nightly",
+                "enabled": 1,
+                "interval_hours": 24.0,
+                "window_start_utc": "02:00",
+                "day_of_week": 0,
+                "execution_time_utc": "02:00",
+                "domain_timeout_seconds": 300.0,
+                "parallel_execution": 0,
+                "last_run_at": old_ts,
+                "next_run_at": None,
+                "recovery_window_hours": 6.0,
+                "created_at": old_ts,
+                "updated_at": old_ts,
+            }
+        )
         scheduler = get_evaluation_scheduler()
         result = scheduler.check_missed_runs()
         nightly_results = [r for r in result if r["schedule"] == "nightly"]
@@ -870,43 +1054,49 @@ class TestMissedRunRecovery:
     def test_no_missed_when_recent_run_exists(self, mock_bsvc):
         from database.memory_store import mem_save_evaluation_run, mem_save_scheduler_metadata
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         mock_bsvc.return_value = MockBenchmarkService()
         import time
+
         recent_ts = time.time() - 2 * 3600  # 2 hours ago
-        mem_save_scheduler_metadata({
-            "id": "recent-nightly",
-            "schedule_type": "nightly",
-            "enabled": 1,
-            "interval_hours": 24.0,
-            "window_start_utc": "02:00",
-            "day_of_week": 0,
-            "execution_time_utc": "02:00",
-            "domain_timeout_seconds": 300.0,
-            "parallel_execution": 0,
-            "last_run_at": recent_ts,
-            "next_run_at": None,
-            "recovery_window_hours": 6.0,
-            "created_at": recent_ts,
-            "updated_at": recent_ts,
-        })
-        mem_save_evaluation_run({
-            "id": "recent-run",
-            "trigger_type": "nightly",
-            "status": "completed",
-            "autonomy_score": 0.9,
-            "success_rate": 0.95,
-            "total_cost": 100.0,
-            "total_runtime": 5000.0,
-            "healing_rate": 0.85,
-            "deployment_success_rate": 0.98,
-            "benchmark_score": 0.9,
-            "tasks_completed": 5,
-            "tasks_failed": 0,
-            "error_log": "",
-            "started_at": recent_ts,
-            "completed_at": recent_ts,
-            "created_at": recent_ts,
-        })
+        mem_save_scheduler_metadata(
+            {
+                "id": "recent-nightly",
+                "schedule_type": "nightly",
+                "enabled": 1,
+                "interval_hours": 24.0,
+                "window_start_utc": "02:00",
+                "day_of_week": 0,
+                "execution_time_utc": "02:00",
+                "domain_timeout_seconds": 300.0,
+                "parallel_execution": 0,
+                "last_run_at": recent_ts,
+                "next_run_at": None,
+                "recovery_window_hours": 6.0,
+                "created_at": recent_ts,
+                "updated_at": recent_ts,
+            }
+        )
+        mem_save_evaluation_run(
+            {
+                "id": "recent-run",
+                "trigger_type": "nightly",
+                "status": "completed",
+                "autonomy_score": 0.9,
+                "success_rate": 0.95,
+                "total_cost": 100.0,
+                "total_runtime": 5000.0,
+                "healing_rate": 0.85,
+                "deployment_success_rate": 0.98,
+                "benchmark_score": 0.9,
+                "tasks_completed": 5,
+                "tasks_failed": 0,
+                "error_log": "",
+                "started_at": recent_ts,
+                "completed_at": recent_ts,
+                "created_at": recent_ts,
+            }
+        )
         scheduler = get_evaluation_scheduler()
         result = scheduler.check_missed_runs()
         # Should not trigger recovery since last_run is recent
@@ -918,23 +1108,26 @@ class TestMissedRunRecovery:
 
         from database.memory_store import mem_save_scheduler_metadata
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         old_ts = time.time() - 48 * 3600
-        mem_save_scheduler_metadata({
-            "id": "disabled-nightly",
-            "schedule_type": "nightly_disabled",
-            "enabled": 0,
-            "interval_hours": 24.0,
-            "window_start_utc": "02:00",
-            "day_of_week": 0,
-            "execution_time_utc": "02:00",
-            "domain_timeout_seconds": 300.0,
-            "parallel_execution": 0,
-            "last_run_at": old_ts,
-            "next_run_at": None,
-            "recovery_window_hours": 6.0,
-            "created_at": old_ts,
-            "updated_at": old_ts,
-        })
+        mem_save_scheduler_metadata(
+            {
+                "id": "disabled-nightly",
+                "schedule_type": "nightly_disabled",
+                "enabled": 0,
+                "interval_hours": 24.0,
+                "window_start_utc": "02:00",
+                "day_of_week": 0,
+                "execution_time_utc": "02:00",
+                "domain_timeout_seconds": 300.0,
+                "parallel_execution": 0,
+                "last_run_at": old_ts,
+                "next_run_at": None,
+                "recovery_window_hours": 6.0,
+                "created_at": old_ts,
+                "updated_at": old_ts,
+            }
+        )
         scheduler = get_evaluation_scheduler()
         result = scheduler.check_missed_runs()
         # Disabled nightly_disabled should not cause missed-run recovery
@@ -947,6 +1140,7 @@ class TestWeeklyScheduleConfig:
 
     def test_set_weekly_config(self):
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         scheduler = get_evaluation_scheduler()
         result = scheduler.set_schedule_config(
             schedule_type="weekly",
@@ -962,6 +1156,7 @@ class TestWeeklyScheduleConfig:
 
     def test_weekly_config_persisted(self):
         from database.memory_store import mem_get_scheduler_metadata
+
         meta = mem_get_scheduler_metadata("weekly")
         assert meta is not None
         assert meta["day_of_week"] == 2
@@ -973,6 +1168,7 @@ class TestWeeklyScheduleConfig:
     def test_set_nightly_config(self):
         from database.memory_store import mem_delete_scheduler_metadata
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         mem_delete_scheduler_metadata("nightly")
         scheduler = get_evaluation_scheduler()
         result = scheduler.set_schedule_config(
@@ -987,6 +1183,7 @@ class TestWeeklyScheduleConfig:
     def test_nightly_config_persisted(self):
         from database.memory_store import mem_delete_scheduler_metadata, mem_get_scheduler_metadata
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         mem_delete_scheduler_metadata("nightly")
         scheduler = get_evaluation_scheduler()
         scheduler.set_schedule_config(
@@ -1004,6 +1201,7 @@ class TestWeeklyScheduleConfig:
     def test_config_update_overwrites(self):
         from database.memory_store import mem_get_scheduler_metadata
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         scheduler = get_evaluation_scheduler()
         scheduler.set_schedule_config(
             schedule_type="release",
@@ -1031,6 +1229,7 @@ class TestParallelExecution:
     @patch("services.benchmark_service.BenchmarkService")
     def test_parallel_execution_runs_completes(self, mock_bsvc):
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         mock_bsvc.return_value = MockBenchmarkService()
         scheduler = get_evaluation_scheduler()
         run = scheduler.trigger_run(schedule="nightly", triggered_by="parallel-test", domains=["dom1", "dom2"])
@@ -1040,6 +1239,7 @@ class TestParallelExecution:
     @patch("services.benchmark_service.BenchmarkService")
     def test_sequential_vs_parallel_same_result(self, mock_bsvc):
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         mock_bsvc.return_value = MockBenchmarkService()
         scheduler = get_evaluation_scheduler()
 
@@ -1051,10 +1251,12 @@ class TestParallelExecution:
     @patch("services.benchmark_service.BenchmarkService")
     def test_multiple_domains_parallel_safe(self, mock_bsvc):
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         mock_bsvc.return_value = MockBenchmarkService()
         scheduler = get_evaluation_scheduler()
         run = scheduler.trigger_run(
-            schedule="nightly", triggered_by="multi-parallel",
+            schedule="nightly",
+            triggered_by="multi-parallel",
             domains=["dom1", "dom2", "dom3"],
         )
         assert run.status == "completed"
@@ -1066,6 +1268,7 @@ class TestDomainTimeout:
     @patch("services.benchmark_service.BenchmarkService")
     def test_timeout_parameter_accepted(self, mock_bsvc):
         from services.evaluation_scheduler import EvaluationRun, get_evaluation_scheduler
+
         mock_bsvc.return_value = MockBenchmarkService()
         scheduler = get_evaluation_scheduler()
 
@@ -1077,6 +1280,7 @@ class TestDomainTimeout:
     @patch("services.benchmark_service.BenchmarkService")
     def test_fast_domain_completes_within_timeout(self, mock_bsvc):
         from services.evaluation_scheduler import get_evaluation_scheduler
+
         mock_bsvc.return_value = MockBenchmarkService()
         scheduler = get_evaluation_scheduler()
         run = scheduler.trigger_run(schedule="on_demand", triggered_by="fast-test")
@@ -1091,6 +1295,7 @@ class TestPersistenceIntegrity:
             mem_get_evaluation_run,
             mem_save_evaluation_run,
         )
+
         run_data = {
             "id": "integrity-test-1",
             "trigger_type": "nightly",
@@ -1125,24 +1330,27 @@ class TestPersistenceIntegrity:
             mem_save_evaluation_run,
             mem_update_evaluation_run,
         )
-        mem_save_evaluation_run({
-            "id": "update-test-1",
-            "trigger_type": "nightly",
-            "status": "running",
-            "autonomy_score": 0.0,
-            "success_rate": 0.0,
-            "total_cost": 0.0,
-            "total_runtime": 0.0,
-            "healing_rate": 0.0,
-            "deployment_success_rate": 0.0,
-            "benchmark_score": 0.0,
-            "tasks_completed": 0,
-            "tasks_failed": 0,
-            "error_log": "",
-            "started_at": 7000.0,
-            "completed_at": None,
-            "created_at": 7000.0,
-        })
+
+        mem_save_evaluation_run(
+            {
+                "id": "update-test-1",
+                "trigger_type": "nightly",
+                "status": "running",
+                "autonomy_score": 0.0,
+                "success_rate": 0.0,
+                "total_cost": 0.0,
+                "total_runtime": 0.0,
+                "healing_rate": 0.0,
+                "deployment_success_rate": 0.0,
+                "benchmark_score": 0.0,
+                "tasks_completed": 0,
+                "tasks_failed": 0,
+                "error_log": "",
+                "started_at": 7000.0,
+                "completed_at": None,
+                "created_at": 7000.0,
+            }
+        )
         mem_update_evaluation_run("update-test-1", {"status": "completed", "autonomy_score": 0.95})
         loaded = mem_get_evaluation_run("update-test-1")
         assert loaded["status"] == "completed"
@@ -1152,48 +1360,54 @@ class TestPersistenceIntegrity:
         import time
 
         from database.memory_store import mem_count_missed_runs, mem_save_evaluation_run
+
         now = time.time()
-        mem_save_evaluation_run({
-            "id": "missed-count-1",
-            "trigger_type": "nightly",
-            "status": "completed",
-            "autonomy_score": 0.9,
-            "success_rate": 0.95,
-            "total_cost": 100.0,
-            "total_runtime": 5000.0,
-            "healing_rate": 0.85,
-            "deployment_success_rate": 0.98,
-            "benchmark_score": 0.9,
-            "tasks_completed": 5,
-            "tasks_failed": 0,
-            "error_log": "",
-            "started_at": now - 3600,
-            "completed_at": now - 1800,
-            "created_at": now - 3600,
-        })
+        mem_save_evaluation_run(
+            {
+                "id": "missed-count-1",
+                "trigger_type": "nightly",
+                "status": "completed",
+                "autonomy_score": 0.9,
+                "success_rate": 0.95,
+                "total_cost": 100.0,
+                "total_runtime": 5000.0,
+                "healing_rate": 0.85,
+                "deployment_success_rate": 0.98,
+                "benchmark_score": 0.9,
+                "tasks_completed": 5,
+                "tasks_failed": 0,
+                "error_log": "",
+                "started_at": now - 3600,
+                "completed_at": now - 1800,
+                "created_at": now - 3600,
+            }
+        )
         count = mem_count_missed_runs("nightly", now - 7200)
         assert count >= 1
 
     def test_list_with_filters_preserved(self):
         from database.memory_store import mem_list_evaluation_runs, mem_save_evaluation_run
-        mem_save_evaluation_run({
-            "id": "filter-test-1",
-            "trigger_type": "weekly",
-            "status": "completed",
-            "autonomy_score": 0.85,
-            "success_rate": 0.9,
-            "total_cost": 100.0,
-            "total_runtime": 5000.0,
-            "healing_rate": 0.8,
-            "deployment_success_rate": 0.95,
-            "benchmark_score": 0.85,
-            "tasks_completed": 5,
-            "tasks_failed": 0,
-            "error_log": "",
-            "started_at": 8000.0,
-            "completed_at": 9000.0,
-            "created_at": 8000.0,
-        })
+
+        mem_save_evaluation_run(
+            {
+                "id": "filter-test-1",
+                "trigger_type": "weekly",
+                "status": "completed",
+                "autonomy_score": 0.85,
+                "success_rate": 0.9,
+                "total_cost": 100.0,
+                "total_runtime": 5000.0,
+                "healing_rate": 0.8,
+                "deployment_success_rate": 0.95,
+                "benchmark_score": 0.85,
+                "tasks_completed": 5,
+                "tasks_failed": 0,
+                "error_log": "",
+                "started_at": 8000.0,
+                "completed_at": 9000.0,
+                "created_at": 8000.0,
+            }
+        )
         weekly = mem_list_evaluation_runs(trigger_type="weekly")
         assert len(weekly) >= 1
         for r in weekly:

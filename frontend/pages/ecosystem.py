@@ -1,4 +1,5 @@
 """Ecosystem Dashboard — Plugin & Agent SDK Manager, Marketplace Browser, Workflow Manager."""
+
 import os
 from typing import Any
 
@@ -37,9 +38,15 @@ def show_ecosystem_tab():
     st.markdown("## Plugin & Agent SDK Ecosystem")
     st.caption("Extend the platform with custom plugins, agents, workflows, and benchmark packs")
 
-    tab_plugins, tab_marketplace, tab_agents, tab_workflows, tab_health = st.tabs([
-        " Plugin Manager", " Marketplace", " Custom Agents", " Workflows", " Health",
-    ])
+    tab_plugins, tab_marketplace, tab_agents, tab_workflows, tab_health = st.tabs(
+        [
+            " Plugin Manager",
+            " Marketplace",
+            " Custom Agents",
+            " Workflows",
+            " Health",
+        ]
+    )
 
     with tab_plugins:
         _show_plugin_manager()
@@ -62,7 +69,9 @@ def _show_plugin_manager():
     with col2:
         pname = st.text_input("Plugin Name (optional)", placeholder="my-plugin")
     with col3:
-        ptype = st.selectbox("Type", ["tool", "integration", "provider", "validator", "workflow"], key="plugin_type_sel")
+        ptype = st.selectbox(
+            "Type", ["tool", "integration", "provider", "validator", "workflow"], key="plugin_type_sel"
+        )
 
     if st.button(" Install Plugin") and source:
         data = {"source": source, "plugin_type": ptype}
@@ -89,9 +98,9 @@ def _show_plugin_manager():
         cols = st.columns([3, 1, 1, 1])
         with cols[0]:
             st.markdown(f"**{manifest.get('name', 'unknown')}** v{manifest.get('version', '?')}")
-            st.caption(manifest.get('description', ''))
+            st.caption(manifest.get("description", ""))
         with cols[1]:
-            st.caption(manifest.get('plugin_type', ''))
+            st.caption(manifest.get("plugin_type", ""))
         with cols[2]:
             if enabled:
                 if st.button(" Disable", key=f"dis_{pid}"):
@@ -135,7 +144,7 @@ def _show_marketplace_browser():
             cols = st.columns([3, 1, 1, 1])
             with cols[0]:
                 st.markdown(f"**{pkg.get('name', 'unknown')}** v{pkg.get('version', '?')}")
-                st.caption(pkg.get('description', ''))
+                st.caption(pkg.get("description", ""))
             with cols[1]:
                 st.caption(f"⭐ {pkg.get('rating', 0):.1f} ({pkg.get('rating_count', 0)})")
             with cols[2]:
@@ -160,10 +169,17 @@ def _show_marketplace_browser():
             pub_type = st.selectbox("Type", ["plugin", "agent", "workflow", "benchmark"], key="pub_type")
             pub_path = st.text_input("Source Path", key="pub_path")
         if st.button(" Publish") and pub_name and pub_path:
-            result = _post("/plugins/marketplace/publish", {
-                "name": pub_name, "version": pub_ver, "author": pub_author,
-                "description": pub_desc, "source_path": pub_path, "package_type": pub_type,
-            })
+            result = _post(
+                "/plugins/marketplace/publish",
+                {
+                    "name": pub_name,
+                    "version": pub_ver,
+                    "author": pub_author,
+                    "description": pub_desc,
+                    "source_path": pub_path,
+                    "package_type": pub_type,
+                },
+            )
             if result:
                 st.success(f"Published: {result.get('name')}")
                 st.rerun()
@@ -179,17 +195,25 @@ def _show_agent_manager():
             agent_source = st.text_input("Source Path (.py)", key="agent_source")
         with col2:
             agent_desc = st.text_input("Description", key="agent_desc")
-            agent_caps = st.text_area("Capabilities (JSON array)", '[{"name": "cap1", "description": "..."}]', key="agent_caps")
+            agent_caps = st.text_area(
+                "Capabilities (JSON array)", '[{"name": "cap1", "description": "..."}]', key="agent_caps"
+            )
         if st.button(" Register Agent") and agent_name and agent_source:
             caps = []
             try:
                 caps = __import__("json").loads(agent_caps) if agent_caps else []
             except Exception:
                 st.warning("Invalid capabilities JSON, using empty")
-            result = _post("/agents/register", {
-                "name": agent_name, "version": agent_ver, "source": agent_source,
-                "description": agent_desc, "capabilities": caps,
-            })
+            result = _post(
+                "/agents/register",
+                {
+                    "name": agent_name,
+                    "version": agent_ver,
+                    "source": agent_source,
+                    "description": agent_desc,
+                    "capabilities": caps,
+                },
+            )
             if result:
                 st.success(f"Agent registered: {result.get('name')}")
                 st.rerun()
@@ -207,7 +231,7 @@ def _show_agent_manager():
         cols = st.columns([3, 1, 1])
         with cols[0]:
             st.markdown(f"**{a.get('name', 'unknown')}** v{a.get('version', '?')}")
-            st.caption(a.get('description', ''))
+            st.caption(a.get("description", ""))
         with cols[1]:
             caps = a.get("capabilities", [])
             st.caption(f"{len(caps)} capability(ies)")
@@ -234,10 +258,16 @@ def _show_workflow_manager():
                 steps = __import__("json").loads(wf_steps) if wf_steps else []
             except Exception:
                 st.warning("Invalid steps JSON, using empty")
-            result = _post("/workflows/register", {
-                "name": wf_name, "version": wf_ver, "source": wf_source,
-                "description": wf_desc, "steps": steps,
-            })
+            result = _post(
+                "/workflows/register",
+                {
+                    "name": wf_name,
+                    "version": wf_ver,
+                    "source": wf_source,
+                    "description": wf_desc,
+                    "steps": steps,
+                },
+            )
             if result:
                 st.success(f"Workflow registered: {result.get('name')}")
                 st.rerun()
@@ -255,7 +285,7 @@ def _show_workflow_manager():
         cols = st.columns([3, 1, 1])
         with cols[0]:
             st.markdown(f"**{w.get('name', 'unknown')}** v{w.get('version', '?')}")
-            st.caption(w.get('description', ''))
+            st.caption(w.get("description", ""))
         with cols[1]:
             steps = w.get("steps", [])
             st.caption(f"{len(steps)} step(s)")
@@ -298,7 +328,8 @@ def _show_ecosystem_health():
     """)
 
     st.markdown("### Quick Start")
-    st.code("""# Create a plugin without modifying platform source:
+    st.code(
+        """# Create a plugin without modifying platform source:
 from sdk.plugin_sdk.base_plugin import BasePlugin, PluginManifest
 
 class MyPlugin(BasePlugin):
@@ -306,4 +337,6 @@ class MyPlugin(BasePlugin):
     def uninstall(self) -> bool: ...
     def configure(self, config) -> bool: ...
     def validate(self) -> bool: ...
-""", language="python")
+""",
+        language="python",
+    )

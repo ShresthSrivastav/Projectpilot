@@ -5,6 +5,7 @@ New in v4:
   - clarify() — asks one question before the pipeline if the prompt is vague
   - stack config support (backend_framework, frontend_framework, db)
 """
+
 import json
 import logging
 import re
@@ -16,14 +17,36 @@ from services.llm_service import call_model
 logger = logging.getLogger(__name__)
 
 SUPPORTED_TYPES = {
-    "student_management", "inventory_system", "blog_app", "task_manager",
-    "employee_management", "crud_dashboard", "rest_api",
+    "student_management",
+    "inventory_system",
+    "blog_app",
+    "task_manager",
+    "employee_management",
+    "crud_dashboard",
+    "rest_api",
 }
 UNSUPPORTED_KEYWORDS = [
-    "machine learning", "deep learning", "neural network", "ai model",
-    "game engine", "video game", "unity", "unreal", "operating system",
-    "kernel", "blockchain", "smart contract", "nft", "mobile app",
-    "android", "ios", "react native", "flutter", "desktop gui", "tkinter", "qt",
+    "machine learning",
+    "deep learning",
+    "neural network",
+    "ai model",
+    "game engine",
+    "video game",
+    "unity",
+    "unreal",
+    "operating system",
+    "kernel",
+    "blockchain",
+    "smart contract",
+    "nft",
+    "mobile app",
+    "android",
+    "ios",
+    "react native",
+    "flutter",
+    "desktop gui",
+    "tkinter",
+    "qt",
 ]
 
 _SYSTEM = """You are a software requirements analyst.
@@ -54,10 +77,7 @@ def _validate(prompt: str) -> None:
         raise ValueError("Prompt must be under 500 characters.")
     for kw in UNSUPPORTED_KEYWORDS:
         if kw in prompt.lower():
-            raise ValueError(
-                f"Unsupported project type: '{kw}'. "
-                "ProjectPilot supports CRUD/web applications only."
-            )
+            raise ValueError(f"Unsupported project type: '{kw}'. ProjectPilot supports CRUD/web applications only.")
 
 
 def _parse_json(text: str) -> dict[str, Any]:
@@ -101,14 +121,11 @@ def run(
     log_to_db(job_id, "RequirementAgent", f"Analysing prompt ({len(prompt)} chars).")
     _validate(prompt)
 
-    user_msg = (
-        f"Project Name: {project_name or 'Auto-detect'}\n"
-        f"Description: {prompt}\n\n"
-        "Extract requirements as JSON."
-    )
+    user_msg = f"Project Name: {project_name or 'Auto-detect'}\nDescription: {prompt}\n\nExtract requirements as JSON."
     try:
-        raw = call_model(user_msg, system_prompt=_SYSTEM, model=model or "local",
-                         job_id=job_id, agent="RequirementAgent")
+        raw = call_model(
+            user_msg, system_prompt=_SYSTEM, model=model or "local", job_id=job_id, agent="RequirementAgent"
+        )
         log_to_db(job_id, "RequirementAgent", "LLM response received.")
     except RuntimeError as exc:
         log_to_db(job_id, "RequirementAgent", f"LLM call failed: {exc}", "ERROR")
@@ -128,15 +145,19 @@ def run(
     if stack:
         req["stack"] = stack
     else:
-        req.setdefault("stack", {
-            "backend":  "fastapi",
-            "frontend": "streamlit",
-            "db":       "sqlite",
-        })
+        req.setdefault(
+            "stack",
+            {
+                "backend": "fastapi",
+                "frontend": "streamlit",
+                "db": "sqlite",
+            },
+        )
 
     save_requirements(job_id, req)
     log_to_db(
-        job_id, "RequirementAgent",
+        job_id,
+        "RequirementAgent",
         f"Done — {len(req.get('features', []))} features, "
         f"type={req.get('project_type')}, complexity={req.get('complexity')}.",
     )

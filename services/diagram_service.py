@@ -1,4 +1,5 @@
 """Diagram Service — generates Mermaid.js architecture diagrams from blueprint data."""
+
 from typing import Any
 
 
@@ -11,16 +12,16 @@ def generate_component_diagram(blueprint: dict[str, Any]) -> str:
     tech_stack = blueprint.get("tech_stack", {})
     routes = blueprint.get("routes", [])
 
-    lines = ["graph TD", f'    A["User"] -->|"HTTP"| B["{tech_stack.get("backend","API")}"]']
+    lines = ["graph TD", f'    A["User"] -->|"HTTP"| B["{tech_stack.get("backend", "API")}"]']
 
     frontend_files = [f for f in files if "frontend" in f.get("path", "")]
     database_files = [f for f in files if "database" in f.get("path", "")]
 
     if frontend_files:
-        lines.append(f'    C["{tech_stack.get("frontend","UI")}"] -->|"REST"| B')
-        lines.append('    A --> C')
+        lines.append(f'    C["{tech_stack.get("frontend", "UI")}"] -->|"REST"| B')
+        lines.append("    A --> C")
 
-    lines.append(f'    B -->|"ORM"| D["{tech_stack.get("db","Database")}"]')
+    lines.append(f'    B -->|"ORM"| D["{tech_stack.get("db", "Database")}"]')
 
     if database_files:
         for f in database_files:
@@ -59,7 +60,7 @@ def generate_er_diagram(blueprint: dict[str, Any]) -> str:
         lines.append("    }")
 
     for i, t1 in enumerate(tables):
-        for t2 in tables[i + 1:]:
+        for t2 in tables[i + 1 :]:
             n1 = t1.get("name", "t1")
             n2 = t2.get("name", "t2")
             lines.append(f"    {n1} ||--o{{ {n2} : has")

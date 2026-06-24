@@ -1,4 +1,5 @@
 """GitHub Service — OAuth, repo management, branches, commits, PRs, issues, sync."""
+
 import logging
 import os
 from datetime import UTC, datetime
@@ -18,7 +19,9 @@ from services.token_crypto import decrypt_token, encrypt_token, mask_token
 
 logger = logging.getLogger(__name__)
 
-CLONE_BASE = os.getenv("GITHUB_CLONE_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "github_repos"))
+CLONE_BASE = os.getenv(
+    "GITHUB_CLONE_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "github_repos")
+)
 
 
 def _get_client(token: str) -> Github:
@@ -26,6 +29,7 @@ def _get_client(token: str) -> Github:
 
 
 # ── Connection Management ────────────────────────────────────────────────
+
 
 def connect_github(token: str, username: str = "") -> dict[str, Any]:
     g = _get_client(token)
@@ -85,27 +89,30 @@ def _mask_gh_token_in_args(func_name: str, args: tuple, kwargs: dict) -> tuple:
 
 # ── Repository Operations ────────────────────────────────────────────────
 
+
 def list_repos(token: str, username: str = "") -> list[dict]:
     g = _get_client(token)
     user = g.get_user(username) if username else g.get_user()
     repos = []
     for r in user.get_repos(type="all", sort="updated", direction="desc"):
-        repos.append({
-            "id": r.id,
-            "name": r.name,
-            "full_name": r.full_name,
-            "description": r.description or "",
-            "url": r.html_url,
-            "clone_url": r.clone_url,
-            "ssh_url": r.ssh_url,
-            "language": r.language or "",
-            "default_branch": r.default_branch,
-            "stars": r.stargazers_count,
-            "forks": r.forks_count,
-            "open_issues": r.open_issues_count,
-            "private": r.private,
-            "updated_at": r.updated_at.isoformat() if r.updated_at else "",
-        })
+        repos.append(
+            {
+                "id": r.id,
+                "name": r.name,
+                "full_name": r.full_name,
+                "description": r.description or "",
+                "url": r.html_url,
+                "clone_url": r.clone_url,
+                "ssh_url": r.ssh_url,
+                "language": r.language or "",
+                "default_branch": r.default_branch,
+                "stars": r.stargazers_count,
+                "forks": r.forks_count,
+                "open_issues": r.open_issues_count,
+                "private": r.private,
+                "updated_at": r.updated_at.isoformat() if r.updated_at else "",
+            }
+        )
     return repos
 
 
@@ -142,29 +149,34 @@ def search_repos(token: str, query: str) -> list[dict]:
     g = _get_client(token)
     results = []
     for r in g.search_repositories(query, sort="updated", order="desc")[:20]:
-        results.append({
-            "id": r.id,
-            "full_name": r.full_name,
-            "description": r.description or "",
-            "url": r.html_url,
-            "language": r.language or "",
-            "stars": r.stargazers_count,
-        })
+        results.append(
+            {
+                "id": r.id,
+                "full_name": r.full_name,
+                "description": r.description or "",
+                "url": r.html_url,
+                "language": r.language or "",
+                "stars": r.stargazers_count,
+            }
+        )
     return results
 
 
 # ── Branch Operations ────────────────────────────────────────────────────
+
 
 def list_branches(token: str, full_name: str) -> list[dict]:
     g = _get_client(token)
     r = g.get_repo(full_name)
     branches = []
     for b in r.get_branches():
-        branches.append({
-            "name": b.name,
-            "sha": b.commit.sha,
-            "protected": b.protected,
-        })
+        branches.append(
+            {
+                "name": b.name,
+                "sha": b.commit.sha,
+                "protected": b.protected,
+            }
+        )
     return branches
 
 
@@ -187,6 +199,7 @@ def delete_branch(token: str, full_name: str, branch: str) -> dict:
 
 # ── File Operations ──────────────────────────────────────────────────────
 
+
 def get_file_content(token: str, full_name: str, path: str, ref: str = "") -> dict | None:
     try:
         g = _get_client(token)
@@ -199,7 +212,9 @@ def get_file_content(token: str, full_name: str, path: str, ref: str = "") -> di
             "sha": content.sha,
             "size": content.size,
             "encoding": content.encoding,
-            "content": content.decoded_content.decode("utf-8") if content.encoding == "base64" else content.decoded_content,
+            "content": content.decoded_content.decode("utf-8")
+            if content.encoding == "base64"
+            else content.decoded_content,
             "type": content.type,
             "html_url": content.html_url,
             "download_url": content.download_url,
@@ -253,14 +268,16 @@ def list_files(token: str, full_name: str, path: str = "", ref: str = "") -> lis
             contents = [contents]
         files = []
         for c in contents:
-            files.append({
-                "path": c.path,
-                "name": c.name,
-                "type": c.type,
-                "size": c.size,
-                "sha": c.sha,
-                "download_url": c.download_url,
-            })
+            files.append(
+                {
+                    "path": c.path,
+                    "name": c.name,
+                    "type": c.type,
+                    "size": c.size,
+                    "sha": c.sha,
+                    "download_url": c.download_url,
+                }
+            )
         return files
     except Exception as exc:
         logger.warning("list_files(%s) failed: %s", path, exc)
@@ -268,6 +285,7 @@ def list_files(token: str, full_name: str, path: str = "", ref: str = "") -> lis
 
 
 # ── Commit Operations ────────────────────────────────────────────────────
+
 
 def list_commits(token: str, full_name: str, branch: str = "", since: str = "", until: str = "") -> list[dict]:
     g = _get_client(token)
@@ -281,17 +299,19 @@ def list_commits(token: str, full_name: str, branch: str = "", since: str = "", 
         kwargs["until"] = datetime.fromisoformat(until)
     commits = []
     for c in r.get_commits(**kwargs)[:30]:
-        commits.append({
-            "sha": c.sha,
-            "message": c.commit.message,
-            "author": c.commit.author.name,
-            "author_email": c.commit.author.email,
-            "date": c.commit.author.date.isoformat() if c.commit.author.date else "",
-            "url": c.html_url,
-            "files_changed": len(c.files) if c.files else 0,
-            "additions": c.stats.additions if c.stats else 0,
-            "deletions": c.stats.deletions if c.stats else 0,
-        })
+        commits.append(
+            {
+                "sha": c.sha,
+                "message": c.commit.message,
+                "author": c.commit.author.name,
+                "author_email": c.commit.author.email,
+                "date": c.commit.author.date.isoformat() if c.commit.author.date else "",
+                "url": c.html_url,
+                "files_changed": len(c.files) if c.files else 0,
+                "additions": c.stats.additions if c.stats else 0,
+                "deletions": c.stats.deletions if c.stats else 0,
+            }
+        )
     return commits
 
 
@@ -307,33 +327,38 @@ def get_commit_diff(token: str, full_name: str, sha: str) -> str:
 
 # ── Pull Request Operations ──────────────────────────────────────────────
 
+
 def list_pull_requests(token: str, full_name: str, state: str = "open") -> list[dict]:
     g = _get_client(token)
     r = g.get_repo(full_name)
     prs = []
     for pr in r.get_pulls(state=state, sort="updated", direction="desc"):
-        prs.append({
-            "number": pr.number,
-            "title": pr.title,
-            "body": pr.body or "",
-            "state": pr.state,
-            "author": pr.user.login if pr.user else "",
-            "head_branch": pr.head.ref,
-            "base_branch": pr.base.ref,
-            "created_at": pr.created_at.isoformat() if pr.created_at else "",
-            "updated_at": pr.updated_at.isoformat() if pr.updated_at else "",
-            "url": pr.html_url,
-            "draft": pr.draft if hasattr(pr, "draft") else False,
-            "mergeable": pr.mergeable,
-            "merged": pr.merged,
-            "additions": pr.additions or 0,
-            "deletions": pr.deletions or 0,
-            "changed_files": pr.changed_files or 0,
-        })
+        prs.append(
+            {
+                "number": pr.number,
+                "title": pr.title,
+                "body": pr.body or "",
+                "state": pr.state,
+                "author": pr.user.login if pr.user else "",
+                "head_branch": pr.head.ref,
+                "base_branch": pr.base.ref,
+                "created_at": pr.created_at.isoformat() if pr.created_at else "",
+                "updated_at": pr.updated_at.isoformat() if pr.updated_at else "",
+                "url": pr.html_url,
+                "draft": pr.draft if hasattr(pr, "draft") else False,
+                "mergeable": pr.mergeable,
+                "merged": pr.merged,
+                "additions": pr.additions or 0,
+                "deletions": pr.deletions or 0,
+                "changed_files": pr.changed_files or 0,
+            }
+        )
     return prs
 
 
-def create_pull_request(token: str, full_name: str, title: str, head: str, base: str, body: str = "", draft: bool = False) -> dict:
+def create_pull_request(
+    token: str, full_name: str, title: str, head: str, base: str, body: str = "", draft: bool = False
+) -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     pr = r.create_pull(title=title, body=body, head=head, base=base, draft=draft)
@@ -346,7 +371,9 @@ def create_pull_request(token: str, full_name: str, title: str, head: str, base:
     }
 
 
-def merge_pull_request(token: str, full_name: str, pr_number: int, commit_message: str = "", merge_method: str = "merge") -> dict:
+def merge_pull_request(
+    token: str, full_name: str, pr_number: int, commit_message: str = "", merge_method: str = "merge"
+) -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     pr = r.get_pull(pr_number)
@@ -367,19 +394,22 @@ def get_pr_files(token: str, full_name: str, pr_number: int) -> list[dict]:
     pr = r.get_pull(pr_number)
     files = []
     for f in pr.get_files():
-        files.append({
-            "filename": f.filename,
-            "status": f.status,
-            "additions": f.additions,
-            "deletions": f.deletions,
-            "changes": f.changes,
-            "patch": f.patch or "",
-            "contents_url": f.contents_url,
-        })
+        files.append(
+            {
+                "filename": f.filename,
+                "status": f.status,
+                "additions": f.additions,
+                "deletions": f.deletions,
+                "changes": f.changes,
+                "patch": f.patch or "",
+                "contents_url": f.contents_url,
+            }
+        )
     return files
 
 
 # ── Issue Operations ─────────────────────────────────────────────────────
+
 
 def list_issues(token: str, full_name: str, state: str = "open", labels: str = "") -> list[dict]:
     g = _get_client(token)
@@ -389,23 +419,27 @@ def list_issues(token: str, full_name: str, state: str = "open", labels: str = "
         kwargs["labels"] = labels.split(",")
     issues = []
     for i in r.get_issues(**kwargs)[:30]:
-        issues.append({
-            "number": i.number,
-            "title": i.title,
-            "body": i.body or "",
-            "state": i.state,
-            "author": i.user.login if i.user else "",
-            "labels": [l.name for l in i.labels],
-            "assignees": [a.login for a in i.assignees],
-            "comments_count": i.comments,
-            "created_at": i.created_at.isoformat() if i.created_at else "",
-            "updated_at": i.updated_at.isoformat() if i.updated_at else "",
-            "url": i.html_url,
-        })
+        issues.append(
+            {
+                "number": i.number,
+                "title": i.title,
+                "body": i.body or "",
+                "state": i.state,
+                "author": i.user.login if i.user else "",
+                "labels": [l.name for l in i.labels],
+                "assignees": [a.login for a in i.assignees],
+                "comments_count": i.comments,
+                "created_at": i.created_at.isoformat() if i.created_at else "",
+                "updated_at": i.updated_at.isoformat() if i.updated_at else "",
+                "url": i.html_url,
+            }
+        )
     return issues
 
 
-def create_issue(token: str, full_name: str, title: str, body: str = "", labels: list[str] = None, assignees: list[str] = None) -> dict:
+def create_issue(
+    token: str, full_name: str, title: str, body: str = "", labels: list[str] = None, assignees: list[str] = None
+) -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     issue = r.create_issue(title=title, body=body, labels=labels or [], assignees=assignees or [])
@@ -418,7 +452,9 @@ def create_issue(token: str, full_name: str, title: str, body: str = "", labels:
     }
 
 
-def update_issue(token: str, full_name: str, issue_number: int, title: str = "", body: str = "", state: str = "") -> dict:
+def update_issue(
+    token: str, full_name: str, issue_number: int, title: str = "", body: str = "", state: str = ""
+) -> dict:
     g = _get_client(token)
     r = g.get_repo(full_name)
     issue = r.get_issue(issue_number)
@@ -450,16 +486,19 @@ def list_issue_comments(token: str, full_name: str, issue_number: int) -> list[d
     r = g.get_repo(full_name)
     comments = []
     for c in r.get_issue(issue_number).get_comments():
-        comments.append({
-            "id": c.id,
-            "body": c.body,
-            "author": c.user.login if c.user else "",
-            "created_at": c.created_at.isoformat() if c.created_at else "",
-        })
+        comments.append(
+            {
+                "id": c.id,
+                "body": c.body,
+                "author": c.user.login if c.user else "",
+                "created_at": c.created_at.isoformat() if c.created_at else "",
+            }
+        )
     return comments
 
 
 # ── Local Clone / Sync Operations ────────────────────────────────────────
+
 
 def _clone_dir(full_name: str) -> Path:
     return Path(CLONE_BASE) / full_name.replace("/", "_")
@@ -527,12 +566,14 @@ def local_file_list(full_name: str, path: str = "") -> list[dict]:
         return []
     files = []
     for item in sorted(base.iterdir()):
-        files.append({
-            "name": item.name,
-            "type": "dir" if item.is_dir() else "file",
-            "path": str(item.relative_to(dest)),
-            "size": item.stat().st_size if item.is_file() else 0,
-        })
+        files.append(
+            {
+                "name": item.name,
+                "type": "dir" if item.is_dir() else "file",
+                "path": str(item.relative_to(dest)),
+                "size": item.stat().st_size if item.is_file() else 0,
+            }
+        )
     return files
 
 
@@ -577,19 +618,22 @@ def local_commit_and_push(full_name: str, message: str, branch: str = "") -> dic
 
 # ── Webhook Management ───────────────────────────────────────────────────
 
+
 def list_webhooks(token: str, full_name: str) -> list[dict]:
     g = _get_client(token)
     r = g.get_repo(full_name)
     hooks = []
     for h in r.get_hooks():
-        hooks.append({
-            "id": h.id,
-            "name": h.name,
-            "url": h.config.get("url", ""),
-            "events": h.events,
-            "active": h.active,
-            "created_at": h.created_at.isoformat() if h.created_at else "",
-        })
+        hooks.append(
+            {
+                "id": h.id,
+                "name": h.name,
+                "url": h.config.get("url", ""),
+                "events": h.events,
+                "active": h.active,
+                "created_at": h.created_at.isoformat() if h.created_at else "",
+            }
+        )
     return hooks
 
 

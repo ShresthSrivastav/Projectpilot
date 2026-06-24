@@ -1,4 +1,5 @@
 """Autonomous SDLC Pipeline — full lifecycle from requirements to deployment with self-healing."""
+
 import json
 import logging
 import os
@@ -135,12 +136,16 @@ class SDLCEngine:
 
     def _run_stage_requirements(self, pipeline: SDLCPipeline) -> str:
         from agents.requirement_agent import run
-        result = run(pipeline.prompt, job_id=pipeline.job_id, model=pipeline.model, project_name=f"Project-{pipeline.job_id[:8]}")
+
+        result = run(
+            pipeline.prompt, job_id=pipeline.job_id, model=pipeline.model, project_name=f"Project-{pipeline.job_id[:8]}"
+        )
         pipeline.stages_completed.append("requirements")
         return str(result)
 
     def _run_stage_architecture(self, pipeline: SDLCPipeline, requirements: str) -> str:
         from agents.planner_agent import run
+
         result = run(requirements, job_id=pipeline.job_id, model=pipeline.model)
         pipeline.stages_completed.append("architecture")
         return str(result)
@@ -155,16 +160,19 @@ class SDLCEngine:
 
     def _run_stage_code_gen(self, pipeline: SDLCPipeline, architecture: str) -> None:
         from agents.code_agent import run
+
         blueprint = json.loads(architecture) if architecture.startswith("{") else {"files": []}
         run(requirements=pipeline.prompt, blueprint=blueprint, job_id=pipeline.job_id, model=pipeline.model)
         pipeline.stages_completed.append("code_generation")
 
     def _run_stage_testing(self, pipeline: SDLCPipeline) -> bool:
         from services.test_service import run_pytest
+
         pr = run_pytest(pipeline.job_id)
         ok = pr.get("passed", False)
         if not ok:
             from services.autofix_service import run_autofix
+
             run_autofix(pipeline.job_id, model=pipeline.model, max_attempts=3)
             pr = run_pytest(pipeline.job_id)
             ok = pr.get("passed", False)
@@ -174,6 +182,7 @@ class SDLCEngine:
     def _run_stage_browser_validation(self, pipeline: SDLCPipeline) -> bool:
         try:
             from services.browser_validation_service import ValidationStep, get_validation_service
+
             vs = get_validation_service()
             journey = vs.create_journey(f"SDLC-{pipeline.id[:6]}", "http://localhost:8000")
             vs.add_step(journey.id, ValidationStep(action="navigate", url="http://localhost:8000", description="Root"))
@@ -203,8 +212,10 @@ class SDLCEngine:
             engine = get_healing_engine()
             project_dir = os.path.join(os.getenv("BASE_DIR", "./generated_projects"), pipeline.job_id)
             session = engine.detect_and_heal(
-                pipeline.job_id, pipeline.runtime_id or "",
-                log_text, project_dir=project_dir,
+                pipeline.job_id,
+                pipeline.runtime_id or "",
+                log_text,
+                project_dir=project_dir,
             )
             pipeline.healing_sessions.append(session.id)
         pipeline.stages_completed.append("self_healing")
@@ -245,7 +256,9 @@ class SDLCEngine:
             if path.exists():
                 data = json.loads(path.read_text())
                 pipeline = SDLCPipeline(
-                    id=data["id"], job_id=data["job_id"], prompt=data["prompt"],
+                    id=data["id"],
+                    job_id=data["job_id"],
+                    prompt=data["prompt"],
                     model=data.get("model", "local"),
                     stage=SDLCStage(data.get("stage", "requirements")),
                     stages_completed=data.get("stages_completed", []),

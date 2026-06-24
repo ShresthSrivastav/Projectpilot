@@ -47,6 +47,7 @@ def setup():
     init_chroma_db()
     # Clean up ChromaDB collections
     from database.chroma_db import _get_client
+
     client = _get_client()
     for ws in [WS_ID, "other-ws"]:
         for ct in ("jobs", "generation_logs", "requirements", "blueprints"):
@@ -61,6 +62,7 @@ def setup():
                 pass
     # Clean up memory store
     from database.memory_store import _get_conn
+
     conn = _get_conn()
     for tbl in ["project_analytics"]:
         try:
@@ -122,6 +124,7 @@ class TestChromaDBHistoryIsolation:
 
     def test_get_job_owner_returns_correct_user(self, setup):
         from database.chroma_db import get_job_owner
+
         jid_a = _create_project_for(USER_A)
         jid_b = _create_project_for(USER_B)
         assert get_job_owner(jid_a, WS_ID) == USER_A
@@ -151,6 +154,7 @@ class TestChromaDBHistoryIsolation:
 
     def test_user_id_survives_status_updates(self, setup):
         from database.chroma_db import update_job_status
+
         jid = _create_project_for(USER_A)
         update_job_status(jid, "running", workspace_id=WS_ID, progress_pct=50)
         job = get_job(jid, workspace_id=WS_ID)

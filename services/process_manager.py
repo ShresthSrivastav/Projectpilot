@@ -1,4 +1,5 @@
 """Process Manager — run, monitor, capture output, timeout handling, multi-runtime support."""
+
 import json
 import logging
 import os
@@ -26,7 +27,11 @@ class ProcessStatus(Enum):
 SUPPORTED_RUNTIMES = {
     "python": {"ext": ".py", "run": ["python"], "serve": ["python", "-m", "uvicorn", "main:app"]},
     "node": {"ext": ".js", "run": ["node"], "serve": ["node", "server.js"]},
-    "fastapi": {"ext": ".py", "run": ["uvicorn", "main:app", "--host", "0.0.0.0"], "serve": ["uvicorn", "main:app", "--host", "0.0.0.0"]},
+    "fastapi": {
+        "ext": ".py",
+        "run": ["uvicorn", "main:app", "--host", "0.0.0.0"],
+        "serve": ["uvicorn", "main:app", "--host", "0.0.0.0"],
+    },
     "flask": {"ext": ".py", "run": ["python", "app.py"], "serve": ["python", "app.py"]},
     "react": {"ext": ".js", "run": ["npx", "react-scripts", "start"], "serve": ["npx", "serve", "-s", "build"]},
     "nextjs": {"ext": ".js", "run": ["npx", "next", "dev"], "serve": ["npx", "next", "start"]},
@@ -66,10 +71,16 @@ class ProcessManager:
     def _detect_runtime(self, working_dir: str) -> str:
         project_dir = Path(working_dir)
         if (project_dir / "package.json").exists():
-            pkg = json.loads((project_dir / "package.json").read_text()) if (project_dir / "package.json").exists() else {}
+            pkg = (
+                json.loads((project_dir / "package.json").read_text())
+                if (project_dir / "package.json").exists()
+                else {}
+            )
             if "next" in str(pkg.get("dependencies", {})) or "next" in str(pkg.get("devDependencies", {})):
                 return "nextjs"
-            if "react-scripts" in str(pkg.get("dependencies", {})) or "react-scripts" in str(pkg.get("devDependencies", {})):
+            if "react-scripts" in str(pkg.get("dependencies", {})) or "react-scripts" in str(
+                pkg.get("devDependencies", {})
+            ):
                 return "react"
             return "node"
         py_files = list(project_dir.rglob("*.py"))
@@ -198,6 +209,7 @@ class ProcessManager:
             def _reader(pid: int, popen: subprocess.Popen, proc_id: str, tm: int):
                 import errno
                 import select as sel
+
                 stdout_chunks, stderr_chunks = [], []
                 start = time.time()
                 try:

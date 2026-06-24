@@ -6,6 +6,7 @@ collections named workspace_{ws_id}_{type}.
 
 Uses contextvars for automatic workspace detection from request context.
 """
+
 from __future__ import annotations
 
 import json
@@ -21,7 +22,9 @@ from chromadb.config import Settings
 
 logger = logging.getLogger(__name__)
 
-CHROMA_PATH = os.getenv("CHROMA_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "chroma_data"))
+CHROMA_PATH = os.getenv(
+    "CHROMA_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "chroma_data")
+)
 _client: chromadb.PersistentClient | None = None
 
 _DUMMY_EMBED = [[0.0]]
@@ -95,6 +98,7 @@ def init_workspace(workspace_id: str) -> None:
 
 # ── Internal helpers ──────────────────────────────────────────────────────
 
+
 def _resolve_ws(workspace_id: str) -> str:
     """Resolve workspace_id: use explicit value, then contextvar."""
     return workspace_id or _get_ws()
@@ -124,6 +128,7 @@ def _get_job_meta(workspace_id: str, job_id: str) -> dict | None:
 
 # ── Jobs ──────────────────────────────────────────────────────────────────
 
+
 def create_job(job_id: str, workspace_id: str = "", user_id: str = "") -> None:
     now = datetime.now(UTC).isoformat()
     wid = _resolve_ws(workspace_id)
@@ -138,19 +143,21 @@ def create_job(job_id: str, workspace_id: str = "", user_id: str = "") -> None:
         ids=[job_id],
         embeddings=_embed(1),
         documents=[""],
-        metadatas=[{
-            "status":        "queued",
-            "project_name":  "",
-            "current_agent": "",
-            "progress_pct":  0,
-            "error_message": "",
-            "file_count":    0,
-            "zip_path":      "",
-            "workspace_id":  wid,
-            "user_id":       user_id,
-            "created_at":    now,
-            "updated_at":    now,
-        }],
+        metadatas=[
+            {
+                "status": "queued",
+                "project_name": "",
+                "current_agent": "",
+                "progress_pct": 0,
+                "error_message": "",
+                "file_count": 0,
+                "zip_path": "",
+                "workspace_id": wid,
+                "user_id": user_id,
+                "created_at": now,
+                "updated_at": now,
+            }
+        ],
     )
 
 
@@ -163,20 +170,22 @@ def save_prompt(job_id: str, prompt: str, project_name: str, workspace_id: str =
         ids=[job_id],
         embeddings=_embed(1),
         documents=[prompt],
-        metadatas=[{
-            "status":        existing.get("status", "queued"),
-            "project_name":  project_name,
-            "current_agent": existing.get("current_agent", ""),
-            "progress_pct":  existing.get("progress_pct", 0),
-            "error_message": existing.get("error_message", ""),
-            "file_count":    existing.get("file_count", 0),
-            "zip_path":      existing.get("zip_path", ""),
-            "workspace_id":  wid,
-            # Preserve existing user_id; use provided value as fallback
-            "user_id":       existing.get("user_id") or user_id,
-            "created_at":    existing.get("created_at", now),
-            "updated_at":    now,
-        }],
+        metadatas=[
+            {
+                "status": existing.get("status", "queued"),
+                "project_name": project_name,
+                "current_agent": existing.get("current_agent", ""),
+                "progress_pct": existing.get("progress_pct", 0),
+                "error_message": existing.get("error_message", ""),
+                "file_count": existing.get("file_count", 0),
+                "zip_path": existing.get("zip_path", ""),
+                "workspace_id": wid,
+                # Preserve existing user_id; use provided value as fallback
+                "user_id": existing.get("user_id") or user_id,
+                "created_at": existing.get("created_at", now),
+                "updated_at": now,
+            }
+        ],
     )
 
 
@@ -246,24 +255,24 @@ def update_job_status(
         logger.warning("update_job_status: job %s not found (ws=%s)", job_id, wid)
         return
     meta = {
-        "status":        status,
-        "project_name":  existing.get("project_name", ""),
+        "status": status,
+        "project_name": existing.get("project_name", ""),
         "current_agent": current_agent,
-        "progress_pct":  progress_pct,
+        "progress_pct": progress_pct,
         "error_message": error_message,
-        "file_count":    existing.get("file_count", 0),
-        "zip_path":      existing.get("zip_path", ""),
-        "test_total":    existing.get("test_total", 0),
-        "test_passed":   existing.get("test_passed", 0),
-        "test_failed":   existing.get("test_failed", 0),
-        "test_skipped":  existing.get("test_skipped", 0),
-        "test_summary":  existing.get("test_summary", ""),
-        "test_details":  existing.get("test_details", ""),
-        "workspace_id":  wid,
+        "file_count": existing.get("file_count", 0),
+        "zip_path": existing.get("zip_path", ""),
+        "test_total": existing.get("test_total", 0),
+        "test_passed": existing.get("test_passed", 0),
+        "test_failed": existing.get("test_failed", 0),
+        "test_skipped": existing.get("test_skipped", 0),
+        "test_summary": existing.get("test_summary", ""),
+        "test_details": existing.get("test_details", ""),
+        "workspace_id": wid,
         # Preserve user_id — ownership must survive status updates
-        "user_id":       existing.get("user_id", ""),
-        "created_at":    existing.get("created_at", datetime.now(UTC).isoformat()),
-        "updated_at":    datetime.now(UTC).isoformat(),
+        "user_id": existing.get("user_id", ""),
+        "created_at": existing.get("created_at", datetime.now(UTC).isoformat()),
+        "updated_at": datetime.now(UTC).isoformat(),
     }
     meta.update(extra)
     coll = _collection(wid, "jobs")
@@ -283,23 +292,38 @@ def save_generated_project(job_id: str, file_count: int, zip_path: str, workspac
         ids=[job_id],
         embeddings=_embed(1),
         documents=[existing.get("prompt", "")],
-        metadatas=[{
-            **{k: existing.get(k, d) for k, d in
-               {"status": "", "project_name": "", "current_agent": "", "error_message": "",
-                "created_at": "", "test_total": 0, "test_passed": 0, "test_failed": 0,
-                "test_skipped": 0, "test_details": "", "test_summary": ""}.items()},
-            "progress_pct": existing.get("progress_pct", 100),
-            "file_count":   file_count,
-            "zip_path":     zip_path,
-            "workspace_id": wid,
-            # Preserve user_id — must not be lost when project is saved
-            "user_id":      existing.get("user_id", ""),
-            "updated_at":   datetime.now(UTC).isoformat(),
-        }],
+        metadatas=[
+            {
+                **{
+                    k: existing.get(k, d)
+                    for k, d in {
+                        "status": "",
+                        "project_name": "",
+                        "current_agent": "",
+                        "error_message": "",
+                        "created_at": "",
+                        "test_total": 0,
+                        "test_passed": 0,
+                        "test_failed": 0,
+                        "test_skipped": 0,
+                        "test_details": "",
+                        "test_summary": "",
+                    }.items()
+                },
+                "progress_pct": existing.get("progress_pct", 100),
+                "file_count": file_count,
+                "zip_path": zip_path,
+                "workspace_id": wid,
+                # Preserve user_id — must not be lost when project is saved
+                "user_id": existing.get("user_id", ""),
+                "updated_at": datetime.now(UTC).isoformat(),
+            }
+        ],
     )
 
 
 # ── Logs ──────────────────────────────────────────────────────────────────
+
 
 def log_to_db(
     job_id: str,
@@ -317,13 +341,15 @@ def log_to_db(
             ids=[f"{job_id}_{uuid.uuid4().hex[:10]}"],
             embeddings=_embed(1),
             documents=[message],
-            metadatas=[{
-                "job_id":       job_id,
-                "agent_name":   agent_name,
-                "log_level":    log_level,
-                "workspace_id": wid,
-                "timestamp":    datetime.now(UTC).isoformat(),
-            }],
+            metadatas=[
+                {
+                    "job_id": job_id,
+                    "agent_name": agent_name,
+                    "log_level": log_level,
+                    "workspace_id": wid,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                }
+            ],
         )
     except Exception as exc:
         logger.warning("ChromaDB log write failed: %s", exc)
@@ -340,9 +366,9 @@ def get_logs(job_id: str, workspace_id: str = "", limit: int = 200) -> list[dict
         entries = [
             {
                 "agent_name": m.get("agent_name", ""),
-                "log_level":  m.get("log_level", "INFO"),
-                "message":    doc,
-                "timestamp":  m.get("timestamp", ""),
+                "log_level": m.get("log_level", "INFO"),
+                "message": doc,
+                "timestamp": m.get("timestamp", ""),
             }
             for doc, m in zip(r["documents"], r["metadatas"])
         ]
@@ -353,6 +379,7 @@ def get_logs(job_id: str, workspace_id: str = "", limit: int = 200) -> list[dict
 
 
 # ── Requirements & Blueprints ─────────────────────────────────────────────
+
 
 def _upsert_json(workspace_id: str, collection: str, rec_id: str, job_id: str, data: dict) -> None:
     wid = _resolve_ws(workspace_id)

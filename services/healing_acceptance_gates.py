@@ -92,8 +92,7 @@ def heal_gates(
 
         # Identify healable failures
         failed_healable = [
-            name for name in HEALABLE_GATES
-            if name in gate_results and not gate_results[name].get("passed", False)
+            name for name in HEALABLE_GATES if name in gate_results and not gate_results[name].get("passed", False)
         ]
 
         if not failed_healable:
@@ -126,13 +125,15 @@ def heal_gates(
         # Apply fixes
         applied = _apply_fixes(job_dir, fixes)
 
-        repair_history.append({
-            "attempt": attempt,
-            "failed_gates": failed_healable,
-            "failure_context": failure_context,
-            "changes_requested": fixes,
-            "changes_applied": applied,
-        })
+        repair_history.append(
+            {
+                "attempt": attempt,
+                "failed_gates": failed_healable,
+                "failure_context": failure_context,
+                "changes_requested": fixes,
+                "changes_applied": applied,
+            }
+        )
 
         # Quick syntax check on modified files
         _syntax_check_applied(job_dir, applied)
@@ -142,14 +143,17 @@ def heal_gates(
     elapsed_ms = int((time.monotonic() - t_start) * 1000)
 
     # Write report
-    report_path = _write_report(job_id, {
-        "passed": passed,
-        "gates": gate_results,
-        "repair_history": repair_history,
-        "iterations": len(repair_history),
-        "max_attempts": max_attempts,
-        "elapsed_ms": elapsed_ms,
-    })
+    report_path = _write_report(
+        job_id,
+        {
+            "passed": passed,
+            "gates": gate_results,
+            "repair_history": repair_history,
+            "iterations": len(repair_history),
+            "max_attempts": max_attempts,
+            "elapsed_ms": elapsed_ms,
+        },
+    )
 
     if passed:
         log_to_db(job_id, "HealingGates", f"All gates PASSED after {len(repair_history)} repair(s) ({elapsed_ms}ms)")
@@ -217,7 +221,9 @@ def _request_fixes(model: str, failure_context: list[dict], project_files: dict[
     accumulated = 0
     for rel, content in sorted(project_files.items()):
         if accumulated > 80000:
-            files_section += f"\n# ... ({len(project_files) - len(files_section.splitlines()) + 1} more files truncated)"
+            files_section += (
+                f"\n# ... ({len(project_files) - len(files_section.splitlines()) + 1} more files truncated)"
+            )
             break
         files_section += f"\n# FILE: {rel}\n{content}\n"
         accumulated += len(content) + len(rel) + 20
@@ -265,7 +271,11 @@ Rules:
 
     try:
         response = call_model(prompt, model=model, max_tokens=8192, temperature=0.1, timeout=FIX_TIMEOUT)
-        text = response if isinstance(response, str) else (response.get("text", "") if isinstance(response, dict) else str(response))
+        text = (
+            response
+            if isinstance(response, str)
+            else (response.get("text", "") if isinstance(response, dict) else str(response))
+        )
     except Exception as exc:
         logger.error("LLM call failed during healing: %s", exc)
         return []
@@ -303,11 +313,13 @@ def _parse_fixes(text: str) -> list[dict]:
             content = content[:-6].strip()
 
         if file_path and content:
-            fixes.append({
-                "file": file_path,
-                "action": action.upper(),
-                "content": content,
-            })
+            fixes.append(
+                {
+                    "file": file_path,
+                    "action": action.upper(),
+                    "content": content,
+                }
+            )
 
     return fixes[:MAX_FIX_FILES]
 

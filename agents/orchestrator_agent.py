@@ -4,6 +4,7 @@ Orchestrator Agent — manages the full generation pipeline.
 Centralises agent coordination, cancellation, progress tracking,
 and test-result collection so backend/main.py stays thin.
 """
+
 import json
 import logging
 import threading
@@ -17,15 +18,15 @@ from services.zip_service import create_zip
 logger = logging.getLogger(__name__)
 
 AGENT_STEPS = [
-    ("RequirementAgent",  10),
-    ("PlannerAgent",      25),
-    ("CodeAgent",         55),
-    ("TestGenAgent",      65),
-    ("DebugAgent",        83),
-    ("DocsAgent",         90),
-    ("ValidationAgent",   96),
-    ("AcceptanceGates",   99),
-    ("ZipService",       100),
+    ("RequirementAgent", 10),
+    ("PlannerAgent", 25),
+    ("CodeAgent", 55),
+    ("TestGenAgent", 65),
+    ("DebugAgent", 83),
+    ("DocsAgent", 90),
+    ("ValidationAgent", 96),
+    ("AcceptanceGates", 99),
+    ("ZipService", 100),
 ]
 
 
@@ -85,6 +86,7 @@ class Orchestrator:
             return results
 
         import subprocess
+
         test_files = sorted(test_dir.rglob("test_*.py"))
         results["test_files"] = [str(f.relative_to(job_dir)) for f in test_files]
 
@@ -93,14 +95,20 @@ class Orchestrator:
         try:
             r = subprocess.run(
                 ["python", "-m", "pytest", str(test_dir), "-v", "--tb=short", "--no-header"],
-                capture_output=True, text=True, timeout=120, cwd=str(job_dir),
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=str(job_dir),
             )
             output = (r.stdout or "") + (r.stderr or "")
 
             import re
+
             collected_match = re.search(r"collected (\d+) items?", output)
             collected = int(collected_match.group(1)) if collected_match else 0
-            has_import_error = "ERROR collecting" in output or "ModuleNotFoundError" in output or "ImportError" in output
+            has_import_error = (
+                "ERROR collecting" in output or "ModuleNotFoundError" in output or "ImportError" in output
+            )
 
             test_statuses = re.findall(r"(PASSED|FAILED|SKIPPED)\s+\[\s*\d+%\]", output)
 
@@ -156,16 +164,16 @@ class Orchestrator:
     def _save_test_results(self) -> None:
         """Persist test results to the job record."""
         import json
+
         meta = {
-            "test_total":   self.test_results.get("total", 0),
-            "test_passed":  self.test_results.get("passed", 0),
-            "test_failed":  self.test_results.get("failed", 0),
+            "test_total": self.test_results.get("total", 0),
+            "test_passed": self.test_results.get("passed", 0),
+            "test_failed": self.test_results.get("failed", 0),
             "test_skipped": self.test_results.get("skipped", 0),
             "test_summary": self.test_results.get("summary", ""),
             "test_details": json.dumps(self.test_results.get("details", [])),
         }
-        update_job_status(self.job_id, "running", current_agent="Orchestrator",
-                          progress_pct=85, **meta)
+        update_job_status(self.job_id, "running", current_agent="Orchestrator", progress_pct=85, **meta)
 
     def _replace_test_with_fallback(self) -> None:
         """Replace tests with ones that import and test the REAL generated project."""
@@ -177,10 +185,11 @@ class Orchestrator:
         backend = (self.stack or {}).get("backend", "fastapi")
 
         import re
+
         route_tests = ""
         for route in routes:
             method = route.get("method", "GET").upper()
-            path   = route.get("path", "/")
+            path = route.get("path", "/")
             safe_name = re.sub(r"[^a-zA-Z0-9_]", "", path.replace("/", "_").replace("-", "_")).strip("_") or "root"
             route_tests += f"""
 def test_{method.lower()}_{safe_name}(client):
@@ -247,8 +256,10 @@ def test_health(client):
     def run(self) -> dict[str, Any]:
         """Execute the full agent pipeline. Returns a summary dict."""
         import time as _time
+
         _pipeline_start = _time.monotonic()
         from services.llm_service import reset_token_count
+
         reset_token_count()
         try:
             from agents import (
@@ -265,8 +276,11 @@ def test_health(client):
             self._check_cancel()
             self._step("RequirementAgent", 5)
             requirements = requirement_agent.run(
-                self.prompt, self.project_name, self.job_id,
-                model=self.model, stack=self.stack,
+                self.prompt,
+                self.project_name,
+                self.job_id,
+                model=self.model,
+                stack=self.stack,
             )
             self._step("RequirementAgent", 10)
 
@@ -280,7 +294,10 @@ def test_health(client):
             self._check_cancel()
             self._step("CodeAgent", 30)
             self.generated_files = code_agent.run(
-                requirements, blueprint, self.job_id, model=self.model,
+                requirements,
+                blueprint,
+                self.job_id,
+                model=self.model,
             )
             self._step("CodeAgent", 55)
 
@@ -294,16 +311,18 @@ def test_health(client):
             if missing_critical:
                 error_msg = f"Critical files missing after code generation: {missing_critical}"
                 self._log("CodeAgent", error_msg, level="CRITICAL")
-                update_job_status(self.job_id, "failed", current_agent="", progress_pct=55,
-                                  error_message=error_msg)
+                update_job_status(self.job_id, "failed", current_agent="", progress_pct=55, error_message=error_msg)
                 return {"status": "failed", "error": error_msg, "files": len(self.generated_files)}
 
             # ── 4. TestGen ────────────────────────────────────────────────────
             self._check_cancel()
             self._step("TestGenAgent", 58)
             test_files = test_gen_agent.run(
-                requirements, blueprint, self.generated_files,
-                self.job_id, model=self.model,
+                requirements,
+                blueprint,
+                self.generated_files,
+                self.job_id,
+                model=self.model,
             )
             self.generated_files.extend(test_files)
             self._step("TestGenAgent", 65)
@@ -312,8 +331,10 @@ def test_health(client):
             self._check_cancel()
             self._step("DebugAgent", 70)
             debug_agent.run(
-                self.generated_files, self.job_id,
-                model=self.model, blueprint=blueprint,
+                self.generated_files,
+                self.job_id,
+                model=self.model,
+                blueprint=blueprint,
             )
             self._step("DebugAgent", 83)
 
@@ -326,8 +347,7 @@ def test_health(client):
             # ── 6. Docs ──────────────────────────────────────────────────────
             self._check_cancel()
             self._step("DocsAgent", 88)
-            docs_agent.run(requirements, blueprint, self.generated_files,
-                           self.job_id, model=self.model)
+            docs_agent.run(requirements, blueprint, self.generated_files, self.job_id, model=self.model)
             self._step("DocsAgent", 90)
 
             # ── 7. Validation ─────────────────────────────────────────────────
@@ -345,6 +365,7 @@ def test_health(client):
             self._log("HealingGates", "Running self-healing acceptance gates...")
             try:
                 from backend.main import run_project_review
+
                 gates_result = heal_gates(
                     self.job_id,
                     model=self.model,
@@ -353,12 +374,19 @@ def test_health(client):
                 )
             except Exception as gate_err:
                 logger.exception("Healing gates execution failed: %s", gate_err)
-                gates_result = {"passed": False, "gates": {}, "repair_history": [], "report_path": None, "iterations": 0}
+                gates_result = {
+                    "passed": False,
+                    "gates": {},
+                    "repair_history": [],
+                    "report_path": None,
+                    "iterations": 0,
+                }
 
             # ── 9. Completeness Scoring (always runs) ─────────────────────
             self._step("CompletenessScorer", 98)
             try:
                 from services.completeness_scorer import score_project
+
                 score_result = score_project(self.job_id, gates_result.get("gates"))
                 score = score_result.get("overall", 0)
                 self._log("CompletenessScorer", f"Completeness score: {score}/100")
@@ -380,9 +408,16 @@ def test_health(client):
                 # No source files = critical generation failure
                 status = "FAILED_GENERATION"
                 error_msg = "Critical generation failure — no source files produced"
-                update_job_status(self.job_id, "failed", current_agent="", progress_pct=99,
-                                  error_message=error_msg,
-                                  gates_passed=0, gates_total=0, gates_failed=[])
+                update_job_status(
+                    self.job_id,
+                    "failed",
+                    current_agent="",
+                    progress_pct=99,
+                    error_message=error_msg,
+                    gates_passed=0,
+                    gates_total=0,
+                    gates_failed=[],
+                )
                 self._log("Orchestrator", error_msg, level="ERROR")
                 return {"status": status, "error": error_msg, "files": 0}
 
@@ -390,23 +425,38 @@ def test_health(client):
                 # Some gates failed but we have source files = PARTIAL
                 status = "PARTIAL"
                 error_msg = f"Acceptance gates FAILED: {failed} — {passed_gates}/{total_gates} passed"
-                update_job_status(self.job_id, "partial", current_agent="", progress_pct=99,
-                                  error_message=error_msg,
-                                  gates_passed=passed_gates, gates_total=total_gates, gates_failed=json.dumps(failed))
+                update_job_status(
+                    self.job_id,
+                    "partial",
+                    current_agent="",
+                    progress_pct=99,
+                    error_message=error_msg,
+                    gates_passed=passed_gates,
+                    gates_total=total_gates,
+                    gates_failed=json.dumps(failed),
+                )
                 self._log("HealingGates", error_msg)
             else:
                 # All gates passed = SUCCESS
                 status = "SUCCESS"
                 iters = gates_result.get("iterations", 0)
-                update_job_status(self.job_id, "complete", current_agent="", progress_pct=100,
-                                  review_summary="",
-                                  gates_passed=total_gates, gates_total=total_gates, gates_failed=json.dumps([]))
+                update_job_status(
+                    self.job_id,
+                    "complete",
+                    current_agent="",
+                    progress_pct=100,
+                    review_summary="",
+                    gates_passed=total_gates,
+                    gates_total=total_gates,
+                    gates_failed=json.dumps([]),
+                )
                 self._log("HealingGates", f"All {total_gates} gates PASSED ({iters} repair iteration(s))")
 
             # ── 12. Analytics ───────────────────────────────────────────────
             try:
                 from database.memory_store import record_project_analytics
                 from services.llm_service import get_token_count
+
                 elapsed_ms = int((_time.monotonic() - _pipeline_start) * 1000)
                 record_project_analytics(
                     job_id=self.job_id,
@@ -423,9 +473,11 @@ def test_health(client):
             except Exception as ana_err:
                 logger.debug("Analytics recording skipped: %s", ana_err)
 
-            self._log("Orchestrator",
-                      f"Pipeline done — {len(self.generated_files)} files, "
-                      f"gates: {passed_gates}/{total_gates} passed, status: {status}")
+            self._log(
+                "Orchestrator",
+                f"Pipeline done — {len(self.generated_files)} files, "
+                f"gates: {passed_gates}/{total_gates} passed, status: {status}",
+            )
 
             return {
                 "status": status,
@@ -439,8 +491,6 @@ def test_health(client):
         except Exception as exc:
             cancelled = self._cancel.is_set()
             status = "cancelled" if cancelled else "failed"
-            logger.exception('{"event":"pipeline_error","job_id":"%s","cancelled":%s}',
-                             self.job_id, cancelled)
-            update_job_status(self.job_id, status, current_agent="",
-                              progress_pct=0, error_message=str(exc))
+            logger.exception('{"event":"pipeline_error","job_id":"%s","cancelled":%s}', self.job_id, cancelled)
+            update_job_status(self.job_id, status, current_agent="", progress_pct=0, error_message=str(exc))
             return {"status": status, "error": str(exc)}

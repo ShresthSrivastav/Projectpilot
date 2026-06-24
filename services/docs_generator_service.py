@@ -15,6 +15,7 @@ Generates:
 
 Regeneration: python -c "from services.docs_generator_service import generate_all; generate_all()"
 """
+
 import logging
 import os
 from datetime import datetime
@@ -89,16 +90,19 @@ def _discover_agents() -> list[dict]:
             try:
                 module_name = f"agents.{fp.stem}"
                 import importlib
+
                 mod = importlib.import_module(module_name)
                 run_fn = getattr(mod, "run", None)
                 doc = (mod.__doc__ or "").strip()[:500]
-                agents.append({
-                    "name": fp.stem.replace("_agent", "").replace("_", " ").title() + " Agent",
-                    "module": fp.stem,
-                    "file": str(fp.relative_to(agents_dir.parent)),
-                    "description": doc,
-                    "has_run_function": run_fn is not None,
-                })
+                agents.append(
+                    {
+                        "name": fp.stem.replace("_agent", "").replace("_", " ").title() + " Agent",
+                        "module": fp.stem,
+                        "file": str(fp.relative_to(agents_dir.parent)),
+                        "description": doc,
+                        "has_run_function": run_fn is not None,
+                    }
+                )
             except Exception as exc:
                 agents.append({"name": fp.stem, "error": str(exc)[:100]})
     return agents
@@ -107,6 +111,7 @@ def _discover_agents() -> list[dict]:
 def _discover_routes() -> list[dict]:
     try:
         from backend.main import app
+
         routes = []
         for route in app.routes:
             if hasattr(route, "methods") and hasattr(route, "path"):
@@ -683,22 +688,24 @@ def _generate_index(doc_files: list[str]) -> str:
     for fname in sorted(doc_files):
         name = fname.replace(".md", "").replace("_", " ").title()
         lines.append(f"- [{name}]({fname})")
-    lines.extend([
-        "",
-        "## Diagrams",
-        "",
-        "- [System Architecture](diagrams/system_architecture.md)",
-        "- [Agent Flow](diagrams/agent_flow.md)",
-        "- [Repository Flow](diagrams/repository_flow.md)",
-        "- [Deployment Flow](diagrams/deployment_flow.md)",
-        "",
-        "## Quick Links",
-        "",
-        "- [API Reference](api.md)",
-        "- [Deployment Guide](deployment.md)",
-        "- [Security Model](security.md)",
-        "- [Plugin Development](plugins.md)",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Diagrams",
+            "",
+            "- [System Architecture](diagrams/system_architecture.md)",
+            "- [Agent Flow](diagrams/agent_flow.md)",
+            "- [Repository Flow](diagrams/repository_flow.md)",
+            "- [Deployment Flow](diagrams/deployment_flow.md)",
+            "",
+            "## Quick Links",
+            "",
+            "- [API Reference](api.md)",
+            "- [Deployment Guide](deployment.md)",
+            "- [Security Model](security.md)",
+            "- [Plugin Development](plugins.md)",
+        ]
+    )
     return "\n".join(lines)
 
 

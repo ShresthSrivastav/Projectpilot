@@ -3,6 +3,7 @@
 Covers campaign creation, execution, persistence, reports,
 API routes, resume, and integration with Benchmark Suite.
 """
+
 import os
 import sys
 import time
@@ -28,6 +29,7 @@ from database.memory_store import (
 )
 
 # ── Mock helpers ─────────────────────────────────────────────────────────────
+
 
 class MockBenchmarkMetrics:
     execution_time = 12.5
@@ -79,10 +81,12 @@ class MockBenchmarkService:
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture(autouse=True)
 def reset_db():
     init_db()
     from database.memory_store import _get_conn
+
     try:
         conn = _get_conn()
         conn.execute("DELETE FROM campaign_runs")
@@ -95,6 +99,7 @@ def reset_db():
 @pytest.fixture
 def client():
     from backend.main import app
+
     with TestClient(app) as c:
         yield c
 
@@ -102,6 +107,7 @@ def client():
 @pytest.fixture
 def campaign_service():
     from services.benchmark_campaign_service import get_benchmark_campaign_service
+
     svc = get_benchmark_campaign_service()
     return svc
 
@@ -110,8 +116,8 @@ def campaign_service():
 # Campaign CRUD Tests
 # ═══════════════════════════════════════════════════════════════════════════
 
-class TestCampaignCRUD:
 
+class TestCampaignCRUD:
     def test_save_and_get_campaign(self):
         cid = "test-campaign-1"
         campaign = {
@@ -134,35 +140,67 @@ class TestCampaignCRUD:
 
     def test_list_campaigns(self):
         for i in range(3):
-            mem_save_campaign({
-                "id": f"c{i}", "name": f"C{i}", "status": "pending",
-                "config": {}, "total_runs": 0, "completed_runs": 0,
-                "failed_runs": 0, "domains": [], "created_at": time.time(),
-            })
+            mem_save_campaign(
+                {
+                    "id": f"c{i}",
+                    "name": f"C{i}",
+                    "status": "pending",
+                    "config": {},
+                    "total_runs": 0,
+                    "completed_runs": 0,
+                    "failed_runs": 0,
+                    "domains": [],
+                    "created_at": time.time(),
+                }
+            )
         campaigns = mem_list_campaigns()
         assert len(campaigns) >= 3
 
     def test_list_campaigns_filter_status(self):
-        mem_save_campaign({
-            "id": "c-running", "name": "Running", "status": "running",
-            "config": {}, "total_runs": 0, "completed_runs": 0,
-            "failed_runs": 0, "domains": [], "created_at": time.time(),
-        })
-        mem_save_campaign({
-            "id": "c-completed", "name": "Done", "status": "completed",
-            "config": {}, "total_runs": 0, "completed_runs": 0,
-            "failed_runs": 0, "domains": [], "created_at": time.time(),
-        })
+        mem_save_campaign(
+            {
+                "id": "c-running",
+                "name": "Running",
+                "status": "running",
+                "config": {},
+                "total_runs": 0,
+                "completed_runs": 0,
+                "failed_runs": 0,
+                "domains": [],
+                "created_at": time.time(),
+            }
+        )
+        mem_save_campaign(
+            {
+                "id": "c-completed",
+                "name": "Done",
+                "status": "completed",
+                "config": {},
+                "total_runs": 0,
+                "completed_runs": 0,
+                "failed_runs": 0,
+                "domains": [],
+                "created_at": time.time(),
+            }
+        )
         running = mem_list_campaigns(status="running")
         assert len(running) == 1
         assert running[0]["id"] == "c-running"
 
     def test_update_campaign(self):
-        mem_save_campaign({
-            "id": "c-upd", "name": "Before", "status": "pending",
-            "config": {}, "total_runs": 10, "completed_runs": 0,
-            "failed_runs": 0, "domains": ["a"], "created_at": time.time(),
-        })
+        mem_save_campaign(
+            {
+                "id": "c-upd",
+                "name": "Before",
+                "status": "pending",
+                "config": {},
+                "total_runs": 10,
+                "completed_runs": 0,
+                "failed_runs": 0,
+                "domains": ["a"],
+                "created_at": time.time(),
+            }
+        )
         assert mem_update_campaign("c-upd", {"status": "running", "completed_runs": 5})
         loaded = mem_get_campaign("c-upd")
         assert loaded["status"] == "running"
@@ -170,22 +208,34 @@ class TestCampaignCRUD:
 
     def test_delete_campaign_cascades(self):
         cid = "c-del"
-        mem_save_campaign({
-            "id": cid, "name": "Delete", "status": "pending",
-            "config": {}, "total_runs": 2, "completed_runs": 0,
-            "failed_runs": 0, "domains": [], "created_at": time.time(),
-        })
-        mem_save_campaign_run({
-            "id": "r-del-1", "campaign_id": cid, "domain": "test",
-            "iteration": 1, "status": "completed",
-        })
+        mem_save_campaign(
+            {
+                "id": cid,
+                "name": "Delete",
+                "status": "pending",
+                "config": {},
+                "total_runs": 2,
+                "completed_runs": 0,
+                "failed_runs": 0,
+                "domains": [],
+                "created_at": time.time(),
+            }
+        )
+        mem_save_campaign_run(
+            {
+                "id": "r-del-1",
+                "campaign_id": cid,
+                "domain": "test",
+                "iteration": 1,
+                "status": "completed",
+            }
+        )
         assert mem_delete_campaign(cid)
         assert mem_get_campaign(cid) is None
         assert mem_get_campaign_run("r-del-1") is None
 
 
 class TestCampaignRunCRUD:
-
     def test_save_and_get_run(self):
         run = {
             "id": "run-1",
@@ -216,10 +266,15 @@ class TestCampaignRunCRUD:
     def test_list_runs_by_campaign(self):
         cid = "c-list"
         for i in range(5):
-            mem_save_campaign_run({
-                "id": f"r-{i}", "campaign_id": cid, "domain": "test",
-                "iteration": i, "status": "completed",
-            })
+            mem_save_campaign_run(
+                {
+                    "id": f"r-{i}",
+                    "campaign_id": cid,
+                    "domain": "test",
+                    "iteration": i,
+                    "status": "completed",
+                }
+            )
         runs = mem_list_campaign_runs(campaign_id=cid)
         assert len(runs) == 5
         # Ordered by created_at ASC
@@ -227,24 +282,35 @@ class TestCampaignRunCRUD:
 
     def test_list_runs_filter_domain(self):
         cid = "c-dom"
-        mem_save_campaign_run({"id": "r-dom-1", "campaign_id": cid, "domain": "a", "iteration": 1, "status": "completed"})
-        mem_save_campaign_run({"id": "r-dom-2", "campaign_id": cid, "domain": "b", "iteration": 1, "status": "completed"})
+        mem_save_campaign_run(
+            {"id": "r-dom-1", "campaign_id": cid, "domain": "a", "iteration": 1, "status": "completed"}
+        )
+        mem_save_campaign_run(
+            {"id": "r-dom-2", "campaign_id": cid, "domain": "b", "iteration": 1, "status": "completed"}
+        )
         a_runs = mem_list_campaign_runs(campaign_id=cid, domain="a")
         assert len(a_runs) == 1
         assert a_runs[0]["domain"] == "a"
 
     def test_list_runs_filter_status(self):
         cid = "c-st"
-        mem_save_campaign_run({"id": "r-st-1", "campaign_id": cid, "domain": "a", "iteration": 1, "status": "completed"})
+        mem_save_campaign_run(
+            {"id": "r-st-1", "campaign_id": cid, "domain": "a", "iteration": 1, "status": "completed"}
+        )
         mem_save_campaign_run({"id": "r-st-2", "campaign_id": cid, "domain": "a", "iteration": 2, "status": "failed"})
         completed = mem_list_campaign_runs(campaign_id=cid, status="completed")
         assert len(completed) == 1
 
     def test_update_run(self):
-        mem_save_campaign_run({
-            "id": "r-upd", "campaign_id": "c-upd", "domain": "test",
-            "iteration": 1, "status": "running",
-        })
+        mem_save_campaign_run(
+            {
+                "id": "r-upd",
+                "campaign_id": "c-upd",
+                "domain": "test",
+                "iteration": 1,
+                "status": "running",
+            }
+        )
         assert mem_update_campaign_run("r-upd", {"status": "completed", "autonomy_score": 0.9})
         loaded = mem_get_campaign_run("r-upd")
         assert loaded["status"] == "completed"
@@ -252,8 +318,12 @@ class TestCampaignRunCRUD:
 
     def test_count_runs(self):
         cid = "c-cnt"
-        mem_save_campaign_run({"id": "r-cnt-1", "campaign_id": cid, "domain": "a", "iteration": 1, "status": "completed"})
-        mem_save_campaign_run({"id": "r-cnt-2", "campaign_id": cid, "domain": "a", "iteration": 2, "status": "completed"})
+        mem_save_campaign_run(
+            {"id": "r-cnt-1", "campaign_id": cid, "domain": "a", "iteration": 1, "status": "completed"}
+        )
+        mem_save_campaign_run(
+            {"id": "r-cnt-2", "campaign_id": cid, "domain": "a", "iteration": 2, "status": "completed"}
+        )
         assert mem_count_campaign_runs(campaign_id=cid) == 2
         assert mem_count_campaign_runs(campaign_id=cid, status="completed") == 2
         assert mem_count_campaign_runs(campaign_id=cid, status="failed") == 0
@@ -263,8 +333,8 @@ class TestCampaignRunCRUD:
 # CampaignService Unit Tests
 # ═══════════════════════════════════════════════════════════════════════════
 
-class TestCampaignServiceCreate:
 
+class TestCampaignServiceCreate:
     def test_create_campaign_with_domains(self, campaign_service):
         campaign = campaign_service.create_campaign(
             domains=["hotel_booking", "ecommerce"],
@@ -279,7 +349,9 @@ class TestCampaignServiceCreate:
         with patch("services.benchmark_service.get_benchmark_service") as mock_bsvc:
             mock_svc = MagicMock()
             mock_svc.list_domains.return_value = [
-                {"id": "a"}, {"id": "b"}, {"id": "c"},
+                {"id": "a"},
+                {"id": "b"},
+                {"id": "c"},
             ]
             mock_bsvc.return_value = mock_svc
             campaign = campaign_service.create_campaign(runs_per_domain=2)
@@ -304,7 +376,6 @@ class TestCampaignServiceCreate:
 
 
 class TestCampaignServiceRun:
-
     @patch("services.benchmark_service.get_benchmark_service")
     def test_run_campaign_completes_all_runs(self, mock_bsvc, campaign_service):
         mock_bsvc.return_value = MockBenchmarkService()
@@ -352,6 +423,7 @@ class TestCampaignServiceRun:
     @patch("services.benchmark_service.get_benchmark_service")
     def test_run_creates_result_files(self, mock_bsvc, campaign_service):
         from services.benchmark_campaign_service import RESULTS_DIR
+
         mock_bsvc.return_value = MockBenchmarkService()
         campaign = campaign_service.create_campaign(domains=["hotel_booking"], runs_per_domain=1)
         campaign_service.run_campaign(campaign["id"])
@@ -366,7 +438,6 @@ class TestCampaignServiceRun:
 
 
 class TestCampaignServiceReport:
-
     @patch("services.benchmark_service.get_benchmark_service")
     def test_domain_report_generated(self, mock_bsvc, campaign_service):
         mock_bsvc.return_value = MockBenchmarkService()
@@ -435,7 +506,6 @@ class TestCampaignServiceReport:
 
 
 class TestCampaignServiceResume:
-
     @patch("services.benchmark_service.get_benchmark_service")
     def test_resume_interrupted_campaign(self, mock_bsvc, campaign_service):
         mock_bsvc.return_value = MockBenchmarkService()
@@ -459,19 +529,25 @@ class TestCampaignServiceResume:
     def test_detect_interrupted(self, campaign_service):
         campaign_service.create_campaign(domains=["a"], runs_per_domain=1, name="Fresh")
         old_id = "stale-campaign"
-        mem_save_campaign({
-            "id": old_id, "name": "Stale", "status": "running",
-            "config": {}, "total_runs": 5, "completed_runs": 2,
-            "failed_runs": 0, "domains": ["a"],
-            "created_at": time.time() - 7200,  # 2 hours ago
-        })
+        mem_save_campaign(
+            {
+                "id": old_id,
+                "name": "Stale",
+                "status": "running",
+                "config": {},
+                "total_runs": 5,
+                "completed_runs": 2,
+                "failed_runs": 0,
+                "domains": ["a"],
+                "created_at": time.time() - 7200,  # 2 hours ago
+            }
+        )
         interrupted = campaign_service.detect_interrupted_campaigns()
         ids = [c["id"] for c in interrupted]
         assert old_id in ids
 
 
 class TestCampaignServiceQuery:
-
     @patch("services.benchmark_service.get_benchmark_service")
     def test_get_campaign_status(self, mock_bsvc, campaign_service):
         mock_bsvc.return_value = MockBenchmarkService()
@@ -517,16 +593,19 @@ class TestCampaignServiceQuery:
 # API Route Tests
 # ═══════════════════════════════════════════════════════════════════════════
 
-class TestCampaignAPIRoutes:
 
+class TestCampaignAPIRoutes:
     @patch("services.benchmark_service.get_benchmark_service")
     def test_post_campaign_run_without_execution(self, mock_bsvc, client):
         mock_bsvc.return_value = MockBenchmarkService()
-        resp = client.post("/campaign/run", json={
-            "domains": ["hotel_booking"],
-            "runs_per_domain": 2,
-            "skip_run": True,
-        })
+        resp = client.post(
+            "/campaign/run",
+            json={
+                "domains": ["hotel_booking"],
+                "runs_per_domain": 2,
+                "skip_run": True,
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["success"] is True
@@ -536,10 +615,13 @@ class TestCampaignAPIRoutes:
     @patch("services.benchmark_service.get_benchmark_service")
     def test_post_campaign_run_and_execute(self, mock_bsvc, client):
         mock_bsvc.return_value = MockBenchmarkService()
-        resp = client.post("/campaign/run", json={
-            "domains": ["hotel_booking"],
-            "runs_per_domain": 1,
-        })
+        resp = client.post(
+            "/campaign/run",
+            json={
+                "domains": ["hotel_booking"],
+                "runs_per_domain": 1,
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["success"] is True
@@ -604,7 +686,9 @@ class TestCampaignAPIRoutes:
     @patch("services.benchmark_service.get_benchmark_service")
     def test_post_campaign_resume(self, mock_bsvc, client):
         mock_bsvc.return_value = MockBenchmarkService()
-        create_resp = client.post("/campaign/run", json={"domains": ["hotel_booking"], "runs_per_domain": 1, "skip_run": True})
+        create_resp = client.post(
+            "/campaign/run", json={"domains": ["hotel_booking"], "runs_per_domain": 1, "skip_run": True}
+        )
         cid = create_resp.json()["campaign"]["id"]
         resp = client.post("/campaign/resume", json={"campaign_id": cid})
         assert resp.status_code == 200
@@ -640,8 +724,8 @@ class TestCampaignAPIRoutes:
 # Integration Tests
 # ═══════════════════════════════════════════════════════════════════════════
 
-class TestCampaignIntegration:
 
+class TestCampaignIntegration:
     @patch("services.benchmark_service.get_benchmark_service")
     def test_multi_domain_campaign(self, mock_bsvc, campaign_service):
         mock_bsvc.return_value = MockBenchmarkService()
@@ -660,6 +744,7 @@ class TestCampaignIntegration:
     @patch("services.benchmark_service.get_benchmark_service")
     def test_report_files_created(self, mock_bsvc, campaign_service):
         from services.benchmark_campaign_service import REPORTS_DIR
+
         mock_bsvc.return_value = MockBenchmarkService()
         campaign = campaign_service.create_campaign(domains=["hotel_booking"], runs_per_domain=2)
         campaign_service.run_campaign(campaign["id"])

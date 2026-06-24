@@ -4,6 +4,7 @@ Cleanup Service — removes generated project ZIPs older than RETENTION_HOURS.
 New in v4. Called from a background daemon thread started at app startup.
 Configurable via env var ZIP_RETENTION_HOURS (default: 24).
 """
+
 import logging
 import os
 import threading
@@ -38,7 +39,8 @@ def _cleanup_loop() -> None:
     """Daemon loop — runs cleanup every CHECK_INTERVAL_SECONDS."""
     logger.info(
         "Cleanup service started — retention=%dh, interval=%ds",
-        RETENTION_HOURS, CHECK_INTERVAL_SECONDS,
+        RETENTION_HOURS,
+        CHECK_INTERVAL_SECONDS,
     )
     while True:
         try:

@@ -1,4 +1,5 @@
 """Evaluation Center — history, trends, regressions, leaderboards, and version comparisons."""
+
 import os
 from datetime import datetime
 from typing import Any
@@ -38,9 +39,15 @@ def show_evaluation_tab():
     st.markdown("## Evaluation Center")
     st.caption("Continuous Autonomous Evaluation — track, compare, and improve platform performance")
 
-    tab_history, tab_trends, tab_regressions, tab_leaderboards, tab_comparisons = st.tabs([
-        " History", " Trends", " Regressions", " Leaderboards", " Comparisons",
-    ])
+    tab_history, tab_trends, tab_regressions, tab_leaderboards, tab_comparisons = st.tabs(
+        [
+            " History",
+            " Trends",
+            " Regressions",
+            " Leaderboards",
+            " Comparisons",
+        ]
+    )
 
     with tab_history:
         _show_history_tab()
@@ -81,14 +88,19 @@ def _format_dt(iso_str: str | None) -> str:
 
 # ── History Tab ──────────────────────────────────────────────────────────────
 
+
 def _show_history_tab():
     st.markdown("### Evaluation Runs")
 
     col1, col2, col3 = st.columns([1, 1, 2])
     with col1:
-        schedule_filter = st.selectbox("Schedule", ["All", "nightly", "weekly", "release", "on_demand"], key="eval_hist_sched")
+        schedule_filter = st.selectbox(
+            "Schedule", ["All", "nightly", "weekly", "release", "on_demand"], key="eval_hist_sched"
+        )
     with col2:
-        status_filter = st.selectbox("Status", ["All", "pending", "running", "completed", "failed"], key="eval_hist_status")
+        status_filter = st.selectbox(
+            "Status", ["All", "pending", "running", "completed", "failed"], key="eval_hist_status"
+        )
     with col3:
         search_id = st.text_input("Search Run ID", key="eval_hist_search")
 
@@ -136,6 +148,7 @@ def _show_history_tab():
 
 # ── Trends Tab ───────────────────────────────────────────────────────────────
 
+
 def _show_trends_tab():
     st.markdown("### Performance Trends")
 
@@ -155,67 +168,102 @@ def _show_trends_tab():
 
     c1, c2 = st.columns(2)
     with c1:
-        st.metric("Current Autonomy", f"{autonomy_scores[-1]:.3f}",
-                  delta=f"{autonomy_scores[-1] - autonomy_scores[-2]:+.3f}" if len(autonomy_scores) >= 2 else None)
-        st.metric("Current Cost", f"${costs[-1]:.2f}",
-                  delta=f"{costs[-1] - costs[-2]:+.2f}" if len(costs) >= 2 else None)
+        st.metric(
+            "Current Autonomy",
+            f"{autonomy_scores[-1]:.3f}",
+            delta=f"{autonomy_scores[-1] - autonomy_scores[-2]:+.3f}" if len(autonomy_scores) >= 2 else None,
+        )
+        st.metric(
+            "Current Cost", f"${costs[-1]:.2f}", delta=f"{costs[-1] - costs[-2]:+.2f}" if len(costs) >= 2 else None
+        )
     with c2:
-        st.metric("Current Runtime", f"{runtimes[-1]:.0f}ms",
-                  delta=f"{runtimes[-1] - runtimes[-2]:+.0f}ms" if len(runtimes) >= 2 else None)
-        st.metric("Current Success Rate", f"{success_rates[-1]:.1%}",
-                  delta=f"{success_rates[-1] - success_rates[-2]:+.1%}" if len(success_rates) >= 2 else None)
+        st.metric(
+            "Current Runtime",
+            f"{runtimes[-1]:.0f}ms",
+            delta=f"{runtimes[-1] - runtimes[-2]:+.0f}ms" if len(runtimes) >= 2 else None,
+        )
+        st.metric(
+            "Current Success Rate",
+            f"{success_rates[-1]:.1%}",
+            delta=f"{success_rates[-1] - success_rates[-2]:+.1%}" if len(success_rates) >= 2 else None,
+        )
 
     try:
         import altair as alt
         import pandas as pd
 
-        df = pd.DataFrame({
-            "Run": list(range(1, len(runs) + 1)),
-            "Date": dates,
-            "Autonomy Score": autonomy_scores,
-            "Cost ($)": costs,
-            "Runtime (ms)": runtimes,
-            "Success Rate": success_rates,
-        })
+        df = pd.DataFrame(
+            {
+                "Run": list(range(1, len(runs) + 1)),
+                "Date": dates,
+                "Autonomy Score": autonomy_scores,
+                "Cost ($)": costs,
+                "Runtime (ms)": runtimes,
+                "Success Rate": success_rates,
+            }
+        )
 
-        chart1 = alt.Chart(df).mark_line(point=True, color="#4ade80").encode(
-            x=alt.X("Run:Q", title="Run #"),
-            y=alt.Y("Autonomy Score:Q", scale=alt.Scale(zero=False)),
-            tooltip=["Date:N", "Autonomy Score:Q"],
-        ).properties(height=250, title="Autonomy Score")
+        chart1 = (
+            alt.Chart(df)
+            .mark_line(point=True, color="#4ade80")
+            .encode(
+                x=alt.X("Run:Q", title="Run #"),
+                y=alt.Y("Autonomy Score:Q", scale=alt.Scale(zero=False)),
+                tooltip=["Date:N", "Autonomy Score:Q"],
+            )
+            .properties(height=250, title="Autonomy Score")
+        )
         st.altair_chart(chart1, use_container_width=True)
 
         c1, c2 = st.columns(2)
         with c1:
-            chart2 = alt.Chart(df).mark_line(point=True, color="#f87171").encode(
-                x=alt.X("Run:Q", title="Run #"),
-                y=alt.Y("Cost ($):Q", scale=alt.Scale(zero=False)),
-                tooltip=["Date:N", "Cost ($):Q"],
-            ).properties(height=200, title="Cost")
+            chart2 = (
+                alt.Chart(df)
+                .mark_line(point=True, color="#f87171")
+                .encode(
+                    x=alt.X("Run:Q", title="Run #"),
+                    y=alt.Y("Cost ($):Q", scale=alt.Scale(zero=False)),
+                    tooltip=["Date:N", "Cost ($):Q"],
+                )
+                .properties(height=200, title="Cost")
+            )
             st.altair_chart(chart2, use_container_width=True)
         with c2:
-            chart3 = alt.Chart(df).mark_line(point=True, color="#60a5fa").encode(
-                x=alt.X("Run:Q", title="Run #"),
-                y=alt.Y("Runtime (ms):Q", scale=alt.Scale(zero=False)),
-                tooltip=["Date:N", "Runtime (ms):Q"],
-            ).properties(height=200, title="Runtime")
+            chart3 = (
+                alt.Chart(df)
+                .mark_line(point=True, color="#60a5fa")
+                .encode(
+                    x=alt.X("Run:Q", title="Run #"),
+                    y=alt.Y("Runtime (ms):Q", scale=alt.Scale(zero=False)),
+                    tooltip=["Date:N", "Runtime (ms):Q"],
+                )
+                .properties(height=200, title="Runtime")
+            )
             st.altair_chart(chart3, use_container_width=True)
 
-        chart4 = alt.Chart(df).mark_line(point=True, color="#fcd34d").encode(
-            x=alt.X("Run:Q", title="Run #"),
-            y=alt.Y("Success Rate:Q", scale=alt.Scale(zero=False)),
-            tooltip=["Date:N", "Success Rate:Q"],
-        ).properties(height=250, title="Success Rate")
+        chart4 = (
+            alt.Chart(df)
+            .mark_line(point=True, color="#fcd34d")
+            .encode(
+                x=alt.X("Run:Q", title="Run #"),
+                y=alt.Y("Success Rate:Q", scale=alt.Scale(zero=False)),
+                tooltip=["Date:N", "Success Rate:Q"],
+            )
+            .properties(height=250, title="Success Rate")
+        )
         st.altair_chart(chart4, use_container_width=True)
 
     except ImportError:
         st.info("Install pandas and altair for chart visualization: pip install pandas altair")
         st.markdown("#### Raw Data")
         for r in runs[-10:]:
-            st.text(f"{_format_dt(r.get('started_at'))} — Score: {r.get('autonomy_score', 0):.3f} — Cost: ${r.get('total_cost', 0):.2f}")
+            st.text(
+                f"{_format_dt(r.get('started_at'))} — Score: {r.get('autonomy_score', 0):.3f} — Cost: ${r.get('total_cost', 0):.2f}"
+            )
 
 
 # ── Regressions Tab ──────────────────────────────────────────────────────────
+
 
 def _show_regressions_tab():
     st.markdown("### Regressions & Alerts")
@@ -275,6 +323,7 @@ def _show_regressions_tab():
             if not dismissed:
                 if st.button("Dismiss", key=f"dismiss_{reg_id}"):
                     from database.memory_store import mem_update_regression
+
                     mem_update_regression(reg_id, {"dismissed": True})
                     st.success("Regression dismissed")
                     st.rerun()
@@ -282,12 +331,18 @@ def _show_regressions_tab():
 
 # ── Leaderboards Tab ─────────────────────────────────────────────────────────
 
+
 def _show_leaderboards_tab():
     st.markdown("### Leaderboards")
 
-    lb_tab_models, lb_tab_agents, lb_tab_workflows, lb_tab_benchmarks = st.tabs([
-        " Models", " Agents", " Workflows", " Benchmark Packs",
-    ])
+    lb_tab_models, lb_tab_agents, lb_tab_workflows, lb_tab_benchmarks = st.tabs(
+        [
+            " Models",
+            " Agents",
+            " Workflows",
+            " Benchmark Packs",
+        ]
+    )
 
     with lb_tab_models:
         _show_leaderboard_table("model")
@@ -301,7 +356,8 @@ def _show_leaderboards_tab():
 
 def _show_leaderboard_table(category: str):
     sort_by = st.selectbox(
-        "Sort by", ["score", "autonomy_score", "reliability_score", "cost_efficiency"],
+        "Sort by",
+        ["score", "autonomy_score", "reliability_score", "cost_efficiency"],
         key=f"eval_lb_sort_{category}",
     )
     data = _get(f"/evaluation/leaderboards?category={category}&sort_by={sort_by}&limit=50") or {}
@@ -326,6 +382,7 @@ def _show_leaderboard_table(category: str):
 
 
 # ── Comparisons Tab ──────────────────────────────────────────────────────────
+
 
 def _show_comparisons_tab():
     st.markdown("### Version Comparisons")

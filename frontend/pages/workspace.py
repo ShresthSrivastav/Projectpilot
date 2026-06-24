@@ -64,6 +64,7 @@ def _switch_workspace(ws_id: str):
 
 # ── Workspace Switcher ──────────────────────────────────────────────
 
+
 def _show_workspace_switcher():
     st.markdown("### Workspace Switcher")
     if "workspace_list" not in st.session_state:
@@ -75,7 +76,12 @@ def _show_workspace_switcher():
     if ws_list:
         ws_options = {f"{w['name']} ({w['role']})": w["id"] for w in ws_list}
         default_label = next((k for k, v in ws_options.items() if v == current_id), list(ws_options.keys())[0])
-        selected = st.selectbox("Switch workspace", list(ws_options.keys()), index=list(ws_options.keys()).index(default_label) if default_label in ws_options else 0, key="ws_switcher")
+        selected = st.selectbox(
+            "Switch workspace",
+            list(ws_options.keys()),
+            index=list(ws_options.keys()).index(default_label) if default_label in ws_options else 0,
+            key="ws_switcher",
+        )
         if selected and ws_options[selected] != current_id:
             _switch_workspace(ws_options[selected])
 
@@ -94,6 +100,7 @@ def _show_workspace_switcher():
 
 
 # ── Members Management ──────────────────────────────────────────────
+
 
 def _show_members():
     st.markdown("### Members")
@@ -164,6 +171,7 @@ def _show_members():
 
 # ── Activity Feed ───────────────────────────────────────────────────
 
+
 def _show_activity():
     st.markdown("### Activity Feed")
     try:
@@ -185,6 +193,7 @@ def _show_activity():
 
 # ── Workspace Settings ──────────────────────────────────────────────
 
+
 def _show_settings():
     st.markdown("### Workspace Settings")
     ws = st.session_state.get("workspace_info", {})
@@ -195,7 +204,9 @@ def _show_settings():
 
     st.markdown("#### Rename Workspace")
     new_name = st.text_input("New name", value=ws.get("name", ""), key="ws_rename_input")
-    if st.button("Rename", key="ws_rename_btn", disabled=not new_name.strip() or new_name.strip() == ws.get("name", "")):
+    if st.button(
+        "Rename", key="ws_rename_btn", disabled=not new_name.strip() or new_name.strip() == ws.get("name", "")
+    ):
         try:
             result = _post("/api/workspace/rename", {"name": new_name.strip()})
             if result:
@@ -207,6 +218,7 @@ def _show_settings():
 
 
 # ── Main Entry Point ────────────────────────────────────────────────
+
 
 def show_workspace_tab():
     st.markdown("## Workspace Management")
@@ -237,6 +249,7 @@ def show_workspace_tab():
 
 # ── Local Projects (from old workspace tab) ─────────────────────────
 
+
 def _show_local_projects():
     st.markdown("#### Local Generated Projects")
     try:
@@ -251,7 +264,7 @@ def _show_local_projects():
         st.caption("No local projects yet. Submit a prompt on the Generate tab.")
         return
 
-    labels = [f"{j.get('project_name','?')} [{j.get('job_id','')[:10]}] \u2014 {j.get('status','?')}" for j in jobs]
+    labels = [f"{j.get('project_name', '?')} [{j.get('job_id', '')[:10]}] \u2014 {j.get('status', '?')}" for j in jobs]
     sel = st.selectbox("Project", labels, key="ws_local_sel")
     if not sel:
         return
@@ -266,7 +279,7 @@ def _show_local_projects():
 
     c1, c2, c3 = st.columns(3)
     c1.metric("Status", detail.get("status", ""))
-    c2.metric("Progress", f"{detail.get('progress_pct',0)}%")
+    c2.metric("Progress", f"{detail.get('progress_pct', 0)}%")
     c3.metric("Files", detail.get("file_count", 0))
 
     fl = detail.get("file_list", [])
@@ -277,9 +290,19 @@ def _show_local_projects():
             resp = requests.get(f"{BACKEND}/read-project-file/{jid}/{enc}", headers=_headers(), timeout=10)
             if resp.ok:
                 ext = os.path.splitext(sf)[1]
-                lang = {"py":"python","js":"javascript","ts":"typescript","html":"html",
-                        "css":"css","json":"json","yaml":"yaml","md":"markdown",
-                        "sh":"bash","bat":"batch","txt":"text"}.get(ext.lstrip("."),"")
+                lang = {
+                    "py": "python",
+                    "js": "javascript",
+                    "ts": "typescript",
+                    "html": "html",
+                    "css": "css",
+                    "json": "json",
+                    "yaml": "yaml",
+                    "md": "markdown",
+                    "sh": "bash",
+                    "bat": "batch",
+                    "txt": "text",
+                }.get(ext.lstrip("."), "")
                 st.code(resp.text, language=lang or "text", line_numbers=True)
 
     _show_test_results(detail)
@@ -340,9 +363,14 @@ def _show_local_projects():
                     st.error(str(exc))
 
         st.divider()
-        if st.button("\u274c Delete Project", key="ws_del_btn", type="secondary",
-                     help="Permanently delete this project and all its files."):
+        if st.button(
+            "\u274c Delete Project",
+            key="ws_del_btn",
+            type="secondary",
+            help="Permanently delete this project and all its files.",
+        ):
             import urllib.parse
+
             try:
                 r = requests.delete(f"{BACKEND}/jobs/{urllib.parse.quote(jid)}", headers=_headers(), timeout=10)
                 if r.ok:
@@ -370,14 +398,16 @@ def _show_test_results(detail: dict):
         f"<div style='flex:{pp};background:#27ae60;display:flex;align-items:center;justify-content:center;color:#fff'>{tp} passed</div>"
         f"<div style='flex:{fp};background:#e74c3c;display:flex;align-items:center;justify-content:center;color:#fff'>{tf} failed</div>"
         f"<div style='flex:{sp};background:#f39c12;display:flex;align-items:center;justify-content:center;color:#fff'>{ts} skipped</div>"
-        f"</div>", unsafe_allow_html=True)
+        f"</div>",
+        unsafe_allow_html=True,
+    )
     tdetails = detail.get("test_details", [])
     if tdetails:
         st.markdown("**Individual Tests**")
         for td in tdetails:
             nm = td.get("test", "?")
             sts = td.get("status", "?")
-            ic = {"PASSED":"\u2705","FAILED":"\u274c","SKIPPED":"\u23ed\ufe0f"}.get(sts,"\u2022")
+            ic = {"PASSED": "\u2705", "FAILED": "\u274c", "SKIPPED": "\u23ed\ufe0f"}.get(sts, "\u2022")
             st.markdown(f"{ic} `{nm}`")
     sm = detail.get("test_summary", "")
     if sm:
@@ -398,13 +428,20 @@ def _show_test_results(detail: dict):
             pass
 
     if tf > 0 and jid:
-        if st.button("\U0001f527 Fix Failing Tests", key=f"fix_tests_{jid}", type="primary",
-                     help="Use AI to fix source code so all tests pass"):
+        if st.button(
+            "\U0001f527 Fix Failing Tests",
+            key=f"fix_tests_{jid}",
+            type="primary",
+            help="Use AI to fix source code so all tests pass",
+        ):
             with st.spinner("Running tests, analysing failures, and fixing code..."):
                 try:
-                    fr = requests.post(f"{BACKEND}/fix-tests/{jid}",
-                                       json={"model": st.session_state.selected_model},
-                                       headers=_headers(), timeout=300)
+                    fr = requests.post(
+                        f"{BACKEND}/fix-tests/{jid}",
+                        json={"model": st.session_state.selected_model},
+                        headers=_headers(),
+                        timeout=300,
+                    )
                     if fr.ok:
                         fdata = fr.json()
                         if fdata.get("already_passing"):
@@ -438,6 +475,7 @@ def _show_test_results(detail: dict):
     rs_raw = detail.get("review_summary", "")
     if rs_raw:
         import json as _json
+
         try:
             rs = _json.loads(rs_raw) if isinstance(rs_raw, str) else rs_raw
         except Exception:
@@ -465,13 +503,17 @@ def _show_test_results(detail: dict):
                         st.markdown(f"- {r}")
 
     if jid:
-        if st.button("\U0001f50d Review Project", key=f"review_{jid}", type="secondary",
-                     help="Run AI review of the full project"):
+        if st.button(
+            "\U0001f50d Review Project", key=f"review_{jid}", type="secondary", help="Run AI review of the full project"
+        ):
             with st.spinner("Analyzing project..."):
                 try:
-                    rr = requests.post(f"{BACKEND}/review/{jid}",
-                                       json={"model": st.session_state.selected_model},
-                                       headers=_headers(), timeout=300)
+                    rr = requests.post(
+                        f"{BACKEND}/review/{jid}",
+                        json={"model": st.session_state.selected_model},
+                        headers=_headers(),
+                        timeout=300,
+                    )
                     if rr.ok:
                         st.rerun()
                     else:
@@ -506,6 +548,7 @@ def _show_logs(detail: dict):
 
 # ── GitHub Section ──────────────────────────────────────────────────
 
+
 def _gh_get(path: str, timeout: int = 10) -> dict | None:
     return _get(path, timeout)
 
@@ -534,8 +577,9 @@ def _show_github_section():
                 st.session_state.gh_username = ""
                 st.rerun()
         else:
-            token = st.text_input("GitHub Personal Access Token", type="password",
-                                  placeholder="ghp_...", key="gh_token_input")
+            token = st.text_input(
+                "GitHub Personal Access Token", type="password", placeholder="ghp_...", key="gh_token_input"
+            )
             if st.button("Connect", key="gh_connect"):
                 if token:
                     res = _gh_post("/github/connect", {"token": token})
@@ -552,15 +596,23 @@ def _show_github_section():
         return
 
     username = current_username
-    gh_tab1, gh_tab2, gh_tab3, gh_tab4, gh_tab5 = st.tabs([
-        "Repositories", "Branches && Files", "Commits", "Pull Requests", "Issues",
-    ])
+    gh_tab1, gh_tab2, gh_tab3, gh_tab4, gh_tab5 = st.tabs(
+        [
+            "Repositories",
+            "Branches && Files",
+            "Commits",
+            "Pull Requests",
+            "Issues",
+        ]
+    )
 
     with gh_tab1:
         st.markdown("### Your Repositories")
         col1, col2 = st.columns([3, 1])
         with col1:
-            search_q = st.text_input("Search repos", placeholder="e.g. my-project or organization/repo", key="gh_search_q")
+            search_q = st.text_input(
+                "Search repos", placeholder="e.g. my-project or organization/repo", key="gh_search_q"
+            )
         with col2:
             st.write("")
             if st.button("Refresh", key="gh_refresh_repos", use_container_width=True):
@@ -569,7 +621,7 @@ def _show_github_section():
         repos = (repos_data or {}).get("repos", [])
         if search_q:
             q = search_q.lower()
-            repos = [r for r in repos if q in r["full_name"].lower() or q in r.get("description","").lower()]
+            repos = [r for r in repos if q in r["full_name"].lower() or q in r.get("description", "").lower()]
         if not repos:
             st.caption("No repositories found. Make sure your token has repo scope.")
         else:
@@ -582,10 +634,10 @@ def _show_github_section():
                 with st.expander(f"{priv} **{nm}** \u2014 {lang} \u2606{stars}"):
                     st.caption(desc[:200])
                     c1, c2, c3, c4 = st.columns(4)
-                    c1.markdown(f"**Branch:** `{r.get('default_branch','')}`")
-                    c2.markdown(f"Forks: {r.get('forks',0)}")
-                    c3.markdown(f"Issues: {r.get('open_issues',0)}")
-                    c4.markdown(f"[Open on GitHub]({r.get('url','')})")
+                    c1.markdown(f"**Branch:** `{r.get('default_branch', '')}`")
+                    c2.markdown(f"Forks: {r.get('forks', 0)}")
+                    c3.markdown(f"Issues: {r.get('open_issues', 0)}")
+                    c4.markdown(f"[Open on GitHub]({r.get('url', '')})")
                     if st.button("Browse Files", key=f"gh_browse_{nm}", use_container_width=True):
                         st.session_state.gh_active_repo = nm
                         st.session_state.gh_active_tab = "Branches && Files"
@@ -604,16 +656,25 @@ def _show_github_section():
         branch_names = [b["name"] for b in branches]
         current_branch = st.session_state.get("gh_branch", branches[0]["name"] if branches else "main")
         if branch_names:
-            current_branch = st.selectbox("Branch", branch_names, index=branch_names.index(current_branch)
-                                          if current_branch in branch_names else 0, key="gh_branch_sel")
+            current_branch = st.selectbox(
+                "Branch",
+                branch_names,
+                index=branch_names.index(current_branch) if current_branch in branch_names else 0,
+                key="gh_branch_sel",
+            )
             st.session_state.gh_branch = current_branch
         col1, col2 = st.columns([2, 1])
         with col1:
             new_branch = st.text_input("New branch name", placeholder="feature/xyz", key="gh_new_branch")
             if st.button("Create Branch", key="gh_create_branch") and new_branch:
-                res = _gh_post(f"/github/{repo}/branches", {
-                    "username": username, "branch": new_branch, "source_branch": current_branch,
-                })
+                res = _gh_post(
+                    f"/github/{repo}/branches",
+                    {
+                        "username": username,
+                        "branch": new_branch,
+                        "source_branch": current_branch,
+                    },
+                )
                 if res:
                     st.success(f"Branch `{new_branch}` created")
                     st.rerun()
@@ -651,17 +712,25 @@ def _show_github_section():
             edit_mode = st.session_state.get("gh_edit_mode", "view")
             if edit_mode == "edit":
                 new_content = st.text_area("Edit content", value=content, height=400, key="gh_edit_area")
-                commit_msg = st.text_input("Commit message", placeholder=f"Update {selected_file.split('/')[-1]}", key="gh_commit_msg")
+                commit_msg = st.text_input(
+                    "Commit message", placeholder=f"Update {selected_file.split('/')[-1]}", key="gh_commit_msg"
+                )
                 ccol1, ccol2 = st.columns(2)
                 with ccol1:
                     if st.button("Save & Commit", key="gh_save_file"):
-                        res = _gh_post(f"/github/{repo}/file", {
-                            "username": username, "path": selected_file, "content": new_content,
-                            "message": commit_msg or f"Update {selected_file.split('/')[-1]}",
-                            "branch": current_branch, "sha": sha,
-                        })
+                        res = _gh_post(
+                            f"/github/{repo}/file",
+                            {
+                                "username": username,
+                                "path": selected_file,
+                                "content": new_content,
+                                "message": commit_msg or f"Update {selected_file.split('/')[-1]}",
+                                "branch": current_branch,
+                                "sha": sha,
+                            },
+                        )
                         if res:
-                            st.success(f"Committed: `{res.get('commit','')[:12]}`")
+                            st.success(f"Committed: `{res.get('commit', '')[:12]}`")
                             st.session_state.gh_edit_mode = "view"
                             st.rerun()
                 with ccol2:
@@ -670,9 +739,19 @@ def _show_github_section():
                         st.rerun()
             else:
                 ext = os.path.splitext(selected_file)[1]
-                lang_map = {"py":"python","js":"javascript","ts":"typescript","html":"html",
-                            "css":"css","json":"json","yaml":"yaml","md":"markdown",
-                            "sh":"bash","bat":"batch","txt":"text"}
+                lang_map = {
+                    "py": "python",
+                    "js": "javascript",
+                    "ts": "typescript",
+                    "html": "html",
+                    "css": "css",
+                    "json": "json",
+                    "yaml": "yaml",
+                    "md": "markdown",
+                    "sh": "bash",
+                    "bat": "batch",
+                    "txt": "text",
+                }
                 lang = lang_map.get(ext.lstrip("."), "")
                 st.code(content[:10000], language=lang or "text", line_numbers=True)
                 if st.button("Edit File", key="gh_edit_file"):
@@ -691,10 +770,12 @@ def _show_github_section():
             if commits:
                 for c in commits:
                     with st.expander(f"{c['sha'][:8]} \u2014 {c['message'][:80]}"):
-                        st.markdown(f"**Author:** {c['author']} <{c.get('author_email','')}>")
+                        st.markdown(f"**Author:** {c['author']} <{c.get('author_email', '')}>")
                         st.markdown(f"**Date:** {c['date'][:19]}")
-                        st.markdown(f"**Changes:** {c.get('files_changed',0)} files, +{c.get('additions',0)} -{c.get('deletions',0)}")
-                        st.markdown(f"[View on GitHub]({c.get('url','')})")
+                        st.markdown(
+                            f"**Changes:** {c.get('files_changed', 0)} files, +{c.get('additions', 0)} -{c.get('deletions', 0)}"
+                        )
+                        st.markdown(f"[View on GitHub]({c.get('url', '')})")
                         sha = c["sha"]
                         diff = _gh_get(f"/github/{repo}/commits/{sha}?username={username}")
                         if diff and diff.get("diff"):
@@ -715,24 +796,37 @@ def _show_github_section():
                 for pr in prs:
                     ic = "\U0001f31f" if pr.get("draft") else "\U0001f4d6"
                     with st.expander(f"{ic} **#{pr['number']}** {pr['title'][:80]}"):
-                        st.markdown(f"**State:** {pr['state']} | **Branch:** {pr['head_branch']} \u2192 {pr['base_branch']}")
-                        st.markdown(f"**Author:** {pr['author']} | **Changes:** +{pr.get('additions',0)}/-{pr.get('deletions',0)}")
-                        st.markdown(f"[View PR]({pr.get('url','')})")
+                        st.markdown(
+                            f"**State:** {pr['state']} | **Branch:** {pr['head_branch']} \u2192 {pr['base_branch']}"
+                        )
+                        st.markdown(
+                            f"**Author:** {pr['author']} | **Changes:** +{pr.get('additions', 0)}/-{pr.get('deletions', 0)}"
+                        )
+                        st.markdown(f"[View PR]({pr.get('url', '')})")
                         if pr.get("body"):
-                            st.text_area("Description", pr["body"][:500], disabled=True, key=f"gh_pr_body_{pr['number']}")
+                            st.text_area(
+                                "Description", pr["body"][:500], disabled=True, key=f"gh_pr_body_{pr['number']}"
+                            )
                         if st.button("Review with AI", key=f"gh_review_pr_{pr['number']}"):
                             with st.spinner("AI reviewing PR..."):
-                                review = _gh_post("/github/agent/review-pr", {
-                                    "full_name": repo, "pr_number": pr["number"], "username": username,
-                                })
+                                review = _gh_post(
+                                    "/github/agent/review-pr",
+                                    {
+                                        "full_name": repo,
+                                        "pr_number": pr["number"],
+                                        "username": username,
+                                    },
+                                )
                             if review:
                                 rv = review.get("review", {})
-                                st.markdown(f"**Summary:** {rv.get('summary','')}")
+                                st.markdown(f"**Summary:** {rv.get('summary', '')}")
                                 st.markdown(f"**Approve:** {'Yes' if rv.get('approve') else 'No'}")
                                 for s in rv.get("suggestions", []):
                                     st.markdown(f"- {s}")
                                 for iss in rv.get("issues", []):
-                                    st.warning(f"{iss.get('file','')} ({iss.get('severity','')}): {iss.get('message','')}")
+                                    st.warning(
+                                        f"{iss.get('file', '')} ({iss.get('severity', '')}): {iss.get('message', '')}"
+                                    )
             else:
                 st.caption("No pull requests found.")
 
@@ -742,10 +836,16 @@ def _show_github_section():
                 pr_head = st.text_input("Head branch", key="gh_new_pr_head")
                 pr_base = st.text_input("Base branch", value="main", key="gh_new_pr_base")
                 if st.button("Create PR", key="gh_create_pr_btn") and pr_title and pr_head and pr_base:
-                    res = _gh_post(f"/github/{repo}/pulls", {
-                        "username": username, "title": pr_title,
-                        "head": pr_head, "base": pr_base, "body": pr_body,
-                    })
+                    res = _gh_post(
+                        f"/github/{repo}/pulls",
+                        {
+                            "username": username,
+                            "title": pr_title,
+                            "head": pr_head,
+                            "base": pr_base,
+                            "body": pr_body,
+                        },
+                    )
                     if res:
                         st.success(f"PR #{res.get('number')} created!")
                         st.rerun()
@@ -763,41 +863,64 @@ def _show_github_section():
                     labels = " ".join(f"`{l}`" for l in iss.get("labels", []))
                     with st.expander(f"**#{iss['number']}** {iss['title'][:80]} {labels}"):
                         st.markdown(f"**State:** {iss['state']} | **Author:** {iss['author']}")
-                        st.markdown(f"**Comments:** {iss.get('comments_count',0)}")
+                        st.markdown(f"**Comments:** {iss.get('comments_count', 0)}")
                         if iss.get("body"):
-                            st.text_area("Description", iss["body"][:500], disabled=True, key=f"gh_iss_body_{iss['number']}")
-                        comment_text = st.text_area("Add comment", placeholder="Write a comment...",
-                                                     key=f"gh_iss_comment_{iss['number']}", height=60)
+                            st.text_area(
+                                "Description", iss["body"][:500], disabled=True, key=f"gh_iss_body_{iss['number']}"
+                            )
+                        comment_text = st.text_area(
+                            "Add comment",
+                            placeholder="Write a comment...",
+                            key=f"gh_iss_comment_{iss['number']}",
+                            height=60,
+                        )
                         if st.button("Comment", key=f"gh_iss_comment_btn_{iss['number']}") and comment_text:
-                            res = _gh_post(f"/github/{repo}/issues/{iss['number']}/comments", {
-                                "username": username, "body": comment_text,
-                            })
+                            res = _gh_post(
+                                f"/github/{repo}/issues/{iss['number']}/comments",
+                                {
+                                    "username": username,
+                                    "body": comment_text,
+                                },
+                            )
                             if res:
                                 st.success("Comment added!")
                                 st.rerun()
                         if st.button("Analyze with AI", key=f"gh_ai_issue_{iss['number']}"):
                             with st.spinner("AI analyzing issue..."):
-                                analysis = _gh_post("/github/agent/fix-issue", {
-                                    "full_name": repo, "issue_number": iss["number"], "username": username,
-                                })
+                                analysis = _gh_post(
+                                    "/github/agent/fix-issue",
+                                    {
+                                        "full_name": repo,
+                                        "issue_number": iss["number"],
+                                        "username": username,
+                                    },
+                                )
                             if analysis:
                                 an = analysis.get("analysis", {})
-                                st.markdown(f"**Root Cause:** {an.get('root_cause','')}")
-                                st.markdown(f"**Effort:** {an.get('effort','unknown')}")
+                                st.markdown(f"**Root Cause:** {an.get('root_cause', '')}")
+                                st.markdown(f"**Effort:** {an.get('effort', 'unknown')}")
                                 for step in an.get("fix_plan", []):
-                                    st.markdown(f"- `{step.get('file','')}`: {step.get('description','')}")
+                                    st.markdown(f"- `{step.get('file', '')}`: {step.get('description', '')}")
             else:
                 st.caption("No issues found.")
 
             with st.expander("Create Issue"):
                 iss_title = st.text_input("Title", key="gh_new_iss_title")
                 iss_body = st.text_area("Description", key="gh_new_iss_body", height=100)
-                iss_labels = st.text_input("Labels (comma-separated)", placeholder="bug, enhancement", key="gh_new_iss_labels")
+                iss_labels = st.text_input(
+                    "Labels (comma-separated)", placeholder="bug, enhancement", key="gh_new_iss_labels"
+                )
                 if st.button("Create Issue", key="gh_create_iss_btn") and iss_title:
                     lbls = [l.strip() for l in iss_labels.split(",") if l.strip()] if iss_labels else []
-                    res = _gh_post(f"/github/{repo}/issues", {
-                        "username": username, "title": iss_title, "body": iss_body, "labels": lbls,
-                    })
+                    res = _gh_post(
+                        f"/github/{repo}/issues",
+                        {
+                            "username": username,
+                            "title": iss_title,
+                            "body": iss_body,
+                            "labels": lbls,
+                        },
+                    )
                     if res:
                         st.success(f"Issue #{res.get('number')} created!")
                         st.rerun()

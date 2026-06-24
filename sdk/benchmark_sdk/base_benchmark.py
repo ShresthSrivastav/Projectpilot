@@ -1,4 +1,5 @@
 """Base Benchmark SDK — interface for creating custom benchmark packs."""
+
 import json
 import logging
 from abc import ABC, abstractmethod
@@ -44,20 +45,16 @@ class BaseBenchmarkPack(ABC):
         self._logger = logging.getLogger(f"benchmark.{self.domain}")
 
     @abstractmethod
-    def load_requirements(self) -> str:
-        ...
+    def load_requirements(self) -> str: ...
 
     @abstractmethod
-    def load_tests(self) -> list[BenchmarkTest]:
-        ...
+    def load_tests(self) -> list[BenchmarkTest]: ...
 
     @abstractmethod
-    def load_criteria(self) -> list[BenchmarkCriteria]:
-        ...
+    def load_criteria(self) -> list[BenchmarkCriteria]: ...
 
     @abstractmethod
-    def evaluate(self, results: dict[str, Any]) -> dict[str, Any]:
-        ...
+    def evaluate(self, results: dict[str, Any]) -> dict[str, Any]: ...
 
     def get_manifest(self) -> dict[str, Any]:
         return {

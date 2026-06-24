@@ -1,4 +1,5 @@
 """Plugin Loader — discovers, loads, and manages agent plugins."""
+
 import importlib
 import importlib.util
 import json
@@ -113,14 +114,17 @@ def get_plugin(name: str) -> dict[str, Any] | None:
 
 def list_plugins() -> list[dict[str, Any]]:
     _discover_plugins()
-    return [{
-        "name": info["name"],
-        "version": info.get("version", "1.0.0"),
-        "description": info.get("description", ""),
-        "hooks": info.get("hooks", []),
-        "loaded": info.get("_loaded", False),
-        "enabled": info.get("enabled", True),
-    } for info in _registry.values()]
+    return [
+        {
+            "name": info["name"],
+            "version": info.get("version", "1.0.0"),
+            "description": info.get("description", ""),
+            "hooks": info.get("hooks", []),
+            "loaded": info.get("_loaded", False),
+            "enabled": info.get("enabled", True),
+        }
+        for info in _registry.values()
+    ]
 
 
 def enable_plugin(name: str) -> bool:

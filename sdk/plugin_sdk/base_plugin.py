@@ -1,4 +1,5 @@
 """Base Plugin SDK — interface for creating custom plugins."""
+
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
@@ -61,20 +62,16 @@ class BasePlugin(ABC):
         self._logger = logging.getLogger(f"plugin.{self.manifest.name}")
 
     @abstractmethod
-    def install(self) -> bool:
-        ...
+    def install(self) -> bool: ...
 
     @abstractmethod
-    def uninstall(self) -> bool:
-        ...
+    def uninstall(self) -> bool: ...
 
     @abstractmethod
-    def configure(self, config: dict[str, Any]) -> bool:
-        ...
+    def configure(self, config: dict[str, Any]) -> bool: ...
 
     @abstractmethod
-    def validate(self) -> bool:
-        ...
+    def validate(self) -> bool: ...
 
     def enable(self) -> bool:
         self._enabled = True

@@ -1,4 +1,5 @@
 """Benchmark Suite — autonomous software generation evaluation framework."""
+
 import json
 import logging
 import os
@@ -142,8 +143,12 @@ class BenchmarkService:
                     domain_info = {
                         "domain": domain_name,
                         "requirements": req_file.read_text(encoding="utf-8") if req_file.exists() else "",
-                        "expected_features": json.loads(features_file.read_text(encoding="utf-8")) if features_file.exists() else {},
-                        "success_criteria": json.loads(success_criteria_file.read_text(encoding="utf-8")) if success_criteria_file.exists() else {},
+                        "expected_features": json.loads(features_file.read_text(encoding="utf-8"))
+                        if features_file.exists()
+                        else {},
+                        "success_criteria": json.loads(success_criteria_file.read_text(encoding="utf-8"))
+                        if success_criteria_file.exists()
+                        else {},
                         "has_validation_tests": validation_file.exists(),
                         "has_browser_tests": browser_file.exists(),
                         "has_deployment_tests": deployment_file.exists(),
@@ -180,7 +185,9 @@ class BenchmarkService:
         metrics = BenchmarkMetrics(**metrics_dict)
         d.pop("metrics", None)
         status_str = d.pop("status", "pending")
-        result = BenchmarkResult(metrics=metrics, **{k: v for k, v in d.items() if k in BenchmarkResult.__dataclass_fields__})
+        result = BenchmarkResult(
+            metrics=metrics, **{k: v for k, v in d.items() if k in BenchmarkResult.__dataclass_fields__}
+        )
         for enum_key, enum_val in BenchmarkStatus.__members__.items():
             if enum_val.value == status_str:
                 result.status = enum_val
@@ -190,13 +197,15 @@ class BenchmarkService:
     def list_domains(self) -> list[dict[str, Any]]:
         domains = []
         for domain_name, info in self._domains.items():
-            domains.append({
-                "domain": domain_name,
-                "features_count": len(info.get("expected_features", {}).get("features", {})),
-                "has_validation_tests": info["has_validation_tests"],
-                "has_browser_tests": info["has_browser_tests"],
-                "has_deployment_tests": info["has_deployment_tests"],
-            })
+            domains.append(
+                {
+                    "domain": domain_name,
+                    "features_count": len(info.get("expected_features", {}).get("features", {})),
+                    "has_validation_tests": info["has_validation_tests"],
+                    "has_browser_tests": info["has_browser_tests"],
+                    "has_deployment_tests": info["has_deployment_tests"],
+                }
+            )
         return domains
 
     def get_domain_info(self, domain: str) -> dict[str, Any] | None:
@@ -264,7 +273,9 @@ class BenchmarkService:
             result.logs.append(f"[{datetime.now(UTC).isoformat()}] Completed. Autonomy Score: {result.autonomy_score}")
 
             self._save_history()
-            logger.info("Benchmark %s/%s completed: autonomy_score=%.1f", result.domain, result.run_id, result.autonomy_score)
+            logger.info(
+                "Benchmark %s/%s completed: autonomy_score=%.1f", result.domain, result.run_id, result.autonomy_score
+            )
 
         except Exception as exc:
             result.status = BenchmarkStatus.FAILED
@@ -295,11 +306,16 @@ class BenchmarkService:
         has_app = any((latest / f).exists() for f in ("main.py", "app.py", "index.js"))
 
         arch_score = 0.0
-        if has_app: arch_score += 30.0
-        if has_tests > 0: arch_score += 20.0
-        if has_readme: arch_score += 15.0
-        if has_requirements: arch_score += 15.0
-        if has_app and has_tests and has_readme: arch_score += 20.0
+        if has_app:
+            arch_score += 30.0
+        if has_tests > 0:
+            arch_score += 20.0
+        if has_readme:
+            arch_score += 15.0
+        if has_requirements:
+            arch_score += 15.0
+        if has_app and has_tests and has_readme:
+            arch_score += 20.0
         architecture_quality = min(100.0, arch_score)
 
         code_score = 0.0
@@ -315,7 +331,9 @@ class BenchmarkService:
                 pass
         code_score = min(100.0, code_score / max(len(py_files), 1))
 
-        result.logs.append(f"Code quality: {total_files} files, completion={completion_rate:.0f}%, arch={architecture_quality:.0f}%, code={code_score:.0f}%")
+        result.logs.append(
+            f"Code quality: {total_files} files, completion={completion_rate:.0f}%, arch={architecture_quality:.0f}%, code={code_score:.0f}%"
+        )
         return completion_rate, architecture_quality, code_score
 
     def _run_validation_tests(self, result: BenchmarkResult, domain_info: dict) -> tuple[float, list[tuple[str, bool]]]:
@@ -366,7 +384,8 @@ class BenchmarkService:
         try:
             content = browser_file.read_text(encoding="utf-8")
             import re
-            journeys = re.findall(r'\{[^}]+\}', content)
+
+            journeys = re.findall(r"\{[^}]+\}", content)
             journey_count = len(journeys)
             return min(100.0, journey_count * 25.0 + 25.0)
         except Exception:
@@ -382,13 +401,17 @@ class BenchmarkService:
             job_projects = list(project_dir.iterdir())
             if job_projects:
                 latest = max(job_projects, key=lambda p: p.stat().st_mtime)
-                if (latest / "Dockerfile").exists(): score += 20.0
-                if (latest / "requirements.txt").exists(): score += 15.0
-                if (latest / ".env.example").exists(): score += 15.0
+                if (latest / "Dockerfile").exists():
+                    score += 20.0
+                if (latest / "requirements.txt").exists():
+                    score += 15.0
+                if (latest / ".env.example").exists():
+                    score += 15.0
         return min(100.0, score)
 
     def _evaluate_self_healing(self, result: BenchmarkResult, domain_info: dict) -> float:
         from services.self_healing_service import get_healing_engine
+
         engine = get_healing_engine()
         sessions = engine.list_sessions() if hasattr(engine, "list_sessions") else []
         if not sessions:
@@ -399,6 +422,7 @@ class BenchmarkService:
 
     def _estimate_token_usage(self, result: BenchmarkResult) -> int:
         from services.llm_service import get_token_count
+
         return get_token_count()
 
     def _estimate_cost(self, result: BenchmarkResult) -> float:
@@ -443,8 +467,20 @@ class BenchmarkService:
             raise ValueError(f"Run not found: {missing}")
 
         comparison = {
-            "run_1": {"id": r1.id, "run_id": r1.run_id, "domain": r1.domain, "autonomy_score": r1.autonomy_score, "metrics": r1.metrics.to_dict()},
-            "run_2": {"id": r2.id, "run_id": r2.run_id, "domain": r2.domain, "autonomy_score": r2.autonomy_score, "metrics": r2.metrics.to_dict()},
+            "run_1": {
+                "id": r1.id,
+                "run_id": r1.run_id,
+                "domain": r1.domain,
+                "autonomy_score": r1.autonomy_score,
+                "metrics": r1.metrics.to_dict(),
+            },
+            "run_2": {
+                "id": r2.id,
+                "run_id": r2.run_id,
+                "domain": r2.domain,
+                "autonomy_score": r2.autonomy_score,
+                "metrics": r2.metrics.to_dict(),
+            },
             "differences": {},
         }
 
@@ -484,15 +520,17 @@ class BenchmarkService:
             for key, val in result.metrics.to_dict().items():
                 lines.append(f"| {key.replace('_', ' ').title()} | {val} |")
 
-            lines.extend([
-                "",
-                "## Features",
-                "",
-                f"- **Passed:** {len(result.features_passed)}/{result.feature_total}",
-                f"- **Failed:** {len(result.features_failed)}/{result.feature_total}",
-                "",
-                "## Logs",
-            ])
+            lines.extend(
+                [
+                    "",
+                    "## Features",
+                    "",
+                    f"- **Passed:** {len(result.features_passed)}/{result.feature_total}",
+                    f"- **Failed:** {len(result.features_failed)}/{result.feature_total}",
+                    "",
+                    "## Logs",
+                ]
+            )
             for log in result.logs[-20:]:
                 lines.append(f"- {log}")
 

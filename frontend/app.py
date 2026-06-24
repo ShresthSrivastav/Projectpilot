@@ -7,6 +7,7 @@ New in v4:
   - Cancel button for running jobs
   - Regenerate file panel on completed jobs
 """
+
 import os
 import time
 
@@ -25,7 +26,8 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.markdown("""
+st.markdown(
+    """
 <style>
 .agent-pill {
     display:inline-block; padding:2px 10px; border-radius:12px;
@@ -45,13 +47,18 @@ st.markdown("""
 .status-badge-queued    { color:#fcd34d; font-weight:700; }
 .status-badge-cancelled { color:#9ca3af; font-weight:700; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
-#  Session defaults 
+#  Session defaults
 for k, v in {
-    "job_id": None, "polling": False,
-    "selected_model": "local", "last_job_name": "",
-    "clarify_question": None, "clarify_answered": False,
+    "job_id": None,
+    "polling": False,
+    "selected_model": "local",
+    "last_job_name": "",
+    "clarify_question": None,
+    "clarify_answered": False,
     "clarify_answer": "",
     "wizard_data": {},
     "chat_messages": [],
@@ -90,12 +97,15 @@ if not st.session_state.access_token:
 # ── Auth wall ──────────────────────────────────────────────────────────
 
 if not st.session_state.access_token:
-    st.markdown("""
+    st.markdown(
+        """
     <div style='text-align:center; padding:2rem 0 1rem 0;'>
         <h1 style='font-size:2.5rem; margin:0;'>🚀 ProjectPilot</h1>
         <p style='color:#9ca3af; font-size:1.1rem;'>Multi-Agent AI Project Generator</p>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     col1, col2 = st.columns([1, 1])
 
@@ -103,7 +113,8 @@ if not st.session_state.access_token:
         st.markdown("### Sign In")
         login_email = st.text_input("Email", key="login_email")
         login_password = st.text_input(
-            "Password", type="password" if not st.session_state.show_password else "default",
+            "Password",
+            type="password" if not st.session_state.show_password else "default",
             key="login_password",
         )
         if st.button("Sign In", type="primary", use_container_width=True, disabled=st.session_state.auth_loading):
@@ -210,7 +221,7 @@ def _sync_project_defaults(project_type: str) -> dict[str, str]:
     return current
 
 
-#  API helpers 
+#  API helpers
 def _headers() -> dict:
     token = st.session_state.get("access_token")
     if token:
@@ -258,6 +269,7 @@ def _download(job_id: str) -> bytes | None:
 def _delete_chat_conv(conversation_id):
     try:
         import requests as _req
+
         r = _req.delete(f"{BACKEND}/chat/conversations/{conversation_id}", headers=_headers(), timeout=8)
         r.raise_for_status()
         return r.json()
@@ -265,13 +277,10 @@ def _delete_chat_conv(conversation_id):
         return None
 
 
-
-
-
-#  Sidebar 
+#  Sidebar
 MODELS = {
-    "local":    (" Gemma 4 12B", "gemma4:12b",     "Gemma 4 12B (local)",                        "local"),
-    "cloud":    (" Gemma 4 31B", "gemma-4-31b-it", "Google Gemma 4 31B via Google AI (cloud)", "cloud"),
+    "local": (" Gemma 4 12B", "gemma4:12b", "Gemma 4 12B (local)", "local"),
+    "cloud": (" Gemma 4 31B", "gemma-4-31b-it", "Google Gemma 4 31B via Google AI (cloud)", "cloud"),
 }
 
 with st.sidebar:
@@ -289,6 +298,7 @@ with st.sidebar:
         if "workspace_list" not in st.session_state or last_token != st.session_state.access_token:
             try:
                 import frontend.auth as auth
+
                 st.session_state.workspace_list = auth.list_workspaces(st.session_state.access_token)
             except Exception:
                 st.session_state.workspace_list = []
@@ -297,13 +307,21 @@ with st.sidebar:
         current_ws_id = ws.get("id", "")
         if ws_list:
             ws_options = {w["name"]: w["id"] for w in ws_list}
-            current_label = next((k for k, v in ws_options.items() if v == current_ws_id), list(ws_options.keys())[0] if ws_options else "")
-            selected = st.selectbox("Workspace", list(ws_options.keys()),
-                                    index=list(ws_options.keys()).index(current_label) if current_label in ws_options else 0,
-                                    key="sidebar_ws_switcher", label_visibility="collapsed")
+            current_label = next(
+                (k for k, v in ws_options.items() if v == current_ws_id),
+                list(ws_options.keys())[0] if ws_options else "",
+            )
+            selected = st.selectbox(
+                "Workspace",
+                list(ws_options.keys()),
+                index=list(ws_options.keys()).index(current_label) if current_label in ws_options else 0,
+                key="sidebar_ws_switcher",
+                label_visibility="collapsed",
+            )
             if selected and ws_options[selected] != current_ws_id:
                 try:
                     import frontend.auth as auth
+
                     result = auth.switch_workspace(st.session_state.access_token, ws_options[selected])
                     st.session_state.access_token = result["access_token"]
                     st.session_state.workspace_info = result["workspace"]
@@ -339,12 +357,12 @@ with st.sidebar:
     st.caption("--- or ---")
     health = _get("/health")
 
-    #  Model selector 
+    #  Model selector
     st.markdown("**Model**")
 
     providers = (health or {}).get("providers", [])
     prov_avail = {p["name"]: p["available"] for p in providers}
-    prov_model  = {p["name"]: p.get("model", "") for p in providers}
+    prov_model = {p["name"]: p.get("model", "") for p in providers}
 
     sections = [
         ("Local", ["local"]),
@@ -376,9 +394,11 @@ with st.sidebar:
         st.caption("The AI architect selects the optimal stack based on your project description.")
         wd = st.session_state.get("wizard_data", {})
         if wd:
-            st.json({
-                "Category": wd.get("project_type", "—"),
-            })
+            st.json(
+                {
+                    "Category": wd.get("project_type", "—"),
+                }
+            )
         else:
             st.caption("No wizard data yet — start a generation to configure.")
 
@@ -395,14 +415,11 @@ with st.sidebar:
         st.warning(" Backend unreachable")
 
     st.divider()
-    st.caption(
-        "Student mgmt · Inventory · Blog · Task manager · "
-        "Employee mgmt · CRUD dashboards · REST APIs"
-    )
+    st.caption("Student mgmt · Inventory · Blog · Task manager · Employee mgmt · CRUD dashboards · REST APIs")
     st.divider()
     st.caption("Ollama · ChromaDB · FastAPI · Streamlit · Docker")
 
-    #  AI Chatbot 
+    #  AI Chatbot
     st.divider()
     st.markdown("###  AI Chatbot")
     st.caption("Ask about projects or run actions.")
@@ -443,15 +460,19 @@ with st.sidebar:
     with col2:
         if st.button("+ New", use_container_width=True):
             import uuid as _uuid
+
             new_cid = str(_uuid.uuid4())
             resp = _post("/chat/new", {"conversation_id": new_cid, "title": "New Chat"})
             if resp and resp.get("ok"):
                 st.session_state.chat_conversation_id = new_cid
                 st.session_state.chat_messages = []
-                st.session_state.chat_conversations.insert(0, {
-                    "id": new_cid,
-                    "title": "New Chat",
-                })
+                st.session_state.chat_conversations.insert(
+                    0,
+                    {
+                        "id": new_cid,
+                        "title": "New Chat",
+                    },
+                )
                 st.rerun()
 
         if st.session_state.chat_conversation_id:
@@ -462,8 +483,7 @@ with st.sidebar:
                     st.session_state.chat_messages = []
                     st.session_state.chat_conversation_id = None
                     st.session_state.chat_conversations = [
-                        c for c in st.session_state.chat_conversations
-                        if c["id"] != del_id
+                        c for c in st.session_state.chat_conversations if c["id"] != del_id
                     ]
                     st.rerun()
 
@@ -482,6 +502,7 @@ with st.sidebar:
                 cid = st.session_state.chat_conversation_id
                 if not cid:
                     import uuid as _uuid2
+
                     cid = str(_uuid2.uuid4())
                     _post("/chat/new", {"conversation_id": cid, "title": s[:40]})
                     st.session_state.chat_conversation_id = cid
@@ -492,7 +513,9 @@ with st.sidebar:
                     st.session_state.chat_messages.append({"role": "assistant", "content": resp.get("reply", "")})
                     st.session_state.chat_pending_confirm = resp.get("pending_confirm")
                 else:
-                    st.session_state.chat_messages.append({"role": "assistant", "content": "Sorry, something went wrong."})
+                    st.session_state.chat_messages.append(
+                        {"role": "assistant", "content": "Sorry, something went wrong."}
+                    )
                 st.session_state.chat_loading = False
                 st.rerun()
 
@@ -507,24 +530,31 @@ with st.sidebar:
             c1, c2 = st.columns([1, 1])
             with c1:
                 if st.button(" Yes, proceed", key="confirm_yes", use_container_width=True):
-                    resp = _post("/chat/confirm-action", {
-                        "conversation_id": st.session_state.chat_conversation_id,
-                        "tool_name": pc["tool_name"],
-                        "args": pc["args"],
-                    })
+                    resp = _post(
+                        "/chat/confirm-action",
+                        {
+                            "conversation_id": st.session_state.chat_conversation_id,
+                            "tool_name": pc["tool_name"],
+                            "args": pc["args"],
+                        },
+                    )
                     if resp:
-                        st.session_state.chat_messages.append({
-                            "role": "assistant",
-                            "content": resp.get("reply", "Done."),
-                        })
+                        st.session_state.chat_messages.append(
+                            {
+                                "role": "assistant",
+                                "content": resp.get("reply", "Done."),
+                            }
+                        )
                     st.session_state.chat_pending_confirm = None
                     st.rerun()
             with c2:
                 if st.button(" No, cancel", key="confirm_no", use_container_width=True):
-                    st.session_state.chat_messages.append({
-                        "role": "assistant",
-                        "content": "Action cancelled.",
-                    })
+                    st.session_state.chat_messages.append(
+                        {
+                            "role": "assistant",
+                            "content": "Action cancelled.",
+                        }
+                    )
                     st.session_state.chat_pending_confirm = None
                     st.rerun()
 
@@ -543,42 +573,59 @@ with st.sidebar:
             if resp and resp.get("conversation_id"):
                 cid = resp["conversation_id"]
                 st.session_state.chat_conversation_id = cid
-                st.session_state.chat_conversations.insert(0, {
-                    "id": cid,
-                    "title": user_msg[:40],
-                })
+                st.session_state.chat_conversations.insert(
+                    0,
+                    {
+                        "id": cid,
+                        "title": user_msg[:40],
+                    },
+                )
         else:
             st.session_state.chat_loading = True
             resp = _post("/chat", {"message": user_msg, "conversation_id": cid})
 
         st.session_state.chat_messages.append({"role": "user", "content": user_msg})
         if resp:
-            st.session_state.chat_messages.append({
-                "role": "assistant",
-                "content": resp.get("reply", ""),
-            })
+            st.session_state.chat_messages.append(
+                {
+                    "role": "assistant",
+                    "content": resp.get("reply", ""),
+                }
+            )
             if resp.get("pending_confirm"):
                 st.session_state.chat_pending_confirm = resp["pending_confirm"]
             else:
                 st.session_state.chat_pending_confirm = None
         else:
-            st.session_state.chat_messages.append({
-                "role": "assistant",
-                "content": "Sorry, something went wrong.",
-            })
+            st.session_state.chat_messages.append(
+                {
+                    "role": "assistant",
+                    "content": "Sorry, something went wrong.",
+                }
+            )
         st.session_state.chat_loading = False
         st.rerun()
 
 
-#  Main tabs 
-tab_gen, tab_hist, tab_analytics, tab_workspace, tab_benchmarks, tab_org, tab_eco, tab_eval, tab_info = st.tabs([
-    " Generate", " History", " Analytics", " Workspace", " Benchmarks", " Organization", " Ecosystem", " Evaluation", "ℹ How It Works",
-])
+#  Main tabs
+tab_gen, tab_hist, tab_analytics, tab_workspace, tab_benchmarks, tab_org, tab_eco, tab_eval, tab_info = st.tabs(
+    [
+        " Generate",
+        " History",
+        " Analytics",
+        " Workspace",
+        " Benchmarks",
+        " Organization",
+        " Ecosystem",
+        " Evaluation",
+        "ℹ How It Works",
+    ]
+)
 
 
-# 
+#
 # TAB 1 — Generate
-# 
+#
 with tab_gen:
     st.markdown("## Generate a Project")
     project_types = list(PROJECT_TYPE_DEFAULTS.keys())
@@ -620,7 +667,9 @@ with tab_gen:
         )
 
         with st.expander("Tech Constraints (optional)", expanded=False):
-            st.caption("If you need specific technologies, mention them here. Otherwise the AI architect chooses for you.")
+            st.caption(
+                "If you need specific technologies, mention them here. Otherwise the AI architect chooses for you."
+            )
             tech_constraints = st.text_area(
                 "e.g. use React for frontend, use PostgreSQL, use Docker",
                 key="wiz_constraints",
@@ -646,10 +695,12 @@ with tab_gen:
     with brief_right:
         st.markdown("#### Project Summary")
         st.markdown(
-            "\n".join([
-                f"- **Type**: {project_type}",
-                f"- **Name**: {proj_name.strip() or 'My Project'}",
-            ])
+            "\n".join(
+                [
+                    f"- **Type**: {project_type}",
+                    f"- **Name**: {proj_name.strip() or 'My Project'}",
+                ]
+            )
         )
         if tech_constraints.strip():
             st.markdown(f"- **Constraints**: {tech_constraints.strip()}")
@@ -692,35 +743,35 @@ with tab_gen:
                 st.rerun()
 
     if gen_btn:
-            clean_prompt = prompt.strip()
-            constraints = st.session_state.get("wiz_constraints", "").strip()
-            if constraints:
-                clean_prompt += f"\n\nTech constraints: {constraints}"
-            if len(clean_prompt) < 10:
-                st.error("Enter a project description with at least 10 characters.")
-            else:
-                payload = {
-                    "prompt": clean_prompt,
-                    "project_name": proj_name.strip() or "My Project",
-                    "model": st.session_state.selected_model,
-                }
-            if st.session_state.clarify_answer.strip():
-                payload["clarification"] = st.session_state.clarify_answer.strip()
+        clean_prompt = prompt.strip()
+        constraints = st.session_state.get("wiz_constraints", "").strip()
+        if constraints:
+            clean_prompt += f"\n\nTech constraints: {constraints}"
+        if len(clean_prompt) < 10:
+            st.error("Enter a project description with at least 10 characters.")
+        else:
+            payload = {
+                "prompt": clean_prompt,
+                "project_name": proj_name.strip() or "My Project",
+                "model": st.session_state.selected_model,
+            }
+        if st.session_state.clarify_answer.strip():
+            payload["clarification"] = st.session_state.clarify_answer.strip()
 
-            with st.spinner("Submitting project generation..."):
-                resp = _post("/generate-project", payload)
-            if resp:
-                st.session_state.job_id = resp["job_id"]
-                st.session_state.polling = True
-                st.session_state.last_job_name = proj_name.strip() or "My Project"
-                st.session_state.clarify_question = None
-                st.session_state.clarify_answered = False
-                st.session_state.clarify_answer = ""
-                st.success(f"Job started — `{resp['job_id'][:16]}...`")
-                time.sleep(0.5)
-                st.rerun()
+        with st.spinner("Submitting project generation..."):
+            resp = _post("/generate-project", payload)
+        if resp:
+            st.session_state.job_id = resp["job_id"]
+            st.session_state.polling = True
+            st.session_state.last_job_name = proj_name.strip() or "My Project"
+            st.session_state.clarify_question = None
+            st.session_state.clarify_answered = False
+            st.session_state.clarify_answer = ""
+            st.success(f"Job started — `{resp['job_id'][:16]}...`")
+            time.sleep(0.5)
+            st.rerun()
 
-    #  Progress panel 
+    #  Progress panel
     if st.session_state.job_id:
         st.divider()
         data = _get(f"/status/{st.session_state.job_id}")
@@ -728,10 +779,10 @@ with tab_gen:
         if not data:
             st.warning(" Could not fetch job status.")
         else:
-            status  = data.get("status", "unknown")
-            pct     = int(data.get("progress_pct", 0))
-            agent   = data.get("current_agent", "")
-            err     = data.get("error_message", "")
+            status = data.get("status", "unknown")
+            pct = int(data.get("progress_pct", 0))
+            agent = data.get("current_agent", "")
+            err = data.get("error_message", "")
             logs: list[dict] = data.get("logs", [])
 
             badge_html = f"<span class='status-badge-{status}'>{status.upper()}</span>"
@@ -749,13 +800,13 @@ with tab_gen:
 
             AGENTS = [
                 ("RequirementAgent", " Requirements"),
-                ("PlannerAgent",     " Planner"),
-                ("CodeAgent",        " Code"),
-                ("TestGenAgent",     " Test Gen"),
-                ("DebugAgent",       " Debug"),
-                ("DocsAgent",        " Docs"),
-                ("ValidationAgent",  " Validate"),
-                ("ZipService",       " Package"),
+                ("PlannerAgent", " Planner"),
+                ("CodeAgent", " Code"),
+                ("TestGenAgent", " Test Gen"),
+                ("DebugAgent", " Debug"),
+                ("DocsAgent", " Docs"),
+                ("ValidationAgent", " Validate"),
+                ("ZipService", " Package"),
             ]
             THRESHOLDS = [10, 25, 55, 65, 83, 90, 96, 100]
 
@@ -780,11 +831,11 @@ with tab_gen:
             if status in ("failed", "cancelled"):
                 st.error(f" {err or status.capitalize()}")
                 if st.button(" Start Over", key="restart"):
-                    st.session_state.job_id  = None
+                    st.session_state.job_id = None
                     st.session_state.polling = False
                     st.rerun()
 
-            #  Live file tree (two-column layout) 
+            #  Live file tree (two-column layout)
             col_logs, col_files = st.columns([2, 1])
 
             with col_logs:
@@ -795,11 +846,11 @@ with tab_gen:
                     ):
                         log_lines = ""
                         for entry in logs[-80:]:
-                            ts    = entry.get("timestamp", "")[:19].replace("T", " ")
+                            ts = entry.get("timestamp", "")[:19].replace("T", " ")
                             level = entry.get("log_level", "INFO")
-                            name  = entry.get("agent_name", "")
-                            msg   = entry.get("message", "")
-                            icon  = {"INFO": "›", "WARNING": "", "ERROR": "", "DEBUG": "·"}.get(level, "›")
+                            name = entry.get("agent_name", "")
+                            msg = entry.get("message", "")
+                            icon = {"INFO": "›", "WARNING": "", "ERROR": "", "DEBUG": "·"}.get(level, "›")
                             log_lines += (
                                 f"<div class='log-line log-{level}'>"
                                 f"<span style='color:#4b5563'>{ts}</span> "
@@ -815,12 +866,22 @@ with tab_gen:
                         expanded=True,
                     ):
                         for f in file_data["files"]:
-                            icon = "" if f.endswith(".py") else "" if f.endswith(".md") else "" if f.endswith(".txt") else "" if "Docker" in f else ""
+                            icon = (
+                                ""
+                                if f.endswith(".py")
+                                else ""
+                                if f.endswith(".md")
+                                else ""
+                                if f.endswith(".txt")
+                                else ""
+                                if "Docker" in f
+                                else ""
+                            )
                             st.caption(f"{icon} `{f}`")
 
-            #  Download + Regenerate 
-            #  Live test results (visible during and after run) 
-            test_total  = data.get("test_total", 0)
+            #  Download + Regenerate
+            #  Live test results (visible during and after run)
+            test_total = data.get("test_total", 0)
             test_passed = data.get("test_passed", 0)
             test_failed = data.get("test_failed", 0)
             test_summary = data.get("test_summary", "")
@@ -846,7 +907,7 @@ with tab_gen:
                     else:
                         st.info(f"ℹ {test_summary}")
 
-                #  Test source code + fix button 
+                #  Test source code + fix button
                 if status == "complete" and st.session_state.job_id:
                     _jid = st.session_state.job_id
                     try:
@@ -862,13 +923,14 @@ with tab_gen:
                         pass
 
                     if test_failed > 0:
-                        if st.button("\U0001f527 Fix Failing Tests", key=f"fix_tests_gen_{_jid}",
-                                     type="primary"):
+                        if st.button("\U0001f527 Fix Failing Tests", key=f"fix_tests_gen_{_jid}", type="primary"):
                             with st.spinner("Fixing failing tests..."):
                                 try:
-                                    _fr = requests.post(f"{BACKEND}/fix-tests/{_jid}",
-                                                        json={"model": st.session_state.selected_model},
-                                                        timeout=300)
+                                    _fr = requests.post(
+                                        f"{BACKEND}/fix-tests/{_jid}",
+                                        json={"model": st.session_state.selected_model},
+                                        timeout=300,
+                                    )
                                     if _fr.ok:
                                         _fd = _fr.json()
                                         if _fd.get("already_passing"):
@@ -917,20 +979,19 @@ with tab_gen:
                             type="primary",
                         )
 
-                #  Validation summary 
+                #  Validation summary
                 val_result = _get(f"/validate/{st.session_state.job_id}")
                 if val_result:
                     st.divider()
                     st.markdown("####  Validation Report")
                     v1, v2, v3 = st.columns(3)
-                    syn_ok     = val_result.get("syntax_ok", False)
+                    syn_ok = val_result.get("syntax_ok", False)
                     pytest_res = val_result.get("pytest") or {}
-                    py_passed  = pytest_res.get("passed", False)
+                    py_passed = pytest_res.get("passed", False)
                     py_skipped = pytest_res.get("skipped", False)
-                    syn_count  = len(val_result.get("syntax_results", {}))
+                    syn_count = len(val_result.get("syntax_results", {}))
                     with v1:
-                        st.metric("Syntax", f"{' OK' if syn_ok else ' Errors'}",
-                                  f"{syn_count} files checked")
+                        st.metric("Syntax", f"{' OK' if syn_ok else ' Errors'}", f"{syn_count} files checked")
                     with v2:
                         if py_skipped:
                             st.metric("Tests", " Skipped", "No test dir")
@@ -950,7 +1011,7 @@ with tab_gen:
                         with st.expander("pytest output"):
                             st.code(pytest_res["output"][:2000], language="text")
 
-                #  Changelog viewer 
+                #  Changelog viewer
                 _jid = st.session_state.job_id
                 try:
                     _cr = requests.get(f"{BACKEND}/changelog/{_jid}", timeout=10)
@@ -960,10 +1021,11 @@ with tab_gen:
                 except Exception:
                     pass
 
-                #  AI Review 
+                #  AI Review
                 _rs_raw = data.get("review_summary", "")
                 if _rs_raw:
                     import json as _json2
+
                     try:
                         _rs = _json2.loads(_rs_raw) if isinstance(_rs_raw, str) else _rs_raw
                     except Exception:
@@ -971,7 +1033,9 @@ with tab_gen:
                     if _rs and isinstance(_rs, dict):
                         _v = _rs.get("verdict", "")
                         _err = _rs.get("error", "")
-                        _icon = {"PASS": "\U0001f7e2", "WARN": "\U0001f7e1", "FAIL": "\U0001f534"}.get(_v, "\u26a0\ufe0f")
+                        _icon = {"PASS": "\U0001f7e2", "WARN": "\U0001f7e1", "FAIL": "\U0001f534"}.get(
+                            _v, "\u26a0\ufe0f"
+                        )
                         with st.expander(f"{_icon} AI Review — {_v}" + (" (error)" if _err else ""), expanded=True):
                             if _err:
                                 st.warning(f"Review encountered an issue: {_err}")
@@ -979,15 +1043,15 @@ with tab_gen:
                             if _issues:
                                 for _iss in _issues:
                                     _sev_ic = "\U0001f534" if _iss.get("severity") == "error" else "\U0001f7e1"
-                                    _loc = f"`{_iss.get('file','')}:{_iss.get('line',0)}`" if _iss.get("file") else ""
-                                    st.markdown(f"{_sev_ic} **{_iss.get('description','')}** {_loc}")
+                                    _loc = f"`{_iss.get('file', '')}:{_iss.get('line', 0)}`" if _iss.get("file") else ""
+                                    st.markdown(f"{_sev_ic} **{_iss.get('description', '')}** {_loc}")
                             _recs = _rs.get("recommendations", [])
                             if _recs:
                                 st.markdown("**Recommendations:**")
                                 for _r in _recs:
                                     st.markdown(f"- {_r}")
 
-                #  Regenerate file panel 
+                #  Regenerate file panel
                 st.markdown("####  Regenerate a File")
                 st.caption("Fix or improve a specific file without regenerating the whole project.")
                 regen_file = st.text_input(
@@ -1003,19 +1067,24 @@ with tab_gen:
                 )
                 if st.button(" Regenerate File", key="regen_btn", disabled=not regen_file.strip()):
                     with st.spinner(f"Regenerating {regen_file}…"):
-                        result = _post("/regenerate-file", {
-                            "job_id":          st.session_state.job_id,
-                            "file_path":       regen_file.strip(),
-                            "correction_note": regen_note.strip() or None,
-                            "model":           st.session_state.selected_model,
-                        })
+                        result = _post(
+                            "/regenerate-file",
+                            {
+                                "job_id": st.session_state.job_id,
+                                "file_path": regen_file.strip(),
+                                "correction_note": regen_note.strip() or None,
+                                "model": st.session_state.selected_model,
+                            },
+                        )
                     if result:
                         if result.get("syntax_ok"):
                             st.success(f" `{regen_file}` regenerated ({result.get('chars', 0)} chars, syntax OK)")
                         else:
-                            st.warning(f" `{regen_file}` regenerated but has syntax error: {result.get('syntax_error')}")
+                            st.warning(
+                                f" `{regen_file}` regenerated but has syntax error: {result.get('syntax_error')}"
+                            )
 
-                #  Iterate project panel 
+                #  Iterate project panel
                 st.markdown("####  Iterate on Project")
                 st.caption("Add new features, modify existing code, or change behavior with a natural language prompt.")
                 iter_prompt = st.text_area(
@@ -1026,10 +1095,13 @@ with tab_gen:
                 )
                 if st.button(" Apply Changes", key="iter_btn", disabled=not iter_prompt.strip()):
                     with st.spinner("AI is modifying your project..."):
-                        result = _post(f"/iterate/{st.session_state.job_id}", {
-                            "prompt": iter_prompt.strip(),
-                            "model":  st.session_state.selected_model,
-                        })
+                        result = _post(
+                            f"/iterate/{st.session_state.job_id}",
+                            {
+                                "prompt": iter_prompt.strip(),
+                                "model": st.session_state.selected_model,
+                            },
+                        )
                     if result:
                         changes = result.get("changes", {})
                         added = changes.get("added", [])
@@ -1059,7 +1131,7 @@ with tab_gen:
                         st.rerun()
 
                 if st.button(" New Project", use_container_width=False):
-                    st.session_state.job_id  = None
+                    st.session_state.job_id = None
                     st.session_state.polling = False
                     st.rerun()
 
@@ -1070,9 +1142,9 @@ with tab_gen:
                 st.session_state.polling = False
 
 
-# 
+#
 # TAB 2 — History
-# 
+#
 with tab_hist:
     st.markdown("## Recent Jobs")
     if st.button(" Refresh", key="hist_refresh"):
@@ -1085,22 +1157,25 @@ with tab_hist:
         st.info("No jobs found yet. Generate your first project!")
     else:
         STATUS_ICON = {
-            "complete": "", "running": "", "failed": "",
-            "queued": "", "cancelled": "",
+            "complete": "",
+            "running": "",
+            "failed": "",
+            "queued": "",
+            "cancelled": "",
         }
         for job in jobs:
-            jid      = job.get("job_id", "")
-            jname    = job.get("project_name", "Unnamed")
-            jstat    = job.get("status", "unknown")
-            jpct     = int(job.get("progress_pct", 0))
+            jid = job.get("job_id", "")
+            jname = job.get("project_name", "Unnamed")
+            jstat = job.get("status", "unknown")
+            jpct = int(job.get("progress_pct", 0))
             jcreated = job.get("created_at", "")[:16].replace("T", " ")
-            icon     = STATUS_ICON.get(jstat, "•")
+            icon = STATUS_ICON.get(jstat, "•")
 
             with st.expander(f"{icon} **{jname}** — `{jid[:12]}…`  •  {jcreated}"):
                 c1, c2, c3 = st.columns(3)
-                c1.metric("Status",   jstat.upper())
+                c1.metric("Status", jstat.upper())
                 c2.metric("Progress", f"{jpct}%")
-                c3.metric("Files",    job.get("file_count", 0))
+                c3.metric("Files", job.get("file_count", 0))
 
                 if jstat == "complete":
                     zb = _download(jid)
@@ -1115,7 +1190,7 @@ with tab_hist:
                 elif jstat == "failed":
                     st.error(job.get("error_message", "Unknown error"))
                 if st.button("View Live Status", key=f"view_{jid}"):
-                    st.session_state.job_id  = jid
+                    st.session_state.job_id = jid
                     st.session_state.polling = jstat in ("queued", "running")
                     st.rerun()
 
@@ -1123,6 +1198,7 @@ with tab_hist:
                     st.warning("Delete this project permanently?")
                     if st.button("Yes, delete", key=f"del_yes_{jid}"):
                         import urllib.parse
+
                         try:
                             dr = requests.delete(f"{BACKEND}/jobs/{urllib.parse.quote(jid)}", timeout=10)
                             if dr.ok:
@@ -1134,57 +1210,63 @@ with tab_hist:
                             st.error(str(exc))
 
 
-# 
+#
 # TAB 3 — Analytics
-# 
+#
 with tab_analytics:
     from frontend.pages.analytics import show_analytics_tab
+
     show_analytics_tab()
 
 
-# 
+#
 # TAB 4 — Workspace
-# 
+#
 with tab_workspace:
     from frontend.pages.workspace import show_workspace_tab
+
     show_workspace_tab()
 
 
-# 
+#
 # TAB 5 — Benchmarks
-# 
+#
 with tab_benchmarks:
     from frontend.pages.benchmarks import show_benchmarks_tab
+
     show_benchmarks_tab()
 
 
-# 
+#
 # TAB 6 — Organization
-# 
+#
 with tab_org:
     from frontend.pages.organization import show_organization_tab
+
     show_organization_tab()
 
 
-# 
+#
 # TAB 7 — Ecosystem
-# 
+#
 with tab_eco:
     from frontend.pages.ecosystem import show_ecosystem_tab
+
     show_ecosystem_tab()
 
 
-# 
+#
 # TAB 8 — Evaluation
-# 
+#
 with tab_eval:
     from frontend.pages.evaluation import show_evaluation_tab
+
     show_evaluation_tab()
 
 
-# 
+#
 # TAB 9 — How It Works
-# 
+#
 with tab_info:
     st.markdown("## How ProjectPilot Works")
     st.markdown("""

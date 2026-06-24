@@ -6,6 +6,7 @@ Reads the blueprint routes + db_tables and asks the LLM to write
 tests/test_app.py. DebugAgent already calls run_pytest() — this
 agent feeds it the test files it needs.
 """
+
 import logging
 import time
 from typing import Any
@@ -44,10 +45,10 @@ def run(
     project_name = requirements.get("project_name", "App")
 
     prompt = f"""Generate a complete pytest test file (tests/test_app.py) for: {project_name}
-Features: {', '.join(features)}
+Features: {", ".join(features)}
 Routes:
 {chr(10).join(f"  {r.get('method')} {r.get('path')} — {r.get('description', '')}" for r in routes)}
-DB Tables: {', '.join(t.get('name', '') for t in tables)}
+DB Tables: {", ".join(t.get("name", "") for t in tables)}
 
 CRITICAL REQUIREMENT:
 - Do NOT import from the generated project (no 'from backend.main import app' or 'from backend import *')
@@ -64,8 +65,7 @@ CRITICAL REQUIREMENT:
     t0 = time.monotonic()
     try:
         content = clean_code_response(
-            call_model(prompt, system_prompt=_SYS, model=model or "local",
-                       job_id=job_id, agent="TestGenAgent")
+            call_model(prompt, system_prompt=_SYS, model=model or "local", job_id=job_id, agent="TestGenAgent")
         )
         elapsed = int((time.monotonic() - t0) * 1000)
         if len(content) < 100:
@@ -78,8 +78,7 @@ CRITICAL REQUIREMENT:
 
     except Exception as exc:
         elapsed = int((time.monotonic() - t0) * 1000)
-        log_to_db(job_id, "TestGenAgent",
-                  f"Test generation FAILED after {elapsed}ms: {exc}", "CRITICAL")
+        log_to_db(job_id, "TestGenAgent", f"Test generation FAILED after {elapsed}ms: {exc}", "CRITICAL")
 
     return new_files
 

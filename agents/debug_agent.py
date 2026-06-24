@@ -6,6 +6,7 @@ New in v4:
   - Blueprint reflection: verifies generated routes match blueprint
   - job_id / agent forwarded to call_model for structured logging
 """
+
 import logging
 import os
 import time
@@ -51,7 +52,8 @@ def _attempt_fix(file_path: Path, error: str, job_id: str, model: str) -> bool:
                     "Return the complete corrected file:",
                     system_prompt=_FIX_SYS,
                     model=current_model,
-                    job_id=job_id, agent="DebugAgent",
+                    job_id=job_id,
+                    agent="DebugAgent",
                 )
             )
         except RuntimeError as exc:
@@ -93,8 +95,8 @@ def _check_and_fix_file(rel: str, job_dir: Path, job_id: str, fix_model: str) ->
         if check["valid"]:
             return None  # fixed on re-check
         if attempt < MAX_RETRIES:
-            backoff = 2 ** attempt
-            log_to_db(job_id, "DebugAgent", f"Backoff {backoff}s before retry {attempt+1}…")
+            backoff = 2**attempt
+            log_to_db(job_id, "DebugAgent", f"Backoff {backoff}s before retry {attempt + 1}…")
             time.sleep(backoff)
 
     log_to_db(job_id, "DebugAgent", f"Could not fix {rel} after {MAX_RETRIES} attempts.", "ERROR")
@@ -124,15 +126,18 @@ def _reflect_blueprint(blueprint: dict, job_dir: Path, job_id: str) -> list[dict
         # Check if the path string appears anywhere in main.py
         if path not in source:
             log_to_db(
-                job_id, "DebugAgent",
-                f"Blueprint reflection: route '{route.get('method')} {path}' "
-                f"not found in backend/main.py", "WARNING"
+                job_id,
+                "DebugAgent",
+                f"Blueprint reflection: route '{route.get('method')} {path}' not found in backend/main.py",
+                "WARNING",
             )
-            issues.append({
-                "file": "backend/main.py",
-                "error": f"Blueprint route '{path}' missing from generated code",
-                "type": "reflection",
-            })
+            issues.append(
+                {
+                    "file": "backend/main.py",
+                    "error": f"Blueprint route '{path}' missing from generated code",
+                    "type": "reflection",
+                }
+            )
 
     if not issues:
         log_to_db(job_id, "DebugAgent", "Blueprint reflection passed — all routes present.")
@@ -153,12 +158,9 @@ def run(
 
     py_files = [f for f in generated_files if f.endswith(".py")]
 
-    #  Parallel syntax check + fix 
+    #  Parallel syntax check + fix
     with ThreadPoolExecutor(max_workers=PARALLEL_FIX_WORKERS) as pool:
-        futures = {
-            pool.submit(_check_and_fix_file, rel, job_dir, job_id, fix_model): rel
-            for rel in py_files
-        }
+        futures = {pool.submit(_check_and_fix_file, rel, job_dir, job_id, fix_model): rel for rel in py_files}
         for future in as_completed(futures):
             result = future.result()
             if result is None:
@@ -166,23 +168,25 @@ def run(
             else:
                 errors.append(result)
 
-    #  Blueprint reflection check 
+    #  Blueprint reflection check
     if blueprint:
         reflection_issues = _reflect_blueprint(blueprint, job_dir, job_id)
         errors.extend(reflection_issues)
 
-    #  Run pytest if tests exist 
+    #  Run pytest if tests exist
     test_dir = job_dir / "tests"
     if test_dir.exists() and any(test_dir.rglob("test_*.py")):
         log_to_db(job_id, "DebugAgent", "Running pytest on generated tests…")
         result = run_pytest(job_id)
         if not result["passed"]:
             for f in result["failures"]:
-                errors.append({
-                    "file":  f.get("file", "?"),
-                    "error": f.get("error", "Test failure"),
-                    "type":  "test",
-                })
+                errors.append(
+                    {
+                        "file": f.get("file", "?"),
+                        "error": f.get("error", "Test failure"),
+                        "type": "test",
+                    }
+                )
             log_to_db(job_id, "DebugAgent", f"pytest: {len(result['failures'])} failure(s).", "WARNING")
         else:
             log_to_db(job_id, "DebugAgent", "pytest: all tests passed.")
@@ -191,7 +195,8 @@ def run(
 
     status = "passed" if not errors else ("partial" if fixes > 0 else "failed")
     log_to_db(
-        job_id, "DebugAgent",
+        job_id,
+        "DebugAgent",
         f"Done — status={status}, errors={len(errors)}, fixes={fixes}.",
     )
     return {"status": status, "errors": errors, "fixes_applied": fixes}

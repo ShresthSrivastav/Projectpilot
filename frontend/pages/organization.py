@@ -1,4 +1,5 @@
 """Organization Dashboard — multi-repo graph, impact analysis, cross-repo changes."""
+
 import os
 from typing import Any
 
@@ -61,9 +62,15 @@ def show_organization_tab():
     if not org_id:
         return
 
-    tab_graph, tab_repos, tab_impact, tab_changes, tab_validate = st.tabs([
-        " Graph", " Repositories", " Impact", " Changes", " Validate",
-    ])
+    tab_graph, tab_repos, tab_impact, tab_changes, tab_validate = st.tabs(
+        [
+            " Graph",
+            " Repositories",
+            " Impact",
+            " Changes",
+            " Validate",
+        ]
+    )
 
     # ── Tab 1: Graph ──────────────────────────────────────────────────────
     with tab_graph:
@@ -81,7 +88,9 @@ def show_organization_tab():
                 if resp:
                     idx = resp.get("index_results", {})
                     for rname, stats in idx.items():
-                        st.info(f"{rname}: {stats.get('files_scanned', 0)} files, {stats.get('entities_found', 0)} entities")
+                        st.info(
+                            f"{rname}: {stats.get('files_scanned', 0)} files, {stats.get('entities_found', 0)} entities"
+                        )
                     st.rerun()
 
         graph_data = _get(f"/organization/graph?org_id={org_id}")
@@ -123,21 +132,38 @@ def show_organization_tab():
         with st.expander(" Add Repository", expanded=True):
             r_name = st.text_input("Repo name", placeholder="frontend-web", key="repo_name")
             r_path = st.text_input("Path", placeholder="/path/to/repo", key="repo_path")
-            r_cat = st.selectbox("Category", ["", "backend", "frontend", "mobile", "infrastructure", "shared-libraries", "data-services", "documentation", "other"], key="repo_cat")
+            r_cat = st.selectbox(
+                "Category",
+                [
+                    "",
+                    "backend",
+                    "frontend",
+                    "mobile",
+                    "infrastructure",
+                    "shared-libraries",
+                    "data-services",
+                    "documentation",
+                    "other",
+                ],
+                key="repo_cat",
+            )
             r_lang = st.text_input("Language (optional)", placeholder="python", key="repo_lang")
             r_url = st.text_input("URL (optional)", placeholder="https://github.com/org/repo", key="repo_url")
             r_desc = st.text_area("Description", placeholder="What this repo does", key="repo_desc")
 
             if st.button(" Add Repo", key="add_repo", disabled=not r_name.strip() or not r_path.strip()):
-                resp = _post("/organization/add-repo", {
-                    "org_id": org_id,
-                    "name": r_name.strip(),
-                    "path": r_path.strip(),
-                    "category": r_cat,
-                    "language": r_lang.strip(),
-                    "url": r_url.strip(),
-                    "description": r_desc.strip(),
-                })
+                resp = _post(
+                    "/organization/add-repo",
+                    {
+                        "org_id": org_id,
+                        "name": r_name.strip(),
+                        "path": r_path.strip(),
+                        "category": r_cat,
+                        "language": r_lang.strip(),
+                        "url": r_url.strip(),
+                        "description": r_desc.strip(),
+                    },
+                )
                 if resp:
                     st.success(f"Added repo: {resp.get('repository', {}).get('name', '')}")
                     st.rerun()
@@ -147,15 +173,20 @@ def show_organization_tab():
         with st.expander(" Manual Dependency", expanded=False):
             dep_src = st.text_input("Source repo name", key="dep_src")
             dep_tgt = st.text_input("Target repo name", key="dep_tgt")
-            dep_rel = st.selectbox("Relationship", ["depends_on", "imports", "calls", "deploys", "tests", "documents"], key="dep_rel")
+            dep_rel = st.selectbox(
+                "Relationship", ["depends_on", "imports", "calls", "deploys", "tests", "documents"], key="dep_rel"
+            )
             if st.button(" Add Dependency", key="add_dep", disabled=not dep_src.strip() or not dep_tgt.strip()):
-                resp = _post("/organization/dependency", {
-                    "org_id": org_id,
-                    "source_repo": dep_src.strip(),
-                    "target_repo": dep_tgt.strip(),
-                    "relationship": dep_rel,
-                    "weight": 1.0,
-                })
+                resp = _post(
+                    "/organization/dependency",
+                    {
+                        "org_id": org_id,
+                        "source_repo": dep_src.strip(),
+                        "target_repo": dep_tgt.strip(),
+                        "relationship": dep_rel,
+                        "weight": 1.0,
+                    },
+                )
                 if resp:
                     st.success(f"Dependency added: {dep_src} -> {dep_tgt}")
                     st.rerun()
@@ -165,18 +196,22 @@ def show_organization_tab():
         if repos_data and repos_data.get("repositories"):
             for r in repos_data["repositories"]:
                 with st.expander(f" {r['name']} ({r['category']})"):
-                    st.json({
-                        "path": r["path"],
-                        "language": r["language"],
-                        "url": r["url"],
-                        "files": r["file_count"],
-                        "description": r["description"],
-                    })
+                    st.json(
+                        {
+                            "path": r["path"],
+                            "language": r["language"],
+                            "url": r["url"],
+                            "files": r["file_count"],
+                            "description": r["description"],
+                        }
+                    )
                     if st.button(f" Index {r['name']}", key=f"idx_{r['id']}"):
                         with st.spinner(f"Indexing {r['name']}..."):
                             resp = _post("/organization/index", {"org_id": org_id})
                             if resp:
-                                st.info(f"Indexed. Entities: {resp.get('index_results', {}).get(r['name'], {}).get('entities_found', 0)}")
+                                st.info(
+                                    f"Indexed. Entities: {resp.get('index_results', {}).get(r['name'], {}).get('entities_found', 0)}"
+                                )
                                 st.rerun()
 
     # ── Tab 3: Impact Analysis ────────────────────────────────────────────
@@ -222,11 +257,13 @@ def show_organization_tab():
         if reports_data and reports_data.get("impact_reports"):
             for rp in reports_data["impact_reports"][:10]:
                 with st.expander(f" {rp.get('query', '')[:50]}... (Score: {rp.get('impact_score', 0):.1f})"):
-                    st.json({
-                        "risk": rp.get("risk_level"),
-                        "repos": len(rp.get("affected_repos", [])),
-                        "files": len(rp.get("affected_files", [])),
-                    })
+                    st.json(
+                        {
+                            "risk": rp.get("risk_level"),
+                            "repos": len(rp.get("affected_repos", [])),
+                            "files": len(rp.get("affected_files", [])),
+                        }
+                    )
 
     # ── Tab 4: Cross-Repo Changes ─────────────────────────────────────────
     with tab_changes:
@@ -234,7 +271,9 @@ def show_organization_tab():
         st.caption("Plan and apply changes across multiple repositories")
 
         with st.expander(" New Coordinated Change", expanded=True):
-            change_desc = st.text_area("Description", placeholder="What this change does across repos", key="change_desc")
+            change_desc = st.text_area(
+                "Description", placeholder="What this change does across repos", key="change_desc"
+            )
             st.caption("Specify file changes per repo (repo_name -> file_path -> content)")
             st.info("Format: one repo per line in the format `repo_name:file_path|content`")
             change_input = st.text_area(
@@ -243,7 +282,9 @@ def show_organization_tab():
                 height=120,
                 key="change_input",
             )
-            if st.button(" Plan & Apply Change", key="apply_change", disabled=not change_desc.strip() or not change_input.strip()):
+            if st.button(
+                " Plan & Apply Change", key="apply_change", disabled=not change_desc.strip() or not change_input.strip()
+            ):
                 changes: dict[str, dict[str, str]] = {}
                 for line in change_input.strip().split("\n"):
                     line = line.strip()
@@ -258,11 +299,14 @@ def show_organization_tab():
                         changes[repo_name][fpath.strip()] = fcontent
                 if changes:
                     with st.spinner("Applying changes..."):
-                        resp = _post("/organization/modify", {
-                            "org_id": org_id,
-                            "description": change_desc.strip(),
-                            "changes": changes,
-                        })
+                        resp = _post(
+                            "/organization/modify",
+                            {
+                                "org_id": org_id,
+                                "description": change_desc.strip(),
+                                "changes": changes,
+                            },
+                        )
                     if resp:
                         st.success(f"Change applied: {resp.get('status', '')}")
                         st.json({k: v.get("status", "") for k, v in resp.get("changes", {}).items()})
@@ -284,16 +328,25 @@ def show_organization_tab():
 
         validate_types = st.multiselect(
             "Validation types",
-            ["api_compatibility", "shared_libraries", "schema_compatibility", "deployment_consistency", "documentation_coverage"],
+            [
+                "api_compatibility",
+                "shared_libraries",
+                "schema_compatibility",
+                "deployment_consistency",
+                "documentation_coverage",
+            ],
             default=["api_compatibility", "schema_compatibility"],
             key="validate_types",
         )
         if st.button(" Run Validation", key="run_validate"):
             with st.spinner("Running validations..."):
-                resp = _post("/organization/validate", {
-                    "org_id": org_id,
-                    "validation_types": validate_types if validate_types else None,
-                })
+                resp = _post(
+                    "/organization/validate",
+                    {
+                        "org_id": org_id,
+                        "validation_types": validate_types if validate_types else None,
+                    },
+                )
             if resp:
                 results = resp.get("results", {})
                 for vtype, vresult in results.items():

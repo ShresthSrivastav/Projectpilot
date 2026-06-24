@@ -1,4 +1,5 @@
 """Evaluation Reporter — generate daily, weekly, and release reports with trend analysis, regressions, improvements, and recommendations."""
+
 import json
 import logging
 import uuid
@@ -59,7 +60,9 @@ class EvaluationReporter:
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
                 for item in data:
-                    report = EvaluationReport(**{k: v for k, v in item.items() if k in EvaluationReport.__dataclass_fields__})
+                    report = EvaluationReport(
+                        **{k: v for k, v in item.items() if k in EvaluationReport.__dataclass_fields__}
+                    )
                     self._reports[report.id] = report
             except Exception as e:
                 self._logger.warning("Failed to load reports: %s", e)
@@ -100,13 +103,15 @@ class EvaluationReporter:
                 continue
             change_pct = ((curr_val - prev_val) / prev_val) * 100
             if (invert and change_pct > 5) or (not invert and change_pct < -5):
-                results.append({
-                    "metric": label,
-                    "previous": prev_val,
-                    "current": curr_val,
-                    "change_pct": round(change_pct, 1),
-                    "direction": "increased" if change_pct > 0 else "decreased",
-                })
+                results.append(
+                    {
+                        "metric": label,
+                        "previous": prev_val,
+                        "current": curr_val,
+                        "change_pct": round(change_pct, 1),
+                        "direction": "increased" if change_pct > 0 else "decreased",
+                    }
+                )
         return results
 
     def _detect_improvements(self, runs: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -128,12 +133,14 @@ class EvaluationReporter:
                 continue
             change_pct = ((curr_val - prev_val) / prev_val) * 100
             if not invert and change_pct > 5:
-                results.append({
-                    "metric": label,
-                    "previous": prev_val,
-                    "current": curr_val,
-                    "improvement_pct": round(change_pct, 1),
-                })
+                results.append(
+                    {
+                        "metric": label,
+                        "previous": prev_val,
+                        "current": curr_val,
+                        "improvement_pct": round(change_pct, 1),
+                    }
+                )
         return results
 
     def _generate_recommendations(self, runs: list[dict[str, Any]]) -> list[str]:
@@ -214,16 +221,23 @@ class EvaluationReporter:
             generated_at=now.isoformat(),
             period_start=period_start,
             period_end=period_end,
-            markdown=self._generate_markdown(title, summary, trend_text, regressions, improvements, recommendations, metrics),
+            markdown=self._generate_markdown(
+                title, summary, trend_text, regressions, improvements, recommendations, metrics
+            ),
         )
         self._reports[report.id] = report
         self._save_reports()
         return report
 
     def _generate_markdown(
-        self, title: str, summary: str, trends: str,
-        regressions: list[dict], improvements: list[dict],
-        recommendations: list[str], metrics: dict[str, float],
+        self,
+        title: str,
+        summary: str,
+        trends: str,
+        regressions: list[dict],
+        improvements: list[dict],
+        recommendations: list[str],
+        metrics: dict[str, float],
     ) -> str:
         lines = [
             f"# {title}",
@@ -237,13 +251,17 @@ class EvaluationReporter:
         ]
         if regressions:
             for r in regressions:
-                lines.append(f"- {r['metric']}: {r['direction']} by {r['change_pct']}% ({r['previous']:.2f} → {r['current']:.2f})")
+                lines.append(
+                    f"- {r['metric']}: {r['direction']} by {r['change_pct']}% ({r['previous']:.2f} → {r['current']:.2f})"
+                )
         else:
             lines.append("- No regressions detected")
         lines.extend(["", "## Improvements"])
         if improvements:
             for imp in improvements:
-                lines.append(f"- {imp['metric']}: improved by {imp['improvement_pct']}% ({imp['previous']:.2f} → {imp['current']:.2f})")
+                lines.append(
+                    f"- {imp['metric']}: improved by {imp['improvement_pct']}% ({imp['previous']:.2f} → {imp['current']:.2f})"
+                )
         else:
             lines.append("- No significant improvements")
         lines.extend(["", "## Recommendations"])
@@ -258,9 +276,7 @@ class EvaluationReporter:
     def get_report(self, report_id: str) -> EvaluationReport | None:
         return self._reports.get(report_id)
 
-    def list_reports(
-        self, report_type: str | None = None, limit: int = 20
-    ) -> list[EvaluationReport]:
+    def list_reports(self, report_type: str | None = None, limit: int = 20) -> list[EvaluationReport]:
         results = list(self._reports.values())
         if report_type:
             results = [r for r in results if r.report_type == report_type]

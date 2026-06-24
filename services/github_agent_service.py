@@ -1,4 +1,5 @@
 """GitHub Agent Service — AI-powered repo analysis, PR review, bug fixing, improvements."""
+
 import json
 import logging
 from typing import Any
@@ -44,9 +45,21 @@ def _repo_context(token: str, full_name: str, limit_files: int = 15) -> str:
 
 
 def _read_key_files(token: str, full_name: str, max_chars: int = 8000) -> str:
-    paths = ["README.md", "package.json", "requirements.txt", "pyproject.toml",
-             "setup.py", "Makefile", "Dockerfile", "docker-compose.yml",
-             ".env.example", "main.py", "app.py", "index.js", "src/main.py"]
+    paths = [
+        "README.md",
+        "package.json",
+        "requirements.txt",
+        "pyproject.toml",
+        "setup.py",
+        "Makefile",
+        "Dockerfile",
+        "docker-compose.yml",
+        ".env.example",
+        "main.py",
+        "app.py",
+        "index.js",
+        "src/main.py",
+    ]
     contents = []
     total = 0
     for p in paths:
@@ -77,9 +90,9 @@ def analyze_repository(token: str, full_name: str, model: str = "local") -> dict
             "recommendations (list of 3-5 actionable suggestions)."
         )
         system = "You are a senior software engineer analyzing a GitHub repository. Return ONLY valid JSON."
-        result = call_model(prompt, system_prompt=system, model=model,
-                            job_id="gh_analyze", agent="GitHubAgent")
+        result = call_model(prompt, system_prompt=system, model=model, job_id="gh_analyze", agent="GitHubAgent")
         import re
+
         json_match = re.search(r"\{.*\}", result, re.DOTALL)
         parsed = json.loads(json_match.group(0)) if json_match else json.loads(result)
         return {"status": "ok", "full_name": full_name, "analysis": parsed}
@@ -112,15 +125,19 @@ def review_pull_request(token: str, full_name: str, pr_number: int, model: str =
             "approve (bool), suggestions (list of strings)."
         )
         system = "You are a senior code reviewer. Return ONLY valid JSON."
-        result = call_model(prompt, system_prompt=system, model=model,
-                            job_id=f"gh_pr_{pr_number}", agent="GitHubAgent")
+        result = call_model(prompt, system_prompt=system, model=model, job_id=f"gh_pr_{pr_number}", agent="GitHubAgent")
         import re
+
         json_match = re.search(r"\{.*\}", result, re.DOTALL)
         parsed = json.loads(json_match.group(0)) if json_match else json.loads(result)
-        add_issue_comment(token, full_name, pr_number,
-                          f"## AI Code Review\n\n{parsed.get('summary', '')}\n\n"
-                          f"**Approve:** {'Yes' if parsed.get('approve') else 'No'}\n\n"
-                          f"### Suggestions:\n" + "\n".join(f"- {s}" for s in parsed.get("suggestions", [])))
+        add_issue_comment(
+            token,
+            full_name,
+            pr_number,
+            f"## AI Code Review\n\n{parsed.get('summary', '')}\n\n"
+            f"**Approve:** {'Yes' if parsed.get('approve') else 'No'}\n\n"
+            f"### Suggestions:\n" + "\n".join(f"- {s}" for s in parsed.get("suggestions", [])),
+        )
         return {"status": "ok", "pr_number": pr_number, "review": parsed}
     except Exception as exc:
         logger.error("review_pull_request failed: %s", exc)
@@ -143,17 +160,25 @@ def fix_issue(token: str, full_name: str, issue_number: int, model: str = "local
             "effort (low/medium/high), related_files (list of paths)."
         )
         system = "You are a senior developer fixing a GitHub issue. Return ONLY valid JSON."
-        result = call_model(prompt, system_prompt=system, model=model,
-                            job_id=f"gh_issue_{issue_number}", agent="GitHubAgent")
+        result = call_model(
+            prompt, system_prompt=system, model=model, job_id=f"gh_issue_{issue_number}", agent="GitHubAgent"
+        )
         import re
+
         json_match = re.search(r"\{.*\}", result, re.DOTALL)
         parsed = json.loads(json_match.group(0)) if json_match else json.loads(result)
-        add_issue_comment(token, full_name, issue_number,
-                          f"## AI Analysis\n\n**Root Cause:** {parsed.get('root_cause', '')}\n\n"
-                          f"**Effort:** {parsed.get('effort', 'unknown')}\n\n"
-                          f"### Fix Plan\n"
-                          + "\n".join(f"{i+1}. `{s.get('file', '?')}` — {s.get('description', '')}"
-                                      for i, s in enumerate(parsed.get("fix_plan", []))))
+        add_issue_comment(
+            token,
+            full_name,
+            issue_number,
+            f"## AI Analysis\n\n**Root Cause:** {parsed.get('root_cause', '')}\n\n"
+            f"**Effort:** {parsed.get('effort', 'unknown')}\n\n"
+            f"### Fix Plan\n"
+            + "\n".join(
+                f"{i + 1}. `{s.get('file', '?')}` — {s.get('description', '')}"
+                for i, s in enumerate(parsed.get("fix_plan", []))
+            ),
+        )
         return {"status": "ok", "issue_number": issue_number, "analysis": parsed}
     except Exception as exc:
         logger.error("fix_issue failed: %s", exc)
@@ -172,15 +197,18 @@ def suggest_improvements(token: str, full_name: str, model: str = "local") -> di
             "maintainability (list), testing (list), new_features (list of {title, description})."
         )
         system = "You are a senior software architect. Return ONLY valid JSON."
-        result = call_model(prompt, system_prompt=system, model=model,
-                            job_id="gh_improve", agent="GitHubAgent")
+        result = call_model(prompt, system_prompt=system, model=model, job_id="gh_improve", agent="GitHubAgent")
         import re
+
         json_match = re.search(r"\{.*\}", result, re.DOTALL)
         parsed = json.loads(json_match.group(0)) if json_match else json.loads(result)
-        create_issue(token, full_name,
-                     title=f"[AI] Improvement Suggestions for {full_name.split('/')[-1]}",
-                     body=json.dumps(parsed, indent=2),
-                     labels=["enhancement", "ai-generated"])
+        create_issue(
+            token,
+            full_name,
+            title=f"[AI] Improvement Suggestions for {full_name.split('/')[-1]}",
+            body=json.dumps(parsed, indent=2),
+            labels=["enhancement", "ai-generated"],
+        )
         return {"status": "ok", "full_name": full_name, "suggestions": parsed}
     except Exception as exc:
         logger.error("suggest_improvements failed: %s", exc)

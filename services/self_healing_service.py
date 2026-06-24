@@ -1,4 +1,5 @@
 """Self-Healing Engine — automatic repair, patch generation, retry, rollback."""
+
 import json
 import logging
 import os
@@ -139,9 +140,7 @@ class SelfHealingEngine:
             session.completed_at = time.time()
             logger.error("Healing %s failed: %s", session.id[:8], exc)
 
-    def _generate_and_apply_fix(
-        self, session: HealingSession, analysis: Any, project_dir: str | None
-    ) -> bool:
+    def _generate_and_apply_fix(self, session: HealingSession, analysis: Any, project_dir: str | None) -> bool:
         try:
             prompt = (
                 f"Error type: {analysis.error_type}\n"
@@ -177,6 +176,7 @@ class SelfHealingEngine:
 
     def _parse_patches(self, text: str, project_dir: str | None = None) -> list[dict]:
         import re
+
         patches = []
         blocks = re.split(r"---\s*FILE\s*:\s*", text)
         for block in blocks:
@@ -199,6 +199,7 @@ class SelfHealingEngine:
         if not project_dir:
             return True
         from services.test_service import run_pytest
+
         try:
             pr = run_pytest(session.job_id)
             return pr.get("passed", False)

@@ -1,4 +1,5 @@
 """Session Manager — long-running sessions with persist, resume, recovery after restart."""
+
 import json
 import logging
 import os
@@ -98,7 +99,13 @@ class SessionManager:
         with self._lock:
             self.sessions[session.id] = session
         self._save_session(session)
-        logger.info("Session %s created for job %s (type=%s, tasks=%d)", session.id[:8], job_id, session_type, len(session.pending_tasks))
+        logger.info(
+            "Session %s created for job %s (type=%s, tasks=%d)",
+            session.id[:8],
+            job_id,
+            session_type,
+            len(session.pending_tasks),
+        )
         return session
 
     def get_session(self, session_id: str) -> Session | None:
@@ -216,7 +223,8 @@ class SessionManager:
             try:
                 data = json.loads(fpath.read_text())
                 session = Session(
-                    id=data["id"], job_id=data.get("job_id", ""),
+                    id=data["id"],
+                    job_id=data.get("job_id", ""),
                     name=data.get("name", ""),
                     session_type=data.get("session_type", "pipeline"),
                     status=SessionStatus(data.get("status", "active")),
@@ -232,7 +240,12 @@ class SessionManager:
                 if session.status == SessionStatus.ACTIVE:
                     session.status = SessionStatus.RECOVERED
                 self.sessions[session.id] = session
-                logger.info("Restored session %s (status=%s, tasks=%d)", session.id[:8], session.status.value, len(session.pending_tasks))
+                logger.info(
+                    "Restored session %s (status=%s, tasks=%d)",
+                    session.id[:8],
+                    session.status.value,
+                    len(session.pending_tasks),
+                )
             except Exception as exc:
                 logger.warning("Session restore failed for %s: %s", fpath.name, exc)
 
