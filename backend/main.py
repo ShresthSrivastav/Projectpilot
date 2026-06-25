@@ -339,6 +339,13 @@ SKIP_AUTH = os.getenv("SKIP_AUTH", "").lower() in ("true", "1", "yes")
 @app.middleware("http")
 async def authenticate_request(request: Request, call_next):
     if SKIP_AUTH:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            jwt_payload = decode_access_token(auth_header[7:])
+            if jwt_payload:
+                request.state.user_id = jwt_payload.get("sub")
+                request.state.workspace_id = jwt_payload.get("ws", "")
+                set_workspace_context(request.state.workspace_id)
         return await call_next(request)
 
     path = request.url.path

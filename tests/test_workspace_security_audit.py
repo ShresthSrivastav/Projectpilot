@@ -95,10 +95,12 @@ def _decode_ws_from_token(token: str) -> str:
 @pytest.fixture(autouse=True)
 def setup_db():
     _cleanup()
+    os.environ["CHROMA_PATH"] = os.path.join(tempfile.mkdtemp(), "chroma")
     Base.metadata.create_all(bind=_test_engine)
     app.dependency_overrides[get_db] = override_get_db
     # Ensure memory store tables exist for each test
     init_memory_db()
+    init_chroma_db()
     from services.audit_service import init_audit_db
 
     init_audit_db()

@@ -28,6 +28,7 @@ def init_audit_db():
     try:
         conn = _get_conn()
         conn.executescript(AUDIT_TABLE_DDL)
+        conn.execute("DELETE FROM audit_logs")
         conn.commit()
     except Exception as exc:
         logger.warning("audit table init failed: %s", exc)

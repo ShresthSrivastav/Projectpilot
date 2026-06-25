@@ -27,6 +27,12 @@ CHROMA_PATH = os.getenv(
 )
 _client: chromadb.PersistentClient | None = None
 
+
+def _get_chroma_path() -> str:
+    """Return current CHROMA_PATH, re-reading env var if changed."""
+    return os.getenv("CHROMA_PATH", CHROMA_PATH)
+
+
 _DUMMY_EMBED = [[0.0]]
 
 _COLLECTION_TYPES = ("jobs", "generation_logs", "requirements", "blueprints")
@@ -54,7 +60,7 @@ def _get_client() -> chromadb.PersistentClient:
     global _client
     if _client is None:
         _client = chromadb.PersistentClient(
-            path=CHROMA_PATH,
+            path=_get_chroma_path(),
             settings=Settings(anonymized_telemetry=False),
         )
     return _client
@@ -85,9 +91,11 @@ def get_workspace_collection(workspace_id: str, collection_type: str):
 
 def init_db() -> None:
     """Initialize default (legacy) collections. New usage should call init_workspace()."""
+    global _client
+    _client = None
     for name in _COLLECTION_TYPES:
         _col(name)
-    logger.info("ChromaDB ready (persistent at %s)", CHROMA_PATH)
+    logger.info("ChromaDB ready (persistent at %s)", _get_chroma_path())
 
 
 def init_workspace(workspace_id: str) -> None:
