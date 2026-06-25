@@ -26,12 +26,12 @@ variable "shape" {
 
 variable "ocpus" {
   type    = number
-  default = 2
+  default = 1
 }
 
 variable "memory_gbs" {
   type    = number
-  default = 8
+  default = 1
 }
 
 variable "os" {
@@ -62,27 +62,6 @@ variable "ghcr_token" {
   type      = string
   sensitive = true
   default   = ""
-}
-
-variable "db_host" {
-  type = string
-}
-
-variable "db_port" {
-  type = number
-}
-
-variable "db_name" {
-  type = string
-}
-
-variable "db_user" {
-  type = string
-}
-
-variable "db_password" {
-  type      = string
-  sensitive = true
 }
 
 variable "domain_name" {

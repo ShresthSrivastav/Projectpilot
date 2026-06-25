@@ -39,11 +39,6 @@ resource "oci_core_instance" "app" {
     user_data           = base64encode(templatefile("${path.module}/../../cloud-init.yaml", {
       github_username = var.github_username
       ghcr_token      = var.ghcr_token
-      db_host         = var.db_host
-      db_port         = var.db_port
-      db_name         = var.db_name
-      db_user         = var.db_user
-      db_password     = var.db_password
       domain_name     = var.domain_name
       project_name    = var.project_name
       environment     = var.environment
