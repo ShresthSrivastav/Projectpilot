@@ -37,6 +37,7 @@ WS_B = "ws-bob-uuid"
 @pytest.fixture(autouse=True)
 def setup():
     """Reset test state before each test."""
+    os.environ["CHROMA_PATH"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_chroma")
     set_workspace_context("")
     init_memory_db()
     init_chroma_db()

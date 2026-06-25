@@ -95,7 +95,7 @@ def init_db() -> None:
     _client = None
     for name in _COLLECTION_TYPES:
         _col(name)
-    logger.info("ChromaDB ready (persistent at %s)", CHROMA_PATH)
+    logger.info("ChromaDB ready (persistent at %s)", _get_chroma_path())
 
 
 def init_workspace(workspace_id: str) -> None:
