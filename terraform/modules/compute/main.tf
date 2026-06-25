@@ -30,7 +30,7 @@ resource "oci_core_instance" "app" {
   create_vnic_details {
     subnet_id        = var.subnet_id
     display_name     = "${var.project_name}-${var.environment}-vnic"
-    assign_public_ip = false
+    assign_public_ip = true
     nsg_ids          = var.nsg_ids
   }
 
@@ -57,22 +57,4 @@ resource "oci_core_instance" "app" {
   lifecycle {
     create_before_destroy = true
   }
-}
-
-data "oci_core_vnic_attachments" "instance_vnics" {
-  compartment_id = var.compartment_ocid
-  instance_id    = oci_core_instance.app.id
-}
-
-data "oci_core_vnic" "instance_vnic" {
-  vnic_id = data.oci_core_vnic_attachments.instance_vnics.vnic_attachments[0].vnic_id
-}
-
-resource "oci_core_public_ip" "reserved" {
-  compartment_id = var.compartment_ocid
-  display_name   = "${var.project_name}-${var.environment}-pubip"
-  lifetime       = "RESERVED"
-  private_ip_id  = data.oci_core_vnic.instance_vnic.private_ip_id
-
-  freeform_tags = var.tags
 }
