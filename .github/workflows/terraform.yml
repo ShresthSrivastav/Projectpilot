@@ -109,6 +109,10 @@ jobs:
             -no-color
         continue-on-error: true
 
+      - name: Fail if Plan Failed
+        if: steps.plan.outputs.exitcode != '0'
+        run: exit 1
+
       - name: Upload Plan Artifact
         if: steps.plan.outputs.exitcode == 0
         uses: actions/upload-artifact@v4
@@ -144,7 +148,7 @@ jobs:
     needs: plan
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply') ||
-      (github.event_name == 'push')
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     defaults:
       run:
         working-directory: terraform
