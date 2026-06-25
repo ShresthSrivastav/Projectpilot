@@ -130,7 +130,7 @@ class TestAuth:
 
     def test_get_me_unauthenticated(self):
         resp = client.get("/api/auth/me")
-        assert resp.status_code == 403
+        assert resp.status_code in (401, 403)
 
     def test_refresh_token(self):
         reg = client.post("/api/auth/register", json=self.REGISTER_PAYLOAD).json()

@@ -35,16 +35,23 @@ class Orchestrator:
 
     def __init__(
         self,
-        job_id: str,
-        prompt: str,
-        project_name: str,
-        model: str,
+        job_id: str = "",
+        prompt: str = "",
+        project_name: str = "",
+        model: str = "",
         stack: dict | None = None,
         cancel_flag: threading.Event | None = None,
+        context: Any | None = None,
     ):
-        self.job_id = job_id
+        if context:
+            self._ws = context.workspace_id
+            self.job_id = context.job_id or job_id
+            self.project_name = context.project_name or project_name
+        else:
+            self._ws = ""
+            self.job_id = job_id
+            self.project_name = project_name
         self.prompt = prompt
-        self.project_name = project_name
         self.model = model
         self.stack = stack
         self._cancel = cancel_flag or threading.Event()

@@ -16,131 +16,128 @@ Internet → Nginx (HTTPS) → Backend (FastAPI :8000)
 | Docker | 24+ | https://docs.docker.com/engine/install/ |
 | GitHub Account | — | For GHCR and Actions |
 
+## Deployment Architecture
+
+### Workflows
+
+```
+PR → ci.yml (lint + test, 3.11 + 3.12)
+                         ↓
+merge to main ──────────────────┐
+                                ↓
+                         cd.yml ──────────────────────────
+                         ├── lint-and-test (same as ci)   │
+                         ├── docker-build (GHCR push)    │
+                         └── deploy (SSH → OCI VM)       │
+                              ├── pull latest image       │
+                              ├── docker compose up        │
+                              ├── health check (300s)      │
+                              ├── verify public endpoint   │
+                              └── rollback on failure     │
+```
+
+### Concurrency
+
+`cd.yml` uses `concurrency: cd-main` with `cancel-in-progress: false`. If two merges happen rapidly, the second deployment waits for the first to finish (queued, not cancelled).
+
 ## 1. GitHub Secrets Setup
 
 Add these secrets in **Settings → Secrets and variables → Actions**:
 
+### Required (CD pipeline)
+
 | Secret | Description |
 |--------|-------------|
-| `DO_TOKEN` | DigitalOcean API token |
-| `DO_SSH_KEY_ID` | DigitalOcean SSH key ID |
-| `DO_HOST` | Droplet IP (set after first apply) |
-| `DO_USER` | SSH username (`deploy`) |
+| `OCI_HOST` | OCI VM public IP |
+| `OCI_USER` | SSH username (e.g. `ubuntu`) |
+| `OCI_SSH_PRIVATE_KEY` | SSH private key for OCI VM |
+| `OCI_ENV_FILE` | `.env` file content (base64 encoded) |
 | `DOMAIN_NAME` | Your domain (e.g., `app.example.com`) |
-| `SPACES_ACCESS_KEY_ID` | DigitalOcean Spaces access key |
-| `SPACES_SECRET_ACCESS_KEY` | DigitalOcean Spaces secret key |
 
-## 2. DigitalOcean Spaces (Terraform State)
+### Optional (Terraform)
 
-1. Create a Spaces bucket: `projectpilot-terraform-state` in `nyc3`
-2. Generate Spaces API keys: **API → Tokens → Spaces Keys**
-3. Add keys to GitHub Secrets
+| Secret | Description |
+|--------|-------------|
+| `OCI_TENANCY_OCID` | OCI tenancy OCID |
+| `OCI_USER_OCID` | OCI user OCID |
+| `OCI_FINGERPRINT` | OCI API key fingerprint |
+| `OCI_REGION` | Region (e.g. `ap-mumbai-1`) |
+| `OCI_PRIVATE_KEY` | OCI API private key |
 
-## 3. Generate SSH Key
+## 2. OCI VM Setup
+
+### Create VM
+
+1. Create an OCI Compute VM (Ubuntu 22.04+, minimum recommended: VM.Standard.E2.1.Micro for free tier, VM.Standard.E4.Flex for production)
+2. Configure security list to allow ports 22 (SSH), 80 (HTTP), 443 (HTTPS)
+3. Note the public IP and set `OCI_HOST`
+
+### Initial Setup
 
 ```bash
-ssh-keygen -t ed25519 -f ~/.ssh/projectpilot -N ""
+ssh ubuntu@YOUR_VM_IP
+
+# Install Docker
+curl -fsSL https://get.docker.com | sudo bash
+sudo usermod -aG docker ubuntu
+
+# Create project directory
+sudo mkdir -p /opt/projectpilot
+sudo chown ubuntu:ubuntu /opt/projectpilot
 ```
 
-Upload to DigitalOcean:
+### Copy files to VM
+
 ```bash
-# Using doctl CLI
-doctl compute ssh-key create projectpilot --public-key-file ~/.ssh/projectpilot.pub
+# From local machine
+scp docker-compose.prod.yml ubuntu@YOUR_VM_IP:/opt/projectpilot/
+scp -r scripts/ ubuntu@YOUR_VM_IP:/opt/projectpilot/
+scp -r nginx/ ubuntu@YOUR_VM_IP:/opt/projectpilot/
+
+# Create .env and set as secret OCI_ENV_FILE (base64 encoded)
+export OCI_ENV_FILE=$(cat .env.production | base64 -w0)
+
+# Apply .env
+ssh ubuntu@YOUR_VM_IP 'echo "$OCI_ENV_FILE" | base64 -d > /opt/projectpilot/.env'
 ```
 
-## 4. Terraform Deployment
+## 3. CD Pipeline
 
-### Initialize
+The `cd.yml` workflow runs automatically on every push to `main`:
+
+1. **lint-and-test**: Runs ruff + pytest on Python 3.11 and 3.12 (same as `ci.yml`)
+2. **docker-build**: Builds Docker image and pushes to `ghcr.io/shresthsrivastav/projectpilot:latest`
+3. **deploy**: SSHes into OCI VM, runs `scripts/deploy.sh`
+
+### Deploy Script (`scripts/deploy.sh`)
 
 ```bash
-cd terraform
-
-# Copy and edit variables
-cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with your values
-
-# Initialize
-terraform init \
-  -backend-config="access_key=$SPACES_ACCESS_KEY_ID" \
-  -backend-config="secret_key=$SPACES_SECRET_ACCESS_KEY"
-
-# Create workspace
-terraform workspace new prod
-terraform workspace select prod
+bash /opt/projectpilot/scripts/deploy.sh [tag]
 ```
 
-### Plan
+- Saves current `:latest` as `:previous` for rollback
+- Pulls new image
+- Runs `docker compose up -d --force-recreate`
+- Polls `docker health` / HTTP health check for 300s
+- On failure: restores `:previous` image and restarts
+
+## 4. GHCR Setup
+
+### Automatic (via CI)
+
+Every push to `main` triggers `cd.yml` which builds and pushes to `ghcr.io/shresthsrivastav/projectpilot`.
+
+### Manual push
 
 ```bash
-terraform plan \
-  -var-file="environments/prod.tfvars" \
-  -var="do_token=$DO_TOKEN" \
-  -var="ssh_key_ids=[SSH_KEY_ID]" \
-  -var="domain_name=app.example.com"
-```
-
-### Apply
-
-```bash
-terraform apply \
-  -var-file="environments/prod.tfvars" \
-  -var="do_token=$DO_TOKEN" \
-  -var="ssh_key_ids=[SSH_KEY_ID]" \
-  -var="domain_name=app.example.com"
-```
-
-### Output
-
-After apply, get the droplet IP:
-```bash
-terraform output droplet_ip
-terraform output ssh_command
-```
-
-## 5. Domain Setup
-
-1. Point your domain A record to the droplet IP
-2. Update `DO_HOST` secret with the droplet IP
-3. Update `DOMAIN_NAME` secret with your domain
-
-```bash
-# Example DNS records
-Type    Name    Value           TTL
-A       app     192.168.1.100   300
-CNAME   www     app.example.com 300
-```
-
-## 6. SSL Certificate
-
-On the droplet:
-```bash
-# SSH into the droplet
-ssh root@YOUR_DROPLET_IP
-
-# Get SSL certificate
-certbot --nginx -d app.example.com --non-interactive --agree-tos --email admin@example.com
-
-# Verify auto-renewal
-certbot renew --dry-run
-```
-
-## 7. GHCR Setup
-
-The `build-and-push.yml` workflow automatically pushes to `ghcr.io/shresthsrivastav/projectpilot`.
-
-To manually push:
-```bash
-# Login to GHCR
 echo $GITHUB_TOKEN | docker login ghcr.io -u ShresthSrivastav --password-stdin
-
-# Build and push
 docker build -t ghcr.io/shresthsrivastav/projectpilot:latest .
 docker push ghcr.io/shresthsrivastav/projectpilot:latest
 ```
 
-## 8. Environment Variables
+## 5. Environment Variables
 
-Create `/opt/projectpilot/.env` on the droplet:
+Create `/opt/projectpilot/.env` on the VM:
 
 ```bash
 ADMIN_API_KEY=ak-admin-your-admin-key
@@ -162,7 +159,23 @@ RATE_LIMIT_GENERATE=5
 RATE_LIMIT_DEFAULT=60
 ```
 
-## 9. Verify Deployment
+## 6. SSL Certificate with Let's Encrypt
+
+```bash
+# SSH into VM
+ssh ubuntu@YOUR_VM_IP
+
+# Install certbot
+sudo apt install -y certbot python3-certbot-nginx
+
+# Get certificate
+sudo certbot --nginx -d app.example.com --non-interactive --agree-tos --email admin@example.com
+
+# Verify renewal
+sudo certbot renew --dry-run
+```
+
+## 7. Verify Deployment
 
 ```bash
 # Health check
@@ -175,19 +188,26 @@ curl https://app.example.com/docs
 open https://app.example.com/
 ```
 
-## 10. Rollback
+## 8. Rollback
 
-### Rollback Application
+### Automatic (CD pipeline)
+
+If the deploy step fails, `cd.yml` automatically SSHes into the VM and runs `scripts/deploy.sh previous` to restore the prior image.
+
+### Manual rollback
 
 ```bash
-# SSH into droplet
-ssh root@YOUR_DROPLET_IP
+# SSH into VM
+ssh ubuntu@YOUR_VM_IP
+cd /opt/projectpilot
 
-# List available images
+# List images
 docker images ghcr.io/shresthsrivastav/projectpilot
 
-# Deploy specific version
-cd /opt/projectpilot
+# Deploy previous
+bash scripts/deploy.sh previous
+
+# Or deploy specific version
 export IMAGE_TAG=v1.0.0
 docker compose -f docker-compose.prod.yml up -d --force-recreate
 ```
@@ -197,29 +217,20 @@ docker compose -f docker-compose.prod.yml up -d --force-recreate
 ```bash
 cd terraform
 terraform plan -out=tfplan
-# Review changes
 terraform apply tfplan
 ```
 
-### Full Destroy
-
-```bash
-cd terraform
-terraform destroy \
-  -var-file="environments/prod.tfvars" \
-  -var="do_token=$DO_TOKEN"
-```
-
-## 11. Troubleshooting
+## 9. Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
 | Container won't start | `docker logs projectpilot_backend` |
-| Port 80/443 blocked | Check firewall: `ufw status` |
+| Port 80/443 blocked | Check OCI security list rules |
 | SSL not working | Verify cert: `certbot certificates` |
 | Database connection failed | Check `.env` DATABASE_URL |
-| Out of memory | Increase droplet size or add swap |
+| Out of memory | Increase VM shape or add swap |
 | GHCR auth failed | Re-login: `docker login ghcr.io` |
+| CD workflow stuck | Check GitHub Actions logs; verify `concurrency: cd-main` |
 
 ### Logs
 
@@ -236,6 +247,9 @@ tail -f /var/log/nginx/error.log
 
 # System logs
 journalctl -u projectpilot -f
+
+# Deploy logs
+ls -la /opt/projectpilot/logs/
 ```
 
 ### Disk Cleanup
@@ -251,7 +265,7 @@ docker volume prune -f
 df -h
 ```
 
-## 12. Monitoring
+## 10. Monitoring
 
 ```bash
 # Container stats
@@ -276,6 +290,7 @@ terraform/
 ├── versions.tf                # Version constraints + backend
 ├── variables.tf               # Input variables
 ├── outputs.tf                 # Output values
+├── terraform.tfvars           # OCI API key fingerprint
 ├── terraform.tfvars.example   # Variable template
 ├── cloud-init.yaml            # Server provisioning
 ├── environments/
@@ -289,9 +304,11 @@ terraform/
 
 .github/workflows/
 ├── terraform.yml              # IaC pipeline
-├── build-and-push.yml         # CI/CD + GHCR
-├── deploy.yml                 # Deployment trigger
-└── ci.yml                     # PR checks
+├── cd.yml                     # CD pipeline (build + push + deploy)
+└── ci.yml                     # PR checks (lint + test)
+
+scripts/
+└── deploy.sh                  # OCI VM deploy + rollback
 
 docker-compose.prod.yml        # Production compose
 nginx/nginx.conf               # Nginx config

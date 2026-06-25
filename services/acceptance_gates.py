@@ -33,6 +33,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 
 from database.chroma_db import log_to_db
@@ -51,7 +52,7 @@ SKIP_IMPORT = os.getenv("SKIP_IMPORT_VALIDATION", "").lower() in ("true", "1", "
 def run_gates(
     job_id: str,
     model: str = "local",
-    review_fn: callable | None = None,
+    review_fn: Callable[[str, str], dict] | None = None,
 ) -> dict[str, Any]:
     """Execute all 20 acceptance gates.  Returns gate results dict.
 
@@ -577,7 +578,7 @@ def _run_deployment_gate(job_dir: Path) -> dict:
     }
 
 
-def _run_e2e_gate(job_dir: Path, model: str, review_fn: callable | None) -> dict:
+def _run_e2e_gate(job_dir: Path, model: str, review_fn: Callable[[str, str], dict] | None) -> dict:
     test_dir = job_dir / "tests"
     if not test_dir.exists():
         test_dir = job_dir / "test"

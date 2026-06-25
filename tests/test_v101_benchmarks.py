@@ -1,6 +1,7 @@
 """Tests for v10.1 Benchmark Suite — autonomy score computation, leaderboard, trends, comparisons."""
 
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -8,6 +9,14 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+_BENCHMARKS_DIR = Path(os.getenv("BENCHMARKS_DIR", "./benchmarks"))
+_has_benchmarks = _BENCHMARKS_DIR.exists() and any(_BENCHMARKS_DIR.iterdir())
+
+requires_benchmarks = pytest.mark.skipif(
+    not _has_benchmarks,
+    reason="benchmarks/ directory not found or empty (gitignored)",
+)
 
 
 # ── Unit Tests: Benchmark Service ──────────────────────────────────────────────
@@ -114,6 +123,7 @@ class TestBenchmarkResult:
         assert d["metrics"]["completion_rate"] == 0.0
 
 
+@requires_benchmarks
 class TestBenchmarkService:
     def test_singleton(self):
         from services.benchmark_service import get_benchmark_service
@@ -385,6 +395,7 @@ class TestBenchmarkDB:
 # ── API Tests ──────────────────────────────────────────────────────────────────
 
 
+@requires_benchmarks
 class TestBenchmarkAPI:
     @pytest.fixture
     def client(self):

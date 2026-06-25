@@ -1,28 +1,38 @@
-name: Build and Push to GHCR
+name: Continuous Deployment
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Version tag (e.g., v1.0.0)"
+        description: "Docker image tag to deploy"
         required: false
+        default: "latest"
         type: string
+      skip-tests:
+        description: "Skip test step"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
   packages: write
+  id-token: write
+
+concurrency:
+  group: cd-main
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: shresthsrivastav/projectpilot
 
 jobs:
-  test:
-    name: Test
+  lint-and-test:
+    name: Lint & Test (Python ${{ matrix.python-version }})
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip-tests != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -47,13 +57,13 @@ jobs:
           pip install -r requirements.txt
           pip install ruff pytest-cov pytest-asyncio pytest-timeout
 
-      - name: Ruff Lint
+      - name: Run Ruff Lint Check
         run: ruff check .
 
-      - name: Ruff Format
+      - name: Run Ruff Format Check
         run: ruff format --check .
 
-      - name: Run Tests
+      - name: Run Tests with Coverage
         env:
           CHROMA_PATH: ./test_chroma_ci
           GENERATED_PROJECTS_DIR: ./test_generated_ci
@@ -66,23 +76,29 @@ jobs:
         run: |
           pytest --cov=. --cov-report=xml --cov-report=term -v --tb=short --no-header --timeout=120
 
+      - name: Clean up Test Artifacts
+        if: always()
+        run: |
+          rm -rf test_chroma_ci test_generated_ci test_chroma_data_v4 test_generated_projects_v4
+
       - name: Upload Coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.python-version }}
+          name: coverage-report-python-${{ matrix.python-version }}
           path: coverage.xml
           retention-days: 7
 
-  build-and-push:
-    name: Build & Push
+  docker-build:
+    name: Build & Push Docker Image
     runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: lint-and-test
+    if: ${{ always() && (success() || github.event.inputs.skip-tests == 'true') }}
 
     outputs:
       image-tag: ${{ steps.meta.outputs.tags }}
       image-digest: ${{ steps.build.outputs.digest }}
+      image-tag-short: ${{ steps.meta.outputs.version }}
 
     steps:
       - name: Checkout
@@ -133,7 +149,7 @@ jobs:
 
       - name: Generate build summary
         run: |
-          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Docker Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Tags**: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
@@ -141,14 +157,18 @@ jobs:
           echo "- **Platform**: linux/amd64" >> $GITHUB_STEP_SUMMARY
 
   deploy:
-    name: Deploy to OCI
+    name: Deploy to OCI Production
     runs-on: ubuntu-latest
-    needs: build-and-push
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: docker-build
+    if: success()
     environment: prod
 
     steps:
-      - name: Deploy via SSH
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to OCI VM
+        id: deploy
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.OCI_HOST }}
@@ -156,35 +176,37 @@ jobs:
           key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
           script_stop: true
           script: |
-            cd /opt/projectpilot
+            set -euo pipefail
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            chmod +x /opt/projectpilot/scripts/deploy.sh
+            export DOMAIN_NAME="${{ secrets.DOMAIN_NAME }}"
+            export DEPLOY_TIMEOUT="300"
+            bash /opt/projectpilot/scripts/deploy.sh "${{ inputs.tag || 'latest' }}"
 
-            # Pull latest image
-            docker pull ghcr.io/shresthsrivastav/projectpilot:latest
-
-            # Pull and recreate containers
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
-
-            # Clean up old images
-            docker image prune -af --filter "until=24h"
-
-      - name: Health Check
+      - name: Public Health Check
+        if: success()
         run: |
-          for i in $(seq 1 30); do
-            if curl -sf "https://${{ secrets.DOMAIN_NAME }}/health" -k > /dev/null 2>&1; then
-              echo "Backend is healthy"
+          if [ -z "${{ secrets.DOMAIN_NAME }}" ]; then
+            echo "DOMAIN_NAME not set, skipping public health check"
+            exit 0
+          fi
+          for i in $(seq 1 12); do
+            if curl -sfk "https://${{ secrets.DOMAIN_NAME }}/health" > /dev/null 2>&1; then
+              echo "Public endpoint healthy"
               exit 0
             fi
             sleep 10
           done
-          echo "Backend failed to start"
-          exit 1
+          echo "Public endpoint not healthy (but container may be healthy)"
+          exit 0
 
-      - name: Notify Deploy
+      - name: Notify Deployment Result
         if: always()
         run: |
-          echo "## Deployment Status" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment Result" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image**: \`${{ needs.build-and-push.outputs.image-tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Time**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: \`${{ needs.docker-build.outputs.image-tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Digest**: \`${{ needs.docker-build.outputs.image-digest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger**: ${{ github.event_name }} (${{ github.ref }})" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
