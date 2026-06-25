@@ -33,7 +33,8 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from database.chroma_db import log_to_db
 from services.file_service import BASE_DIR, write_file
