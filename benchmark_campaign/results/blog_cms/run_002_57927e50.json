@@ -1,0 +1,18 @@
+{
+  "id": "57927e50-cc54-4223-8f8f-f5390fdf6309",
+  "campaign_id": "82a5c916-d54d-4033-9eae-66ea4164ad9a",
+  "domain": "blog_cms",
+  "iteration": 2,
+  "status": "completed",
+  "autonomy_score": 0.87,
+  "execution_time": 12.5,
+  "cost": 0.045,
+  "tests_generated": 85.0,
+  "tests_passed": 78,
+  "healing_iterations": 7,
+  "deployment_success": true,
+  "benchmark_success": true,
+  "error": "",
+  "created_at": 1782362025.2621224,
+  "completed_at": 1782362025.2621224
+}

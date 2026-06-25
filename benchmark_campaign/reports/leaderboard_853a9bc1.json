@@ -1,0 +1,55 @@
+{
+  "campaign_id": "853a9bc1-b756-4c45-8375-fe8be6c710ac",
+  "generated_at": "2026-06-24T13:30:52.401338+00:00",
+  "overall_leader": {
+    "rank": 1,
+    "domain": "hotel_booking",
+    "iteration": 1,
+    "autonomy_score": 0.87,
+    "execution_time": 12.5,
+    "cost": 0.045,
+    "tests_passed": 78,
+    "benchmark_success": true,
+    "deployment_success": true
+  },
+  "best_autonomy_score": 0.87,
+  "domain_leaders": {
+    "hotel_booking": {
+      "rank": 1,
+      "domain": "hotel_booking",
+      "iteration": 1,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    }
+  },
+  "top_10": [
+    {
+      "rank": 1,
+      "domain": "hotel_booking",
+      "iteration": 1,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    }
+  ],
+  "all_entries_sorted": [
+    {
+      "rank": 1,
+      "domain": "hotel_booking",
+      "iteration": 1,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    }
+  ]
+}

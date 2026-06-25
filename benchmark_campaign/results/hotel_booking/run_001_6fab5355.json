@@ -1,0 +1,18 @@
+{
+  "id": "6fab5355-df9d-483e-a2a4-b59c081d95d6",
+  "campaign_id": "0f3503b4-9474-44ee-8764-f09b9fc53833",
+  "domain": "hotel_booking",
+  "iteration": 1,
+  "status": "completed",
+  "autonomy_score": 0.87,
+  "execution_time": 12.5,
+  "cost": 0.045,
+  "tests_generated": 85.0,
+  "tests_passed": 78,
+  "healing_iterations": 7,
+  "deployment_success": true,
+  "benchmark_success": true,
+  "error": "",
+  "created_at": 1782314429.5230267,
+  "completed_at": 1782314429.5230267
+}

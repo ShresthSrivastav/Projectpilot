@@ -45,8 +45,8 @@ save_previous_version() {
 rollback() {
     log "WARN" "ROLLBACK: Restoring ${IMAGE}:${ROLLBACK_TAG}"
     docker tag "${IMAGE}:${ROLLBACK_TAG}" "${IMAGE}:latest" 2>/dev/null || true
-    docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend 2>/dev/null || \
-        docker compose -f "$COMPOSE_FILE" up -d --force-recreate
+    IMAGE_TAG="latest" docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend 2>/dev/null || \
+        IMAGE_TAG="latest" docker compose -f "$COMPOSE_FILE" up -d --force-recreate
     log "INFO" "Rollback complete"
 }
 
@@ -69,8 +69,13 @@ health_check() {
             return 0
         fi
 
-        if curl -sf "http://localhost:8000/health" > /dev/null 2>&1; then
+        if [ "$service" = "backend" ] && curl -sf "http://localhost:8000/health" > /dev/null 2>&1; then
             log "INFO" "${service} responded to health check via HTTP"
+            return 0
+        fi
+
+        if [ "$service" = "frontend" ] && curl -sf "http://localhost:8501" > /dev/null 2>&1; then
+            log "INFO" "${service} responded on port 8501"
             return 0
         fi
 
@@ -91,39 +96,37 @@ setup_nginx_ssl() {
 
     log "INFO" "Setting up SSL for domain: ${domain}"
 
-    # Obtain SSL certificate
     certbot --nginx -d "$domain" --non-interactive --agree-tos --email "admin@${domain}" || {
         log "WARN" "Certbot failed, keeping HTTP-only config"
         return 0
     }
 
-    # Reload nginx with SSL config
     systemctl reload nginx
     log "INFO" "SSL setup complete for ${domain}"
 }
 
 verify_public_endpoint() {
-    local domain="${DOMAIN_NAME:-localhost}"
-    local max_attempts=$((120 / 10))
-    local attempt=1
-
-    if [ "$domain" = "localhost" ] || [ -z "$domain" ]; then
-        log "INFO" "No DOMAIN_NAME set, skipping public endpoint check"
+    local ip
+    ip=$(curl -sf http://ifconfig.me 2>/dev/null || echo "")
+    if [ -z "$ip" ]; then
+        log "WARN" "Could not determine public IP"
         return 0
     fi
 
-    log "INFO" "Verifying public endpoint: https://${domain}/health"
+    log "INFO" "Verifying public endpoint: http://${ip}/health"
+    local max_attempts=12
+    local attempt=1
 
     while [ $attempt -le "$max_attempts" ]; do
-        if curl -sfk "https://${domain}/health" > /dev/null 2>&1; then
-            log "INFO" "Public endpoint is healthy"
+        if curl -sf "http://${ip}/health" > /dev/null 2>&1; then
+            log "INFO" "Public endpoint is healthy at http://${ip}"
             return 0
         fi
         attempt=$((attempt + 1))
         sleep 10
     done
 
-    log "WARN" "Public endpoint not reachable, but container may be healthy"
+    log "WARN" "Public endpoint not reachable via HTTP, but container may be healthy"
     return 0
 }
 
@@ -138,13 +141,15 @@ if [ ! -f .env ]; then
     log "WARN" "No .env file found; services may not start correctly"
 fi
 
-log "INFO" "Recreating containers with ${FULL_IMAGE}"
-docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans
+log "INFO" "Recreating containers with tag: ${TAG}"
+IMAGE_TAG="${TAG}" docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans
 
 log "INFO" "Waiting for containers to initialize..."
 sleep 15
 
 if health_check "backend"; then
+    log "INFO" "Backend healthy!"
+    health_check "frontend" || log "WARN" "Frontend not yet healthy (may need more time)"
     log "INFO" "Deployment successful!"
     docker image prune -af --filter "until=24h" > /dev/null 2>&1 || true
     setup_nginx_ssl

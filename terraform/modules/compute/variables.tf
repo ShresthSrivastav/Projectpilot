@@ -21,7 +21,7 @@ variable "nsg_ids" {
 
 variable "shape" {
   type    = string
-  default = "VM.Standard.E4.Flex"
+  default = "VM.Standard.A1.Flex"
 }
 
 variable "ocpus" {
@@ -45,11 +45,6 @@ variable "ssh_public_key" {
 }
 
 variable "enable_monitoring" {
-  type    = bool
-  default = true
-}
-
-variable "enable_backups" {
   type    = bool
   default = true
 }

@@ -78,7 +78,6 @@ module "compute" {
   os                = var.instance_os
   ssh_public_key    = var.ssh_public_key
   enable_monitoring = var.enable_monitoring
-  enable_backups    = var.enable_backups
   github_username   = var.github_username
   ghcr_token        = var.ghcr_token
   domain_name       = var.domain_name

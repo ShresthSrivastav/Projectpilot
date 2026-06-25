@@ -1,0 +1,88 @@
+{
+  "campaign_id": "c08bd6c7-6e91-4aab-ac52-103ae19768c5",
+  "generated_at": "2026-06-25T03:54:32.892174+00:00",
+  "overall_leader": {
+    "rank": 1,
+    "domain": "hotel_booking",
+    "iteration": 1,
+    "autonomy_score": 0.87,
+    "execution_time": 12.5,
+    "cost": 0.045,
+    "tests_passed": 78,
+    "benchmark_success": true,
+    "deployment_success": true
+  },
+  "best_autonomy_score": 0.87,
+  "domain_leaders": {
+    "hotel_booking": {
+      "rank": 1,
+      "domain": "hotel_booking",
+      "iteration": 1,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    },
+    "ecommerce": {
+      "rank": 2,
+      "domain": "ecommerce",
+      "iteration": 1,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    }
+  },
+  "top_10": [
+    {
+      "rank": 1,
+      "domain": "hotel_booking",
+      "iteration": 1,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    },
+    {
+      "rank": 2,
+      "domain": "ecommerce",
+      "iteration": 1,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    }
+  ],
+  "all_entries_sorted": [
+    {
+      "rank": 1,
+      "domain": "hotel_booking",
+      "iteration": 1,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    },
+    {
+      "rank": 2,
+      "domain": "ecommerce",
+      "iteration": 1,
+      "autonomy_score": 0.87,
+      "execution_time": 12.5,
+      "cost": 0.045,
+      "tests_passed": 78,
+      "benchmark_success": true,
+      "deployment_success": true
+    }
+  ]
+}

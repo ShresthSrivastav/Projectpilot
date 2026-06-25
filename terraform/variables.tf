@@ -66,11 +66,11 @@ variable "subnet_cidr" {
   default     = "10.0.1.0/24"
 }
 
-# Compute — OCI Free Tier: VM.Standard.E4.Flex (1 OCPU, 1 GB RAM)
+# Compute — OCI Always Free: VM.Standard.A1.Flex (ARM, 1 OCPU, 1 GB RAM)
 variable "instance_shape" {
   description = "Compute instance shape"
   type        = string
-  default     = "VM.Standard.E4.Flex"
+  default     = "VM.Standard.A1.Flex"
 }
 
 variable "instance_ocpus" {
@@ -99,12 +99,6 @@ variable "ssh_public_key" {
 
 variable "enable_monitoring" {
   description = "Enable monitoring"
-  type        = bool
-  default     = true
-}
-
-variable "enable_backups" {
-  description = "Enable boot volume backups"
   type        = bool
   default     = true
 }

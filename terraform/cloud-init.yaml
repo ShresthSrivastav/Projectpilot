@@ -15,6 +15,7 @@ packages:
   - curl
   - jq
   - logrotate
+  - unattended-upgrades
 
 users:
   - name: deploy

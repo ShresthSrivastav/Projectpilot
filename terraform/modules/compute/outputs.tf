@@ -7,7 +7,7 @@ output "public_ip" {
 }
 
 output "ssh_command" {
-  value = "ssh ubuntu@${oci_core_instance.app.public_ip}"
+  value = "ssh deploy@${oci_core_instance.app.public_ip}"
 }
 
 output "application_url" {

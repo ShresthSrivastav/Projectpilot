@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ghcr.io/shresthsrivastav/projectpilot:latest
+    image: ghcr.io/shresthsrivastav/projectpilot:${IMAGE_TAG:-latest}
     container_name: projectpilot_backend
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 2 --log-level info
     ports:
@@ -38,7 +38,7 @@ services:
       - projectpilot
 
   frontend:
-    image: ghcr.io/shresthsrivastav/projectpilot:latest
+    image: ghcr.io/shresthsrivastav/projectpilot:${IMAGE_TAG:-latest}
     container_name: projectpilot_frontend
     command: streamlit run frontend/app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true --server.enableCORS false --server.enableXsrfProtection false
     ports:
