@@ -1,9 +1,9 @@
 resource "oci_psql_db_system" "postgres" {
-  display_name    = "${var.project_name}-${var.environment}-db"
-  compartment_id  = var.compartment_ocid
-  db_version      = var.db_version
-  shape           = var.shape
-  system_type     = "OCI_OPTIMIZED_STORAGE"
+  display_name   = "${var.project_name}-${var.environment}-db"
+  compartment_id = var.compartment_ocid
+  db_version     = var.db_version
+  shape          = var.shape
+  system_type    = "OCI_OPTIMIZED_STORAGE"
 
   subnet_id = var.subnet_id
 

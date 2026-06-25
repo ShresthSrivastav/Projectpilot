@@ -36,7 +36,7 @@ resource "oci_core_instance" "app" {
 
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
-    user_data           = base64encode(templatefile("${path.module}/../../cloud-init.yaml", {
+    user_data = base64encode(templatefile("${path.module}/../../cloud-init.yaml", {
       github_username = var.github_username
       ghcr_token      = var.ghcr_token
       domain_name     = var.domain_name
@@ -47,8 +47,8 @@ resource "oci_core_instance" "app" {
 
   agent_config {
     plugins_config {
-      name           = "Compute Instance Monitoring"
-      desired_state  = var.enable_monitoring ? "ENABLED" : "DISABLED"
+      name          = "Compute Instance Monitoring"
+      desired_state = var.enable_monitoring ? "ENABLED" : "DISABLED"
     }
   }
 

@@ -41,12 +41,12 @@ resource "oci_core_route_table" "public" {
 }
 
 resource "oci_core_subnet" "public" {
-  compartment_id      = var.compartment_ocid
-  vcn_id              = oci_core_vcn.main.id
-  display_name        = "${var.project_name}-${var.environment}-subnet-public"
-  cidr_block          = var.subnet_cidr
-  route_table_id      = oci_core_route_table.public.id
-  dns_label           = "public"
+  compartment_id             = var.compartment_ocid
+  vcn_id                     = oci_core_vcn.main.id
+  display_name               = "${var.project_name}-${var.environment}-subnet-public"
+  cidr_block                 = var.subnet_cidr
+  route_table_id             = oci_core_route_table.public.id
+  dns_label                  = "public"
   prohibit_public_ip_on_vnic = false
 
   freeform_tags = local.common_tags
