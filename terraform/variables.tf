@@ -66,7 +66,7 @@ variable "subnet_cidr" {
   default     = "10.0.1.0/24"
 }
 
-# Compute
+# Compute — OCI Free Tier: VM.Standard.E4.Flex (1 OCPU, 1 GB RAM)
 variable "instance_shape" {
   description = "Compute instance shape"
   type        = string
@@ -76,13 +76,13 @@ variable "instance_shape" {
 variable "instance_ocpus" {
   description = "Number of OCPUs for flex shape"
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "instance_memory_gbs" {
   description = "Memory in GB for flex shape"
   type        = number
-  default     = 8
+  default     = 1
 }
 
 variable "instance_os" {
@@ -107,37 +107,6 @@ variable "enable_backups" {
   description = "Enable boot volume backups"
   type        = bool
   default     = true
-}
-
-# Database (OCI PostgreSQL)
-variable "db_shape" {
-  description = "PostgreSQL DB system shape"
-  type        = string
-  default     = "VM.Standard.E4.Flex"
-}
-
-variable "db_ocpus" {
-  description = "Number of OCPUs for PostgreSQL"
-  type        = number
-  default     = 2
-}
-
-variable "db_memory_gbs" {
-  description = "Memory in GB for PostgreSQL"
-  type        = number
-  default     = 8
-}
-
-variable "db_storage_gbs" {
-  description = "Storage capacity in GB"
-  type        = number
-  default     = 50
-}
-
-variable "db_version" {
-  description = "PostgreSQL version"
-  type        = string
-  default     = "16"
 }
 
 # App

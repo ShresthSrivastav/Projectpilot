@@ -14,10 +14,6 @@ variable "vcn_id" {
   type = string
 }
 
-variable "compute_id" {
-  type = string
-}
-
 variable "tags" {
   type    = map(string)
   default = {}

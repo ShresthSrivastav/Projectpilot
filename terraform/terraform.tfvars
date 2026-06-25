@@ -11,11 +11,11 @@ oci_region       = "ap-mumbai-1"
 # Project
 project_name = "projectpilot"
 environment  = "prod"
-domain_name  = ""  # Set if you have a domain
+domain_name  = "" # Set if you have a domain
 
-# Compute — using the SSH key you just generated
+# Compute — OCI Free Tier: VM.Standard.E4.Flex (1 OCPU, 1 GB RAM)
 ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDRx9/CeJsT+5swIihDgA9uSO+lfRK2Uf1RATY07odtK9M7ZBuLtRGvfLtqjUjCIyQ1egYtIaLKs1o7Ku7Z2CXkJFN18bo+9oJIiSEawPEy7ltbohEHr5YzXlM3CLXRaDXNggMh5zyH/IutVNUrWZjTIl5W6CUbIHNpoRifOtjzNPTaKHkDaZS6vgTyIxdXzAroiyBhGttof6+zrpMGNhvd9kdjJUPE84S5z7592wbdVHQJ+F/gG10/us26BDEeJzaiOV9+C1xYiOipErGq7SaN8BS4ltIc67jpOUJ25cqRVSqKTBUkcXiu/C419oAZ5Gq8neD8qZLvmeSSsy42EUDd"
 
 # App
 github_username = "ShresthSrivastav"
-ghcr_token      = ""  # Optional: GitHub PAT for GHCR image pulls
+ghcr_token      = "" # Optional: GitHub PAT for GHCR image pulls

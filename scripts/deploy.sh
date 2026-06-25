@@ -82,6 +82,26 @@ health_check() {
     return 1
 }
 
+setup_nginx_ssl() {
+    local domain="${DOMAIN_NAME:-}"
+    if [ -z "$domain" ]; then
+        log "INFO" "No DOMAIN_NAME set, using HTTP-only nginx config"
+        return 0
+    fi
+
+    log "INFO" "Setting up SSL for domain: ${domain}"
+
+    # Obtain SSL certificate
+    certbot --nginx -d "$domain" --non-interactive --agree-tos --email "admin@${domain}" || {
+        log "WARN" "Certbot failed, keeping HTTP-only config"
+        return 0
+    }
+
+    # Reload nginx with SSL config
+    systemctl reload nginx
+    log "INFO" "SSL setup complete for ${domain}"
+}
+
 verify_public_endpoint() {
     local domain="${DOMAIN_NAME:-localhost}"
     local max_attempts=$((120 / 10))
@@ -127,6 +147,7 @@ sleep 15
 if health_check "backend"; then
     log "INFO" "Deployment successful!"
     docker image prune -af --filter "until=24h" > /dev/null 2>&1 || true
+    setup_nginx_ssl
     verify_public_endpoint
     exit 0
 else

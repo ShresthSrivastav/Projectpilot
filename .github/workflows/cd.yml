@@ -174,10 +174,9 @@ jobs:
           host: ${{ secrets.OCI_HOST }}
           username: ${{ secrets.OCI_USER }}
           key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
-          script_stop: true
           script: |
             set -euo pipefail
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             chmod +x /opt/projectpilot/scripts/deploy.sh
             export DOMAIN_NAME="${{ secrets.DOMAIN_NAME }}"
             export DEPLOY_TIMEOUT="300"
