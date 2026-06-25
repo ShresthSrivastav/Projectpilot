@@ -1,10 +1,6 @@
-oci_region          = "us-ashburn-1"
-instance_shape      = "VM.Standard.E4.Flex"
+oci_region          = "ap-mumbai-1"
+instance_shape      = "VM.Standard.A1.Flex"
 instance_ocpus      = 1
-instance_memory_gbs = 4
+instance_memory_gbs = 1
 environment         = "dev"
-db_shape            = "VM.Standard.E4.Flex"
-db_ocpus            = 1
-db_memory_gbs       = 4
-db_storage_gbs      = 50
-enable_backups      = false
+enable_monitoring   = false

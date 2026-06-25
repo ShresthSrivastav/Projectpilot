@@ -136,7 +136,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64
+          platforms: linux/arm64
 
       - name: Scan image for vulnerabilities
         uses: aquasecurity/trivy-action@master
@@ -154,7 +154,7 @@ jobs:
           echo "- **Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Tags**: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Digest**: ${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Platform**: linux/amd64" >> $GITHUB_STEP_SUMMARY
+          echo "- **Platform**: linux/arm64" >> $GITHUB_STEP_SUMMARY
 
   check-secrets:
     name: Check Deployment Secrets
@@ -164,8 +164,10 @@ jobs:
     steps:
       - name: Check OCI secrets
         id: check
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
         run: |
-          if [ -n "${{ secrets.OCI_HOST }}" ]; then
+          if [ -n "$OCI_HOST" ]; then
             echo "has-secrets=true" >> "$GITHUB_OUTPUT"
           else
             echo "has-secrets=false" >> "$GITHUB_OUTPUT"
@@ -175,12 +177,22 @@ jobs:
     name: Deploy to OCI Production
     runs-on: ubuntu-latest
     needs: [docker-build, check-secrets]
-    if: success() && needs.check-secrets.outputs.has-secrets == 'true'
+    if: needs.check-secrets.outputs.has-secrets == 'true'
     environment: prod
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Copy deployment files to VM
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ${{ secrets.OCI_USER }}
+          key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          source: "scripts/deploy.sh,docker-compose.prod.yml,.env.example"
+          target: /opt/projectpilot/
+          strip_components: 0
 
       - name: Deploy to OCI VM
         id: deploy
@@ -191,27 +203,25 @@ jobs:
           key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
           script: |
             set -euo pipefail
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             chmod +x /opt/projectpilot/scripts/deploy.sh
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             export DOMAIN_NAME="${{ secrets.DOMAIN_NAME }}"
             export DEPLOY_TIMEOUT="300"
-            bash /opt/projectpilot/scripts/deploy.sh "${{ inputs.tag || 'latest' }}"
+            /opt/projectpilot/scripts/deploy.sh "${{ inputs.tag || 'latest' }}"
 
       - name: Public Health Check
         if: success()
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
         run: |
-          if [ -z "${{ secrets.DOMAIN_NAME }}" ]; then
-            echo "DOMAIN_NAME not set, skipping public health check"
-            exit 0
-          fi
           for i in $(seq 1 12); do
-            if curl -sfk "https://${{ secrets.DOMAIN_NAME }}/health" > /dev/null 2>&1; then
-              echo "Public endpoint healthy"
+            if curl -sf "http://${OCI_HOST}/health" > /dev/null 2>&1; then
+              echo "Public endpoint healthy at http://${OCI_HOST}/health"
               exit 0
             fi
             sleep 10
           done
-          echo "Public endpoint not healthy (but container may be healthy)"
+          echo "Public endpoint not reachable (but container may be healthy behind nginx)"
           exit 0
 
       - name: Notify Deployment Result

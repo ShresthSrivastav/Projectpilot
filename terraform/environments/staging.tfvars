@@ -1,10 +1,6 @@
-oci_region          = "us-ashburn-1"
-instance_shape      = "VM.Standard.E4.Flex"
-instance_ocpus      = 2
-instance_memory_gbs = 8
+oci_region          = "ap-mumbai-1"
+instance_shape      = "VM.Standard.A1.Flex"
+instance_ocpus      = 1
+instance_memory_gbs = 1
 environment         = "staging"
-db_shape            = "VM.Standard.E4.Flex"
-db_ocpus            = 2
-db_memory_gbs       = 8
-db_storage_gbs      = 50
-enable_backups      = true
+enable_monitoring   = true
