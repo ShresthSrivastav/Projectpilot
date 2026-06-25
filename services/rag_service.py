@@ -68,7 +68,9 @@ def _chunk_text(text: str, source: str) -> list[dict[str, Any]]:
     return chunks
 
 
-def _extract_text_from_file(file_path: Path) -> str:
+def _extract_text_from_file(file_path: Path | str) -> str:
+    if isinstance(file_path, str):
+        file_path = Path(file_path)
     ext = file_path.suffix.lower()
     if ext == ".txt":
         return file_path.read_text(encoding="utf-8", errors="replace")
@@ -101,10 +103,17 @@ def _extract_text_from_file(file_path: Path) -> str:
 
 
 def upload_document(
-    file_path: Path,
+    file_path: Path | str,
     tags: list[str] | None = None,
     doc_id: str | None = None,
+    workspace_id: str = "",
+    uploaded_by: str = "",
 ) -> dict[str, Any]:
+    if not workspace_id:
+        return {"status": "error", "error": "workspace_id is required"}
+
+    if isinstance(file_path, str):
+        file_path = Path(file_path)
     doc_id = doc_id or str(uuid.uuid4())
     text = _extract_text_from_file(file_path)
     chunks = _chunk_text(text, file_path.name)
@@ -117,12 +126,13 @@ def upload_document(
         "doc_id": doc_id,
         "tags": json.dumps(tags or []),
         "total_chunks": len(chunks),
+        "workspace_id": workspace_id,
     }
 
     _col("rag_docs").upsert(
         ids=[doc_id],
         embeddings=_embed(1),
-        documents=[json.dumps({"source": file_path.name, "tags": tags or [], "text_length": len(text)})],
+        documents=[json.dumps({"source": file_path.name, "tags": tags or [], "text_length": len(text), "workspace_id": workspace_id})],
         metadatas=[metadata],
     )
 
@@ -140,6 +150,7 @@ def upload_document(
                     "source": chunk["source"],
                     "chunk_index": i,
                     "tags": json.dumps(tags or []),
+                    "workspace_id": workspace_id,
                 }
             ],
         )
@@ -148,11 +159,16 @@ def upload_document(
     return {"doc_id": doc_id, "status": "ok", "chunks": len(chunks), "source": file_path.name}
 
 
-def list_documents() -> list[dict[str, Any]]:
+def list_documents(workspace_id: str = "") -> list[dict[str, Any]]:
+    if not workspace_id:
+        return []
     try:
         r = _col("rag_docs").get(include=["documents", "metadatas"])
         docs = []
         for doc, meta in zip(r["documents"], r["metadatas"]):
+            meta_ws = meta.get("workspace_id", "")
+            if workspace_id and meta_ws != workspace_id:
+                continue
             parsed = json.loads(doc) if doc else {}
             docs.append(
                 {
@@ -161,6 +177,7 @@ def list_documents() -> list[dict[str, Any]]:
                     "tags": json.loads(meta.get("tags", "[]")),
                     "total_chunks": meta.get("total_chunks", 0),
                     "text_length": parsed.get("text_length", 0),
+                    "workspace_id": meta_ws,
                 }
             )
         return docs
@@ -169,7 +186,9 @@ def list_documents() -> list[dict[str, Any]]:
         return []
 
 
-def query(query_text: str, top_k: int = 5, tags: list[str] | None = None) -> list[dict[str, Any]]:
+def query(query_text: str, top_k: int = 5, tags: list[str] | None = None, workspace_id: str = "") -> list[dict[str, Any]]:
+    if not workspace_id:
+        return []
     try:
         if tags:
             tag_set = set(tags)
@@ -178,6 +197,9 @@ def query(query_text: str, top_k: int = 5, tags: list[str] | None = None) -> lis
             for doc_text, meta in zip(r_chunks["documents"], r_chunks["metadatas"]):
                 chunk_tags = json.loads(meta.get("tags", "[]"))
                 if tags and not tag_set.intersection(chunk_tags):
+                    continue
+                meta_ws = meta.get("workspace_id", "")
+                if workspace_id and meta_ws != workspace_id:
                     continue
                 if doc_text:
                     score = len(set(query_text.lower().split()) & set(doc_text.lower().split()))
@@ -198,6 +220,9 @@ def query(query_text: str, top_k: int = 5, tags: list[str] | None = None) -> lis
             r = _col("rag_chunks").get(include=["documents", "metadatas"])
             scored = []
             for doc_text, meta in zip(r["documents"], r["metadatas"]):
+                meta_ws = meta.get("workspace_id", "")
+                if workspace_id and meta_ws != workspace_id:
+                    continue
                 if doc_text:
                     score = len(set(query_text.lower().split()) & set(doc_text.lower().split()))
                     scored.append((score, doc_text, meta))
@@ -218,7 +243,9 @@ def query(query_text: str, top_k: int = 5, tags: list[str] | None = None) -> lis
         return []
 
 
-def delete_document(doc_id: str) -> bool:
+def delete_document(doc_id: str, workspace_id: str = "") -> bool:
+    if not workspace_id:
+        return False
     try:
         _col("rag_docs").delete(ids=[doc_id])
         r = _col("rag_chunks").get()
@@ -229,3 +256,7 @@ def delete_document(doc_id: str) -> bool:
     except Exception as exc:
         logger.warning("RAG delete failed: %s", exc)
         return False
+
+
+def get_workspace_knowledge_collection(workspace_id: str) -> Any:
+    return _col(f"workspace_{workspace_id}_knowledge")
