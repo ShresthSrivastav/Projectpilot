@@ -132,7 +132,11 @@ def upload_document(
     _col("rag_docs").upsert(
         ids=[doc_id],
         embeddings=_embed(1),
-        documents=[json.dumps({"source": file_path.name, "tags": tags or [], "text_length": len(text), "workspace_id": workspace_id})],
+        documents=[
+            json.dumps(
+                {"source": file_path.name, "tags": tags or [], "text_length": len(text), "workspace_id": workspace_id}
+            )
+        ],
         metadatas=[metadata],
     )
 
@@ -186,7 +190,9 @@ def list_documents(workspace_id: str = "") -> list[dict[str, Any]]:
         return []
 
 
-def query(query_text: str, top_k: int = 5, tags: list[str] | None = None, workspace_id: str = "") -> list[dict[str, Any]]:
+def query(
+    query_text: str, top_k: int = 5, tags: list[str] | None = None, workspace_id: str = ""
+) -> list[dict[str, Any]]:
     if not workspace_id:
         return []
     try:
