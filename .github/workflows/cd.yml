@@ -139,14 +139,13 @@ jobs:
           platforms: linux/arm64
 
       - name: Scan image for vulnerabilities
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           format: "table"
           exit-code: "0"
           severity: "CRITICAL,HIGH"
           ignore-unfixed: true
-          cache-dir: /tmp/trivy
 
       - name: Generate build summary
         run: |
