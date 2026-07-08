@@ -1,6 +1,7 @@
 """Multi-Agent Debate routes — extracted from main.py."""
 
-from fastapi import APIRouter, HTTPException, Field
+from fastapi import APIRouter, HTTPException
+from pydantic import Field
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/debate", tags=["Debate"])

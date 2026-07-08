@@ -1,6 +1,7 @@
 """Benchmark Suite routes — extracted from main.py."""
 
-from fastapi import APIRouter, HTTPException, Field
+from fastapi import APIRouter, HTTPException
+from pydantic import Field
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 

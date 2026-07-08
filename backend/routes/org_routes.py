@@ -1,6 +1,7 @@
 """Organization routes — extracted from main.py."""
 
-from fastapi import APIRouter, Body, HTTPException, Field
+from fastapi import APIRouter, Body, HTTPException
+from pydantic import Field
 from pydantic import BaseModel
 
 from database.memory_store import (
