@@ -36,7 +36,7 @@ from backend.routes.analytics_routes import router as analytics_router
 from backend.routes.plugin_routes import router as plugin_router
 from backend.routes.diagram_routes import router as diagram_router
 from backend.routes.supervisor_routes import router as supervisor_router
-from backend.routes.pipeline_routes import router as pipeline_router
+from backend.routes.pipeline_routes import router as pipeline_router, run_pipeline
 from backend.routes.github_routes import router as github_router
 from backend.routes.chat_routes import router as chat_router
 from backend.routes.workspace_routes import router as workspace_file_router
@@ -44,7 +44,7 @@ from backend.routes.browser_routes import router as browser_router
 from backend.routes.repo_routes import router as repo_router
 from backend.routes.dashboard_routes import router as dashboard_router
 from backend.routes.docs_routes import router as docs_router
-from backend.routes.graph_routes import router as graph_router
+from backend.routes.graph_routes import router as graph_router, list_router as graph_list_router
 from backend.routes.kg_routes import router as kg_router
 from backend.routes.debate_routes import router as debate_router
 from backend.routes.validation_routes import router as validation_router
@@ -212,6 +212,7 @@ app.include_router(repo_router)
 app.include_router(dashboard_router)
 app.include_router(docs_router)
 app.include_router(graph_router)
+app.include_router(graph_list_router)
 app.include_router(kg_router)
 app.include_router(debate_router)
 app.include_router(validation_router)

@@ -118,7 +118,10 @@ async def graph_resume(graph_id: str, checkpoint_id: str, max_workers: int = 4):
     return {"graph_id": graph_id, "status": loaded.to_dict(), "execution": result}
 
 
-@router.get("")
+list_router = APIRouter(prefix="/graphs", tags=["Graph Engine"])
+
+
+@list_router.get("")
 async def graph_list():
     from database.memory_store import list_graph_sessions
 
