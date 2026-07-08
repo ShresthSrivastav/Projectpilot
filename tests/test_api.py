@@ -712,17 +712,19 @@ def test_llm_retry_on_timeout(monkeypatch):
 
     call_count = 0
 
-    def fake_create(**kwargs):
+    original_call_local = llm_service._call_local
+
+    def tracking_call_local(prompt, system_prompt, model, job_id=None, agent=None, **kwargs):
         nonlocal call_count
-        call_count += 1
-        raise APITimeoutError(request=MagicMock())
+        # Only intercept the specific test call (prompt="test", model="local")
+        if prompt == "test" and model == "local":
+            call_count += 1
+            if call_count <= llm_service.MAX_RETRIES:
+                raise APITimeoutError(request=MagicMock())
+        # For all other calls, delegate to the original
+        return original_call_local(prompt, system_prompt, model, job_id, agent, **kwargs)
 
-    # Reset the singleton so this test gets a fresh client
-    monkeypatch.setattr(llm_service, "_openai_client", None)
-
-    mock_client = MagicMock()
-    mock_client.chat.completions.create.side_effect = fake_create
-    monkeypatch.setattr(llm_service, "_client", lambda: mock_client)
+    monkeypatch.setattr(llm_service, "_call_local", tracking_call_local)
 
     with pytest.raises(RuntimeError, match="failed after"):
         llm_service.call_model("test", model="local")
