@@ -1,3 +1,11 @@
+terraform {
+  required_providers {
+    oci = {
+      source = "oracle/oci"
+    }
+  }
+}
+
 resource "oci_core_network_security_group" "app" {
   compartment_id = var.compartment_ocid
   vcn_id         = var.vcn_id
