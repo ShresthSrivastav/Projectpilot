@@ -26,7 +26,9 @@ router = APIRouter(prefix="/plugins", tags=["Plugins"])
 class _PluginManifest:
     """Minimal inline replacement for sdk.plugin_sdk.base_plugin.PluginManifest (SDK removed)."""
 
-    def __init__(self, name="", version="", author="", description="", compatibility="", plugin_type="", permissions=None):
+    def __init__(
+        self, name="", version="", author="", description="", compatibility="", plugin_type="", permissions=None
+    ):
         self.name = name
         self.version = version
         self.author = author

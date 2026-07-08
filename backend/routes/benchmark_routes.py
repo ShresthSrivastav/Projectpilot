@@ -19,8 +19,14 @@ class BenchmarkCompareRequest(BaseModel):
 
 
 LIST_SUPPORTED_DOMAINS = [
-    "hotel_booking", "ecommerce", "blog_cms", "task_manager",
-    "expense_tracker", "chat_app", "lms", "property_management",
+    "hotel_booking",
+    "ecommerce",
+    "blog_cms",
+    "task_manager",
+    "expense_tracker",
+    "chat_app",
+    "lms",
+    "property_management",
 ]
 
 

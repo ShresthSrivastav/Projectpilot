@@ -165,6 +165,7 @@ def _normalize_job_dir(job_dir: Path) -> None:
     if nested.exists():
         try:
             import shutil
+
             for item in nested.iterdir():
                 dest = job_dir / item.name
                 if dest.exists():
