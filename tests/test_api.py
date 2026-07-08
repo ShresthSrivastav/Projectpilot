@@ -717,9 +717,8 @@ def test_llm_retry_on_timeout():
         call_count += 1
         raise APITimeoutError(request=MagicMock())
 
-    mock_client = MagicMock()
-    mock_client.chat.completions.create.side_effect = fake_create
-    with patch.object(llm_service, "_client", return_value=mock_client):
+    with patch.object(llm_service._client(), "chat") as mock_chat:
+        mock_chat.completions.create.side_effect = fake_create
         with pytest.raises(RuntimeError, match="failed after"):
             llm_service.call_model("test", model="local")
 
