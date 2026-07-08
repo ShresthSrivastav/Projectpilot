@@ -10,10 +10,16 @@ data "oci_identity_availability_domains" "ads" {
   compartment_id = var.compartment_ocid
 }
 
+locals {
+  os_parts    = split(" ", var.os)
+  os_name     = join(" ", slice(local.os_parts, 0, length(local.os_parts) - 1))
+  os_version  = local.os_parts[length(local.os_parts) - 1]
+}
+
 data "oci_core_images" "os" {
   compartment_id           = var.compartment_ocid
-  operating_system         = split(" ", var.os)[0]
-  operating_system_version = split(" ", var.os)[1]
+  operating_system         = local.os_name
+  operating_system_version = local.os_version
   shape                    = var.shape
   sort_by                  = "TIMECREATED"
   sort_order               = "DESC"
