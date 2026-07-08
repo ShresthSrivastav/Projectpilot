@@ -712,13 +712,14 @@ def test_llm_retry_on_timeout():
 
     call_count = 0
 
-    def fake_create(**kwargs):
+    def fake_call_local(prompt, system_prompt, model, job_id=None, agent=None, **kwargs):
         nonlocal call_count
         call_count += 1
+        if call_count > llm_service.MAX_RETRIES:
+            raise RuntimeError("Exceeded max retries in test mock")
         raise APITimeoutError(request=MagicMock())
 
-    with patch.object(llm_service._client(), "chat") as mock_chat:
-        mock_chat.completions.create.side_effect = fake_create
+    with patch.object(llm_service, "_call_local", side_effect=fake_call_local):
         with pytest.raises(RuntimeError, match="failed after"):
             llm_service.call_model("test", model="local")
 
