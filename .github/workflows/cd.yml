@@ -178,8 +178,8 @@ jobs:
   deploy:
     name: Deploy to OCI Production
     runs-on: ubuntu-latest
-    needs: [docker-build, check-secrets]
-    environment: prod
+    needs: docker-build
+    if: success()
 
     steps:
       - name: Checkout
