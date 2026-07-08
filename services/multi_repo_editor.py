@@ -163,10 +163,10 @@ class MultiRepoEditor:
                 continue
 
             try:
-                import requests
+                import httpx
 
                 api_url = f"https://api.github.com/repos/{full_name}/pulls"
-                resp = requests.post(
+                resp = httpx.post(
                     api_url,
                     headers={
                         "Authorization": f"token {github_token}",
@@ -180,7 +180,7 @@ class MultiRepoEditor:
                     },
                     timeout=30,
                 )
-                if resp.ok:
+                if resp.is_success:
                     pr_data = resp.json()
                     rc.pr_url = pr_data.get("html_url", "")
                     rc.status = ChangeStatus.PR_CREATED

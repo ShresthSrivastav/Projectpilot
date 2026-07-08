@@ -269,8 +269,6 @@ class TestRAGWorkspaceIsolation:
         # List documents should be workspace-scoped
         docs_a = list_documents(workspace_id=ws_a)
         docs_b = list_documents(workspace_id=ws_b)
-        a_sources = [d["source"] for d in docs_a]
-        b_sources = [d["source"] for d in docs_b]
         assert len(docs_a) == 1
         assert len(docs_b) == 1
 
@@ -405,8 +403,6 @@ class TestAnalyticsScoping:
     def test_metrics_scoped(self):
         """Verify that metrics endpoint is available and returns data."""
         reg = _register("MetricsUser", "metrics@test.com")
-        ws = client.get("/api/workspace/current", headers=_auth_header(reg["access_token"])).json()
-
         resp = client.get("/metrics", headers=_auth_header(reg["access_token"]))
         assert resp.status_code == 200
         data = resp.json()

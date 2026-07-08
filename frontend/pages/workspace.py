@@ -3,7 +3,7 @@
 import os
 from typing import Any
 
-import requests
+import httpx
 import streamlit as st
 
 import frontend.auth as auth_client
@@ -20,7 +20,7 @@ def _headers():
 
 def _get(path: str, timeout: int = 10) -> dict | None:
     try:
-        r = requests.get(f"{BACKEND}{path}", headers=_headers(), timeout=timeout)
+        r = httpx.get(f"{BACKEND}{path}", headers=_headers(), timeout=timeout)
         r.raise_for_status()
         return r.json()
     except Exception:
@@ -29,8 +29,8 @@ def _get(path: str, timeout: int = 10) -> dict | None:
 
 def _post(path: str, data: Any, timeout: int = 15) -> dict | None:
     try:
-        r = requests.post(f"{BACKEND}{path}", json=data, headers=_headers(), timeout=timeout)
-        if not r.ok:
+        r = httpx.post(f"{BACKEND}{path}", json=data, headers=_headers(), timeout=timeout)
+        if not r.is_success:
             try:
                 detail = r.json().get("detail", r.text[:200])
             except Exception:
@@ -253,7 +253,7 @@ def show_workspace_tab():
 def _show_local_projects():
     st.markdown("#### Local Generated Projects")
     try:
-        r = requests.get(f"{BACKEND}/jobs", headers=_headers(), timeout=8)
+        r = httpx.get(f"{BACKEND}/jobs", headers=_headers(), timeout=8)
         r.raise_for_status()
         jobs = r.json().get("jobs", [])
     except Exception:
@@ -287,8 +287,8 @@ def _show_local_projects():
         sf = st.selectbox("File", fl, key="ws_local_file", label_visibility="collapsed")
         if sf:
             enc = sf.replace("\\", "/")
-            resp = requests.get(f"{BACKEND}/read-project-file/{jid}/{enc}", headers=_headers(), timeout=10)
-            if resp.ok:
+            resp = httpx.get(f"{BACKEND}/read-project-file/{jid}/{enc}", headers=_headers(), timeout=10)
+            if resp.is_success:
                 ext = os.path.splitext(sf)[1]
                 lang = {
                     "py": "python",
@@ -321,13 +321,13 @@ def _show_local_projects():
         if st.button("Apply Changes", key="ws_iter_btn", disabled=not iter_prompt.strip()):
             with st.spinner("Applying changes..."):
                 try:
-                    r = requests.post(
+                    r = httpx.post(
                         f"{BACKEND}/iterate/{jid}",
                         json={"prompt": iter_prompt, "model": st.session_state.selected_model},
                         headers=_headers(),
                         timeout=300,
                     )
-                    if r.ok:
+                    if r.is_success:
                         data = r.json()
                         ch = data.get("changes", {})
                         added = ch.get("added", [])
@@ -372,8 +372,8 @@ def _show_local_projects():
             import urllib.parse
 
             try:
-                r = requests.delete(f"{BACKEND}/jobs/{urllib.parse.quote(jid)}", headers=_headers(), timeout=10)
-                if r.ok:
+                r = httpx.delete(f"{BACKEND}/jobs/{urllib.parse.quote(jid)}", headers=_headers(), timeout=10)
+                if r.is_success:
                     st.success("Project deleted.")
                     st.rerun()
                 else:
@@ -416,8 +416,8 @@ def _show_test_results(detail: dict):
     jid = detail.get("job_id", "")
     if jid:
         try:
-            tr = requests.get(f"{BACKEND}/test-files/{jid}", headers=_headers(), timeout=10)
-            if tr.ok:
+            tr = httpx.get(f"{BACKEND}/test-files/{jid}", headers=_headers(), timeout=10)
+            if tr.is_success:
                 tfiles = tr.json().get("test_files", {})
                 if tfiles:
                     with st.expander("Test Source Code", expanded=False):
@@ -436,13 +436,13 @@ def _show_test_results(detail: dict):
         ):
             with st.spinner("Running tests, analysing failures, and fixing code..."):
                 try:
-                    fr = requests.post(
+                    fr = httpx.post(
                         f"{BACKEND}/fix-tests/{jid}",
                         json={"model": st.session_state.selected_model},
                         headers=_headers(),
                         timeout=300,
                     )
-                    if fr.ok:
+                    if fr.is_success:
                         fdata = fr.json()
                         if fdata.get("already_passing"):
                             st.success("All tests already pass!")
@@ -508,13 +508,13 @@ def _show_test_results(detail: dict):
         ):
             with st.spinner("Analyzing project..."):
                 try:
-                    rr = requests.post(
+                    rr = httpx.post(
                         f"{BACKEND}/review/{jid}",
                         json={"model": st.session_state.selected_model},
                         headers=_headers(),
                         timeout=300,
                     )
-                    if rr.ok:
+                    if rr.is_success:
                         st.rerun()
                     else:
                         st.error(f"Review failed: {rr.text[:200]}")
@@ -524,8 +524,8 @@ def _show_test_results(detail: dict):
 
 def _show_changelog(jid: str):
     try:
-        r = requests.get(f"{BACKEND}/changelog/{jid}", headers=_headers(), timeout=10)
-        if r.ok:
+        r = httpx.get(f"{BACKEND}/changelog/{jid}", headers=_headers(), timeout=10)
+        if r.is_success:
             data = r.json()
             if data.get("exists"):
                 with st.expander("Project Changelog", expanded=False):

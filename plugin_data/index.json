@@ -1,6 +1,6 @@
 [
   {
-    "id": "1940354e-352f-4c95-8b5b-a6d06225e15e",
+    "id": "0f24c9b2-af60-4930-bf08-be324ae3de14",
     "manifest": {
       "name": "secure-plugin",
       "version": "1.0.0",
@@ -12,13 +12,13 @@
         "read:files"
       ],
       "compatibility": ">=11.0.0",
-      "entry_point": "C:\\Users\\shres\\AppData\\Local\\Temp\\tmpea4lyawd.py",
+      "entry_point": "C:\\Users\\shres\\AppData\\Local\\Temp\\tmpvfn1tsoi.py",
       "tags": []
     },
-    "source": "plugin_data\\installed\\tmpea4lyawd\\tmpea4lyawd.py",
+    "source": "plugin_data\\installed\\tmpvfn1tsoi\\tmpvfn1tsoi.py",
     "enabled": true,
-    "installed_at": "2026-06-25T04:49:36.246498+00:00",
-    "updated_at": "2026-06-25T04:49:36.246498+00:00",
+    "installed_at": "2026-07-07T10:41:53.600528+00:00",
+    "updated_at": "2026-07-07T10:41:53.600528+00:00",
     "resource_limits": {
       "cpu": 1,
       "memory_mb": 256

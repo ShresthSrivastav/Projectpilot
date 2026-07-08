@@ -4,7 +4,7 @@ import os
 
 import altair as alt
 import pandas as pd
-import requests
+import httpx
 import streamlit as st
 
 BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
@@ -19,7 +19,7 @@ def _headers() -> dict:
 
 def _get(path: str, timeout: int = 10) -> dict | None:
     try:
-        r = requests.get(f"{BACKEND}{path}", headers=_headers(), timeout=timeout)
+        r = httpx.get(f"{BACKEND}{path}", headers=_headers(), timeout=timeout)
         r.raise_for_status()
         return r.json()
     except Exception:

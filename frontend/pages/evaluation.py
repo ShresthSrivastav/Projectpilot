@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from typing import Any
 
-import requests
+import httpx
 import streamlit as st
 
 BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
@@ -12,7 +12,7 @@ BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 
 def _get(path: str, timeout: int = 10) -> dict | None:
     try:
-        r = requests.get(f"{BACKEND}{path}", timeout=timeout)
+        r = httpx.get(f"{BACKEND}{path}", timeout=timeout)
         r.raise_for_status()
         return r.json()
     except Exception:
@@ -21,8 +21,8 @@ def _get(path: str, timeout: int = 10) -> dict | None:
 
 def _post(path: str, data: Any, timeout: int = 30) -> dict | None:
     try:
-        r = requests.post(f"{BACKEND}{path}", json=data, timeout=timeout)
-        if not r.ok:
+        r = httpx.post(f"{BACKEND}{path}", json=data, timeout=timeout)
+        if not r.is_success:
             try:
                 detail = r.json().get("detail", r.text[:200])
             except Exception:

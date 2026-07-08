@@ -1,7 +1,7 @@
 import os
 import time
 
-import requests
+import httpx
 
 BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 
@@ -15,7 +15,7 @@ def _headers(access_token: str) -> dict:
 
 
 def register(name: str, email: str, password: str, confirm_password: str) -> dict:
-    resp = requests.post(
+    resp = httpx.post(
         backend_url("/api/auth/register"),
         json={
             "name": name,
@@ -30,7 +30,7 @@ def register(name: str, email: str, password: str, confirm_password: str) -> dic
 
 
 def login(email: str, password: str) -> dict:
-    resp = requests.post(
+    resp = httpx.post(
         backend_url("/api/auth/login"),
         json={"email": email, "password": password},
         timeout=15,
@@ -40,7 +40,7 @@ def login(email: str, password: str) -> dict:
 
 
 def refresh_access_token(refresh_token: str) -> dict:
-    resp = requests.post(
+    resp = httpx.post(
         backend_url("/api/auth/refresh"),
         json={"refresh_token": refresh_token},
         timeout=15,
@@ -50,7 +50,7 @@ def refresh_access_token(refresh_token: str) -> dict:
 
 
 def get_me(access_token: str) -> dict:
-    resp = requests.get(
+    resp = httpx.get(
         backend_url("/api/auth/me"),
         headers=_headers(access_token),
         timeout=15,
@@ -60,7 +60,7 @@ def get_me(access_token: str) -> dict:
 
 
 def get_current_workspace(access_token: str) -> dict:
-    resp = requests.get(
+    resp = httpx.get(
         backend_url("/api/workspace/current"),
         headers=_headers(access_token),
         timeout=15,
@@ -71,12 +71,12 @@ def get_current_workspace(access_token: str) -> dict:
 
 def logout(refresh_token: str) -> None:
     try:
-        requests.post(
+        httpx.post(
             backend_url("/api/auth/logout"),
             json={"refresh_token": refresh_token},
             timeout=15,
         )
-    except requests.RequestException:
+    except httpx.HTTPError:
         pass
 
 
@@ -84,7 +84,7 @@ def logout(refresh_token: str) -> None:
 
 
 def list_workspaces(access_token: str) -> list[dict]:
-    resp = requests.get(
+    resp = httpx.get(
         backend_url("/api/workspace"),
         headers=_headers(access_token),
         timeout=15,
@@ -94,7 +94,7 @@ def list_workspaces(access_token: str) -> list[dict]:
 
 
 def create_workspace(access_token: str, name: str) -> dict:
-    resp = requests.post(
+    resp = httpx.post(
         backend_url("/api/workspace"),
         headers=_headers(access_token),
         json={"name": name},
@@ -105,7 +105,7 @@ def create_workspace(access_token: str, name: str) -> dict:
 
 
 def switch_workspace(access_token: str, workspace_id: str) -> dict:
-    resp = requests.post(
+    resp = httpx.post(
         backend_url("/api/workspace/switch"),
         headers=_headers(access_token),
         json={"workspace_id": workspace_id},
@@ -116,7 +116,7 @@ def switch_workspace(access_token: str, workspace_id: str) -> dict:
 
 
 def get_workspace_members(access_token: str) -> list[dict]:
-    resp = requests.get(
+    resp = httpx.get(
         backend_url("/api/workspace/current/members"),
         headers=_headers(access_token),
         timeout=15,
@@ -126,7 +126,7 @@ def get_workspace_members(access_token: str) -> list[dict]:
 
 
 def invite_member(access_token: str, email: str, role: str = "MEMBER") -> dict:
-    resp = requests.post(
+    resp = httpx.post(
         backend_url("/api/workspace/current/invite"),
         headers=_headers(access_token),
         json={"email": email, "role": role},
@@ -137,7 +137,7 @@ def invite_member(access_token: str, email: str, role: str = "MEMBER") -> dict:
 
 
 def remove_member(access_token: str, member_id: str) -> dict:
-    resp = requests.delete(
+    resp = httpx.delete(
         backend_url(f"/api/workspace/current/members/{member_id}"),
         headers=_headers(access_token),
         timeout=15,
@@ -147,7 +147,7 @@ def remove_member(access_token: str, member_id: str) -> dict:
 
 
 def get_pending_invites(access_token: str) -> list[dict]:
-    resp = requests.get(
+    resp = httpx.get(
         backend_url("/api/workspace/current/invites"),
         headers=_headers(access_token),
         timeout=15,
@@ -157,7 +157,7 @@ def get_pending_invites(access_token: str) -> list[dict]:
 
 
 def accept_invite(access_token: str, token: str) -> dict:
-    resp = requests.post(
+    resp = httpx.post(
         backend_url("/api/workspace/accept"),
         headers=_headers(access_token),
         json={"token": token},
@@ -171,7 +171,7 @@ def accept_invite(access_token: str, token: str) -> dict:
 
 
 def get_activities(access_token: str, limit: int = 50) -> list[dict]:
-    resp = requests.get(
+    resp = httpx.get(
         backend_url(f"/api/workspace/current/activity?limit={limit}"),
         headers=_headers(access_token),
         timeout=15,
@@ -181,7 +181,7 @@ def get_activities(access_token: str, limit: int = 50) -> list[dict]:
 
 
 def get_notifications(access_token: str, unread_only: bool = False, limit: int = 20) -> list[dict]:
-    resp = requests.get(
+    resp = httpx.get(
         backend_url(f"/api/workspace/notifications?unread_only={str(unread_only).lower()}&limit={limit}"),
         headers=_headers(access_token),
         timeout=15,
@@ -191,7 +191,7 @@ def get_notifications(access_token: str, unread_only: bool = False, limit: int =
 
 
 def mark_notification_read(access_token: str, notification_id: str) -> dict:
-    resp = requests.post(
+    resp = httpx.post(
         backend_url("/api/workspace/notifications/mark-read"),
         headers=_headers(access_token),
         json={"notification_id": notification_id},
@@ -202,7 +202,7 @@ def mark_notification_read(access_token: str, notification_id: str) -> dict:
 
 
 def mark_all_notifications_read(access_token: str) -> dict:
-    resp = requests.post(
+    resp = httpx.post(
         backend_url("/api/workspace/notifications/mark-all-read"),
         headers=_headers(access_token),
         timeout=15,

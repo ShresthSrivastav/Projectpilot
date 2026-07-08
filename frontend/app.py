@@ -11,7 +11,7 @@ New in v4:
 import os
 import time
 
-import requests
+import httpx
 import streamlit as st
 
 import frontend.auth as auth_client
@@ -131,7 +131,7 @@ if not st.session_state.access_token:
                     st.session_state.workspace_info = workspace
                     st.session_state.auth_loading = False
                     st.rerun()
-                except requests.HTTPError as e:
+                except httpx.HTTPStatusError as e:
                     st.session_state.auth_loading = False
                     detail = ""
                     try:
@@ -178,7 +178,7 @@ if not st.session_state.access_token:
                     st.session_state.auth_loading = False
                     st.success("Account created! Welcome to ProjectPilot.")
                     st.rerun()
-                except requests.HTTPError as e:
+                except httpx.HTTPStatusError as e:
                     st.session_state.auth_loading = False
                     detail = ""
                     try:
@@ -231,7 +231,7 @@ def _headers() -> dict:
 
 def _get(path: str, timeout: int = 8) -> dict | None:
     try:
-        r = requests.get(f"{BACKEND}{path}", headers=_headers(), timeout=timeout)
+        r = httpx.get(f"{BACKEND}{path}", headers=_headers(), timeout=timeout)
         r.raise_for_status()
         return r.json()
     except Exception:
@@ -240,10 +240,10 @@ def _get(path: str, timeout: int = 8) -> dict | None:
 
 def _post(path: str, payload: dict, timeout: int = 60) -> dict | None:
     try:
-        r = requests.post(f"{BACKEND}{path}", json=payload, headers=_headers(), timeout=timeout)
+        r = httpx.post(f"{BACKEND}{path}", json=payload, headers=_headers(), timeout=timeout)
         r.raise_for_status()
         return r.json()
-    except requests.HTTPError as exc:
+    except httpx.HTTPStatusError as exc:
         detail = ""
         try:
             detail = exc.response.json().get("detail", str(exc))
@@ -251,14 +251,14 @@ def _post(path: str, payload: dict, timeout: int = 60) -> dict | None:
             detail = str(exc)
         st.error(f" {detail}")
         return None
-    except requests.ConnectionError:
+    except httpx.ConnectError:
         st.error(f" Cannot reach backend at `{BACKEND}`")
         return None
 
 
 def _download(job_id: str) -> bytes | None:
     try:
-        r = requests.get(f"{BACKEND}/download/{job_id}", headers=_headers(), timeout=30)
+        r = httpx.get(f"{BACKEND}/download/{job_id}", headers=_headers(), timeout=30)
         r.raise_for_status()
         return r.content
     except Exception as exc:
@@ -268,7 +268,7 @@ def _download(job_id: str) -> bytes | None:
 
 def _delete_chat_conv(conversation_id):
     try:
-        import requests as _req
+        import httpx as _req
 
         r = _req.delete(f"{BACKEND}/chat/conversations/{conversation_id}", headers=_headers(), timeout=8)
         r.raise_for_status()
@@ -334,7 +334,7 @@ with st.sidebar:
             try:
                 rt = st.session_state.refresh_token
                 if rt:
-                    requests.post(f"{BACKEND}/api/auth/logout", json={"refresh_token": rt}, timeout=5)
+                    httpx.post(f"{BACKEND}/api/auth/logout", json={"refresh_token": rt}, timeout=5)
             except Exception:
                 pass
             for key in ["access_token", "refresh_token", "user_info", "workspace_info"]:
@@ -911,8 +911,8 @@ with tab_gen:
                 if status == "complete" and st.session_state.job_id:
                     _jid = st.session_state.job_id
                     try:
-                        _tr = requests.get(f"{BACKEND}/test-files/{_jid}", timeout=10)
-                        if _tr.ok:
+                        _tr = httpx.get(f"{BACKEND}/test-files/{_jid}", timeout=10)
+                        if _tr.is_success:
                             _tfiles = _tr.json().get("test_files", {})
                             if _tfiles:
                                 with st.expander("Test Source Code", expanded=False):
@@ -926,12 +926,12 @@ with tab_gen:
                         if st.button("\U0001f527 Fix Failing Tests", key=f"fix_tests_gen_{_jid}", type="primary"):
                             with st.spinner("Fixing failing tests..."):
                                 try:
-                                    _fr = requests.post(
+                                    _fr = httpx.post(
                                         f"{BACKEND}/fix-tests/{_jid}",
                                         json={"model": st.session_state.selected_model},
                                         timeout=300,
                                     )
-                                    if _fr.ok:
+                                    if _fr.is_success:
                                         _fd = _fr.json()
                                         if _fd.get("already_passing"):
                                             st.success("All tests already pass!")
@@ -1014,8 +1014,8 @@ with tab_gen:
                 #  Changelog viewer
                 _jid = st.session_state.job_id
                 try:
-                    _cr = requests.get(f"{BACKEND}/changelog/{_jid}", timeout=10)
-                    if _cr.ok and _cr.json().get("exists"):
+                    _cr = httpx.get(f"{BACKEND}/changelog/{_jid}", timeout=10)
+                    if _cr.is_success and _cr.json().get("exists"):
                         with st.expander("Project Changelog", expanded=False):
                             st.markdown(_cr.json()["changelog"])
                 except Exception:
@@ -1200,8 +1200,8 @@ with tab_hist:
                         import urllib.parse
 
                         try:
-                            dr = requests.delete(f"{BACKEND}/jobs/{urllib.parse.quote(jid)}", timeout=10)
-                            if dr.ok:
+                            dr = httpx.delete(f"{BACKEND}/jobs/{urllib.parse.quote(jid)}", timeout=10)
+                            if dr.is_success:
                                 st.success("Deleted.")
                                 st.rerun()
                             else:
