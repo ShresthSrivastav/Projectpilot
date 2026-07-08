@@ -1,24 +1,36 @@
-# Copy this file to terraform.tfvars and fill in the values
-# cp terraform.tfvars.example terraform.tfvars
+# Copy this file to terraform.tfvars and fill in your values:
+#   cp terraform.tfvars.example terraform.tfvars
+#
+# NEVER commit terraform.tfvars to git — it contains secrets.
+# GitHub Actions passes these via secrets (see .github/workflows/terraform.yml).
 
-# OCI Authentication
+# ── OCI Authentication ──────────────────────────────────────────────────────
+# Generate an API key in OCI Console:
+#   Profile → My profile → API keys → Add API key → Generate API key pair
+# This gives you a private key (.pem) and a public key.
+# Upload the public key — the console shows the fingerprint.
+
 oci_tenancy_ocid     = "ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 oci_user_ocid        = "ocid1.user.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 oci_fingerprint      = "xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx"
 oci_private_key_path = "~/.oci/oci_api_key.pem"
 
-# OCI Resources
-compartment_ocid = "ocid1.compartment.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-oci_region       = "us-ashburn-1"
+# ── OCI Resources ────────────────────────────────────────────────────────────
+# Use root compartment (Tenancy OCID) or create a child compartment.
+compartment_ocid = "ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+oci_region       = "ap-mumbai-1"
 
-# Project
+# ── Project ──────────────────────────────────────────────────────────────────
 project_name = "projectpilot"
 environment  = "prod"
-domain_name  = "your-domain.com"
+domain_name  = ""  # e.g. "pilot.example.com" (leave empty if no domain)
 
-# Compute
-ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ..."
+# ── Compute ──────────────────────────────────────────────────────────────────
+# Generate an SSH key pair for VM access:
+#   ssh-keygen -t ed25519 -f ~/.ssh/projectpilot_oci -C "projectpilot-vm"
+# Paste the PUBLIC key content below.
+ssh_public_key = "ssh-ed25519 AAAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx projectpilot-vm"
 
-# App
+# ── App ──────────────────────────────────────────────────────────────────────
 github_username = "ShresthSrivastav"
-ghcr_token      = "your-github-personal-access-token"
+ghcr_token      = ""  # GitHub PAT with packages:write scope (used by cloud-init)
