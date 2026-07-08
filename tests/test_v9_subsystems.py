@@ -305,17 +305,17 @@ class TestBrowserValidation:
         from services.browser_validation_service import BrowserValidationService
 
         vs = BrowserValidationService()
-        journey = vs.create_journey("Test Journey", "http://localhost:8000", tags=["smoke"])
+        journey = vs.create_journey("Test Journey", "http://localhost:5000", tags=["smoke"])
         assert journey.id
         assert journey.name == "Test Journey"
-        assert journey.base_url == "http://localhost:8000"
+        assert journey.base_url == "http://localhost:5000"
 
     def test_add_step(self):
         from services.browser_validation_service import BrowserValidationService, ValidationStep
 
         vs = BrowserValidationService()
-        journey = vs.create_journey("Test", "http://localhost:8000")
-        step = ValidationStep(action="navigate", url="http://localhost:8000", description="Home page")
+        journey = vs.create_journey("Test", "http://localhost:5000")
+        step = ValidationStep(action="navigate", url="http://localhost:5000", description="Home page")
         ok = vs.add_step(journey.id, step)
         assert ok
         assert len(vs.journeys[journey.id].steps) == 1
@@ -324,8 +324,8 @@ class TestBrowserValidation:
         from services.browser_validation_service import BrowserValidationService
 
         vs = BrowserValidationService()
-        vs.create_journey("J1", "http://localhost:8000")
-        vs.create_journey("J2", "http://localhost:8000/api")
+        vs.create_journey("J1", "http://localhost:5000")
+        vs.create_journey("J2", "http://localhost:5000/api")
         journeys = vs.list_journeys()
         assert len(journeys) >= 2
 
@@ -333,7 +333,7 @@ class TestBrowserValidation:
         from services.browser_validation_service import BrowserValidationService
 
         vs = BrowserValidationService()
-        journey = vs.create_journey("To Delete", "http://localhost:8000")
+        journey = vs.create_journey("To Delete", "http://localhost:5000")
         ok = vs.delete_journey(journey.id)
         assert ok
         assert vs.get_journey(journey.id) is None
@@ -347,14 +347,14 @@ class TestBrowserValidation:
             (Path(tmp) / "templates" / "login.html").write_text(
                 '<html><body><form><input type="password" name="pass"></form></body></html>'
             )
-            journey = vs.auto_generate_tests(tmp, "http://localhost:8000", "Auto Test")
+            journey = vs.auto_generate_tests(tmp, "http://localhost:5000", "Auto Test")
             assert len(journey.steps) > 0
 
     def test_regression_test_lifecycle(self):
         from services.browser_validation_service import BrowserValidationService
 
         vs = BrowserValidationService()
-        journey = vs.create_journey("Reg Journey", "http://localhost:8000")
+        journey = vs.create_journey("Reg Journey", "http://localhost:5000")
         rt = vs.create_regression_test("Regression 1", [journey.id])
         assert rt.id
         assert rt.name == "Regression 1"
@@ -561,7 +561,7 @@ class TestAPI:
             "/validation/journey/create",
             json={
                 "name": "API Test Journey",
-                "base_url": "http://localhost:8000",
+                "base_url": "http://localhost:5000",
                 "tags": ["test"],
             },
         )
@@ -668,14 +668,14 @@ class TestAPI:
             assert "file_count" in data
 
     def test_validation_step_add(self, client):
-        r = client.post("/validation/journey/create", json={"name": "Step Test", "base_url": "http://localhost:8000"})
+        r = client.post("/validation/journey/create", json={"name": "Step Test", "base_url": "http://localhost:5000"})
         jid = r.json()["journey_id"]
         r2 = client.post(
             "/validation/journey/step",
             json={
                 "journey_id": jid,
                 "action": "navigate",
-                "url": "http://localhost:8000",
+                "url": "http://localhost:5000",
             },
         )
         assert r2.status_code == 200
@@ -687,7 +687,7 @@ class TestAPI:
                 "/validation/auto-generate",
                 json={
                     "repo_path": tmp,
-                    "base_url": "http://localhost:8000",
+                    "base_url": "http://localhost:5000",
                     "name": "Auto",
                 },
             )
@@ -708,7 +708,7 @@ class TestAPI:
         assert r.status_code == 200
 
     def test_validation_delete_journey(self, client):
-        r = client.post("/validation/journey/create", json={"name": "To Delete", "base_url": "http://localhost:8000"})
+        r = client.post("/validation/journey/create", json={"name": "To Delete", "base_url": "http://localhost:5000"})
         jid = r.json()["journey_id"]
         r2 = client.delete(f"/validation/journey/{jid}")
         assert r2.status_code == 200

@@ -125,7 +125,7 @@ write_files:
     content: |
       upstream projectpilot_backend {
           least_conn;
-          server 127.0.0.1:8000 max_fails=3 fail_timeout=30s;
+          server 127.0.0.1:5000 max_fails=3 fail_timeout=30s;
       }
 
       upstream projectpilot_frontend {
@@ -302,6 +302,7 @@ runcmd:
   - ufw allow ssh
   - ufw allow 80/tcp
   - ufw allow 443/tcp
+  - ufw allow 5000/tcp
   - ufw --force enable
 
   # Enable fail2ban

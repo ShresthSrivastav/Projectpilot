@@ -224,11 +224,11 @@ class DeploymentOrchestrator:
             cm = ContainerManager()
             container = cm.create_container(
                 image=f"autodev-{project.name}",
-                port_mappings={8000: 8000},
+                port_mappings={5000: 5000},
                 name=f"deploy-{project.name[:12]}",
             )
             cm.start_container(container.id)
-            url = f"http://localhost:{container.host_port or 8000}"
+            url = f"http://localhost:{container.host_port or 5000}"
             return True, f"Container {container.id[:8]} started", url
         except Exception as exc:
             return False, str(exc), None

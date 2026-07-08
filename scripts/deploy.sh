@@ -69,7 +69,7 @@ health_check() {
             return 0
         fi
 
-        if [ "$service" = "backend" ] && curl -sf "http://localhost:8000/health" > /dev/null 2>&1; then
+        if [ "$service" = "backend" ] && curl -sf "http://localhost:5000/health" > /dev/null 2>&1; then
             log "INFO" "${service} responded to health check via HTTP"
             return 0
         fi

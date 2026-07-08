@@ -94,7 +94,7 @@ import requests
 st.set_page_config(page_title="Generated App", page_icon=":rocket:")
 st.title("Generated App")
 
-API_URL = "http://localhost:8000"
+API_URL = "http://localhost:5000"
 
 try:
     r = requests.get(f"{API_URL}/health", timeout=5)
@@ -113,7 +113,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 RUN mkdir -p /app/data
-EXPOSE 8000
+EXPOSE 5000
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 CMD ["/start.sh"]
@@ -122,7 +122,7 @@ CMD ["/start.sh"]
 _START_SH = """\
 #!/bin/bash
 set -e
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+uvicorn backend.main:app --host 0.0.0.0 --port 5000 &
 BACKEND_PID=$!
 sleep 3
 # Frontend will be started separately if applicable
@@ -214,7 +214,7 @@ def _gen_frontend(req: dict, bp: dict, model: str, job_id: str) -> str:
 Project: {req.get("project_name", "App")}
 Type: {req.get("project_type")}
 Features: {", ".join(req.get("features", []))}
-Backend URL: http://localhost:8000
+Backend URL: http://localhost:5000
 Routes: {json.dumps(bp.get("routes", []), indent=2)}
 Stack: {_stack_note(req)}
 
@@ -235,7 +235,7 @@ Rules:
 Project: {req.get("project_name", "App")}
 Type: {req.get("project_type")}
 Features: {", ".join(req.get("features", []))}
-Backend URL: http://localhost:8000
+Backend URL: http://localhost:5000
 Routes: {json.dumps(bp.get("routes", []), indent=2)}
 Stack: {_stack_note(req)}
 

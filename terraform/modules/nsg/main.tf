@@ -46,6 +46,22 @@ resource "oci_core_network_security_group_security_rule" "inbound_http" {
   }
 }
 
+# Inbound: App (5000)
+resource "oci_core_network_security_group_security_rule" "inbound_app" {
+  network_security_group_id = oci_core_network_security_group.app.id
+  direction                 = "INGRESS"
+  protocol                  = "6"
+  source_type               = "CIDR_BLOCK"
+  source                    = "0.0.0.0/0"
+
+  tcp_options {
+    destination_port_range {
+      min = 5000
+      max = 5000
+    }
+  }
+}
+
 # Inbound: HTTPS
 resource "oci_core_network_security_group_security_rule" "inbound_https" {
   network_security_group_id = oci_core_network_security_group.app.id

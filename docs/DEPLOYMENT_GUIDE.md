@@ -3,7 +3,7 @@
 ## Architecture
 
 ```
-Internet → Nginx (HTTPS) → Backend (FastAPI :8000)
+Internet → Nginx (HTTPS) → Backend (FastAPI :5000)
                          → Frontend (Streamlit :8501)
                          → PostgreSQL (Managed)
 ```
@@ -69,7 +69,7 @@ Add these secrets in **Settings → Secrets and variables → Actions**:
 ### Create VM
 
 1. Create an OCI Compute VM (Ubuntu 22.04+, minimum recommended: VM.Standard.E2.1.Micro for free tier, VM.Standard.E4.Flex for production)
-2. Configure security list to allow ports 22 (SSH), 80 (HTTP), 443 (HTTPS)
+2. Configure security list to allow ports 22 (SSH), 80 (HTTP), 443 (HTTPS), 5000 (App)
 3. Note the public IP and set `OCI_HOST`
 
 ### Initial Setup
@@ -148,7 +148,7 @@ MODEL_FAST=qwen2.5-coder:1.5b
 MODEL_BALANCED=qwen2.5-coder:7b
 MODEL_POWERFUL=qwen2.5-coder:14b
 GOOGLE_API_KEY=your-google-api-key
-BACKEND_PORT=8000
+BACKEND_PORT=5000
 FRONTEND_PORT=8501
 CHROMA_PATH=./chroma_data
 GENERATED_PROJECTS_DIR=./generated_projects

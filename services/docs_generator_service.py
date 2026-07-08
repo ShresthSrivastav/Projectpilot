@@ -143,7 +143,7 @@ def _generate_architecture_doc() -> str:
         "## Core Components",
         "",
         "### Backend (FastAPI)",
-        "- **Port:** 8000",
+        "- **Port:** 5000",
         f"- **Routes:** {len(routes)}",
         "- **Framework:** FastAPI with Pydantic v2 validation",
         "",
@@ -321,13 +321,13 @@ docker build -t autodev-ai:latest .
 # Run with production settings
 docker run -d \\
   --name autodev-backend \\
-  -p 8000:8000 \\
+  -p 5000:5000 \\
   -v ./chroma_data:/app/chroma_data \\
   -v ./generated_projects:/app/generated_projects \\
   -v ./memory_store:/app/memory_store \\
   --env-file .env \\
   autodev-ai:latest \\
-  uvicorn backend.main:app --host 0.0.0.0 --port 8000
+  uvicorn backend.main:app --host 0.0.0.0 --port 5000
 ```
 
 ## Platform Deployments
@@ -723,7 +723,7 @@ graph TB
         DASH[Dashboard]
     end
 
-    subgraph Backend["FastAPI Backend :8000"]
+    subgraph Backend["FastAPI Backend :5000"]
         API[API Layer - 92 Routes]
         ORC[Orchestrator]
         SUP[Supervisor]

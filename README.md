@@ -30,7 +30,7 @@
                          │ REST API
                          ▼
 ┌─────────────────────────────────────────────────────┐
-│              FastAPI Backend (8000)                 │
+│              FastAPI Backend (5000)                 │
 │  POST /clarify           POST /generate-project     │
 │  POST /cancel/:id        POST /regenerate-file      │
 │  GET  /files/:id         GET  /validate/:id         │
@@ -64,7 +64,7 @@ docker-compose up --build
 
 # 3. Open browser
 # Frontend: http://localhost:8501
-# API docs: http://localhost:8000/docs
+# API docs: http://localhost:5000/docs
 ```
 
 ## Local development
@@ -73,7 +73,7 @@ docker-compose up --build
 pip install -r requirements.txt
 
 # Terminal 1 — backend
-uvicorn backend.main:app --reload --port 8000
+uvicorn backend.main:app --reload --port 5000
 
 # Terminal 2 — frontend
 streamlit run frontend/app.py

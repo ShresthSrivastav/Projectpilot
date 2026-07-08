@@ -57,7 +57,7 @@ def _read_project_files(job_dir: Path) -> dict[str, str]:
 
 
 def _detect_stack(files: dict[str, str]) -> dict[str, str]:
-    stack = {"backend": "python", "port": "8000", "build": "", "start": ""}
+    stack = {"backend": "python", "port": "5000", "build": "", "start": ""}
     for name in files:
         if "requirements.txt" in name:
             stack["build"] = "pip install -r requirements.txt"
