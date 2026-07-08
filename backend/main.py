@@ -24,7 +24,7 @@ from services.audit_service import init_audit_db
 from services.auth_service import Role, lookup_role
 from services.cleanup_service import start_cleanup_daemon
 from services.jwt_service import decode_access_token
-from services.llm_service import ensure_models, is_available
+from services.llm_service import call_model, ensure_models, is_available
 from services.notification_service import init_notifications_db
 from services.rate_limiter import RateLimitMiddleware
 

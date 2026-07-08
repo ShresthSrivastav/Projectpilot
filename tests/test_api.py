@@ -341,7 +341,7 @@ def test_regenerate_file_success(client, tmp_path):
     new_code = (
         "from fastapi import FastAPI\napp = FastAPI()\n\n@app.get('/health')\ndef health(): return {'status': 'ok'}\n"
     )
-    with patch("backend.main.call_model", return_value=new_code):
+    with patch("backend.routes.pipeline_routes.call_model", return_value=new_code):
         r = client.post(
             "/regenerate-file",
             json={
@@ -717,8 +717,9 @@ def test_llm_retry_on_timeout():
         call_count += 1
         raise APITimeoutError(request=MagicMock())
 
-    with patch.object(llm_service._client(), "chat") as mock_chat:
-        mock_chat.completions.create.side_effect = fake_create
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.side_effect = fake_create
+    with patch.object(llm_service, "_client", return_value=mock_client):
         with pytest.raises(RuntimeError, match="failed after"):
             llm_service.call_model("test", model="local")
 
