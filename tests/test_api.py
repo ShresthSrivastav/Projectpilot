@@ -62,7 +62,7 @@ def client():
 
 
 def _make_job(client, prompt="Build a task manager with CRUD and SQLite database."):
-    with patch("backend.main.run_pipeline"):
+    with patch("backend.routes.pipeline_routes.run_pipeline"):
         r = client.post(
             "/generate-project",
             json={
@@ -92,7 +92,7 @@ def test_health_fields(client):
 # ── Generate
 
 
-@patch("backend.main.run_pipeline")
+@patch("backend.routes.pipeline_routes.run_pipeline")
 def test_generate_valid(mock_p, client):
     r = client.post(
         "/generate-project",
@@ -108,7 +108,7 @@ def test_generate_valid(mock_p, client):
     assert d["status"] == "queued"
 
 
-@patch("backend.main.run_pipeline")
+@patch("backend.routes.pipeline_routes.run_pipeline")
 def test_generate_with_stack(mock_p, client):
     r = client.post(
         "/generate-project",
@@ -123,7 +123,7 @@ def test_generate_with_stack(mock_p, client):
     assert "job_id" in r.json()
 
 
-@patch("backend.main.run_pipeline")
+@patch("backend.routes.pipeline_routes.run_pipeline")
 def test_generate_with_clarification(mock_p, client):
     r = client.post(
         "/generate-project",
