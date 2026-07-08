@@ -7,7 +7,6 @@ Keeps only server initialization, middleware configuration, and lifespan context
 import asyncio
 import logging
 import os
-import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
@@ -24,7 +23,7 @@ from services.audit_service import init_audit_db
 from services.auth_service import Role, lookup_role
 from services.cleanup_service import start_cleanup_daemon
 from services.jwt_service import decode_access_token
-from services.llm_service import call_model, ensure_models, is_available
+from services.llm_service import ensure_models, is_available
 from services.notification_service import init_notifications_db
 from services.rate_limiter import RateLimitMiddleware
 
@@ -36,7 +35,7 @@ from backend.routes.analytics_routes import router as analytics_router
 from backend.routes.plugin_routes import router as plugin_router
 from backend.routes.diagram_routes import router as diagram_router
 from backend.routes.supervisor_routes import router as supervisor_router
-from backend.routes.pipeline_routes import router as pipeline_router, run_pipeline
+from backend.routes.pipeline_routes import router as pipeline_router
 from backend.routes.github_routes import router as github_router
 from backend.routes.chat_routes import router as chat_router
 from backend.routes.workspace_routes import router as workspace_file_router
