@@ -29,7 +29,7 @@ resource "oci_core_instance" "app" {
   compartment_id      = var.compartment_ocid
   display_name        = "${var.project_name}-${var.environment}"
   shape               = var.shape
-  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
+  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[1].name
 
   shape_config {
     ocpus         = var.ocpus
