@@ -60,7 +60,7 @@ class ProcessManager:
         self.processes: dict[str, ProcessResult] = {}
         self._subprocesses: dict[int, subprocess.Popen] = {}
         self._lock = threading.Lock()
-        self._port_counter = 8000
+        self._port_counter = 5000
 
     def _next_port(self) -> int:
         with self._lock:

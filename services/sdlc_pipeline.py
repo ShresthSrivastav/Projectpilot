@@ -184,8 +184,8 @@ class SDLCEngine:
             from services.browser_validation_service import ValidationStep, get_validation_service
 
             vs = get_validation_service()
-            journey = vs.create_journey(f"SDLC-{pipeline.id[:6]}", "http://localhost:8000")
-            vs.add_step(journey.id, ValidationStep(action="navigate", url="http://localhost:8000", description="Root"))
+            journey = vs.create_journey(f"SDLC-{pipeline.id[:6]}", "http://localhost:5000")
+            vs.add_step(journey.id, ValidationStep(action="navigate", url="http://localhost:5000", description="Root"))
             result = vs.execute_journey(journey.id, headless=True)
             pipeline.stages_completed.append("browser_validation")
             return result.get("success", True)

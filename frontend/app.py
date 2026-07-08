@@ -16,7 +16,7 @@ import streamlit as st
 
 import frontend.auth as auth_client
 
-BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+BACKEND = os.getenv("BACKEND_URL", "http://localhost:5000").rstrip("/")
 POLL_SEC = 2
 
 st.set_page_config(
@@ -1279,7 +1279,7 @@ with tab_info:
                           REST API
                          
 
-              FastAPI Backend (8000)                 
+              FastAPI Backend (5000)                 
   POST /clarify           POST /generate-project     
   POST /cancel/:id        POST /regenerate-file      
   GET  /files/:id         GET  /validate/:id         

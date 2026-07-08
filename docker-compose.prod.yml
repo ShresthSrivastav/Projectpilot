@@ -2,9 +2,9 @@ services:
   backend:
     image: ghcr.io/shresthsrivastav/projectpilot:${IMAGE_TAG:-latest}
     container_name: projectpilot_backend
-    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 2 --log-level info
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 5000 --workers 2 --log-level info
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:5000:5000"
     volumes:
       - /opt/projectpilot/data/chroma_data:/app/chroma_data
       - /opt/projectpilot/data/generated_projects:/app/generated_projects
@@ -12,10 +12,10 @@ services:
       - /opt/projectpilot/logs/backend:/app/logs
     env_file: /opt/projectpilot/.env
     environment:
-      - BACKEND_URL=http://127.0.0.1:8000
+      - BACKEND_URL=http://127.0.0.1:5000
       - LOG_LEVEL=INFO
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -45,7 +45,7 @@ services:
       - "127.0.0.1:8501:8501"
     env_file: /opt/projectpilot/.env
     environment:
-      - BACKEND_URL=http://127.0.0.1:8000
+      - BACKEND_URL=http://127.0.0.1:5000
     depends_on:
       backend:
         condition: service_healthy

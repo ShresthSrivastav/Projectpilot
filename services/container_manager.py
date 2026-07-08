@@ -93,7 +93,7 @@ class ContainerManager:
                     cmd.extend(["-p", f"{h_port}:{c_port}"])
             elif not port_mappings:
                 container.host_port = self._next_port()
-                cmd.extend(["-p", f"{container.host_port}:{container.container_port or 8000}"])
+                cmd.extend(["-p", f"{container.host_port}:{container.container_port or 5000}"])
 
             if working_dir:
                 cmd.extend(["-w", working_dir])

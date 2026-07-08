@@ -2,8 +2,8 @@
 
 ## 1. Base URL
 
-`http://localhost:8000` (development)
-`http://backend:8000` (Docker)
+`http://localhost:5000` (development)
+`http://backend:5000` (Docker)
 
 ## 2. Authentication
 

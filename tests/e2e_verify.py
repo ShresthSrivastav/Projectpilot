@@ -2,7 +2,7 @@
 
 import httpx
 
-BACKEND = "http://localhost:8000"
+BACKEND = "http://localhost:5000"
 FRONTEND = "http://localhost:8501"
 
 checks = 0

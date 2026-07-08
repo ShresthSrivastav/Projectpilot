@@ -50,7 +50,7 @@ docker compose -f docker-compose.prod.yml logs backend --tail=50
 
 Common causes:
 - `.env` file missing or misconfigured
-- Port 8000 already in use
+- Port 5000 already in use
 - Ollama not running (if using local models)
 
 ## Application Returns 502 Bad Gateway
@@ -74,7 +74,7 @@ docker compose -f docker-compose.prod.yml restart backend
 
 **Cause**: Backend not healthy or network issue.
 
-**Fix**: The frontend uses `BACKEND_URL=http://127.0.0.1:8000`. Ensure backend is on the same Docker network.
+**Fix**: The frontend uses `BACKEND_URL=http://127.0.0.1:5000`. Ensure backend is on the same Docker network.
 
 ## Nginx Shows Default Page
 
@@ -104,7 +104,7 @@ sudo find /var/log/projectpilot -name "*.log" -mtime +7 -delete
 ## SSH Connection Refused
 
 **Causes**:
-1. UFW blocking: `sudo ufw status` — should allow 22, 80, 443
+1. UFW blocking: `sudo ufw status` — should allow 22, 80, 443, 5000
 2. Instance stopped: check OCI console
 3. Wrong IP: `terraform output instance_public_ip`
 

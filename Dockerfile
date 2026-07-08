@@ -16,4 +16,4 @@ RUN mkdir -p /app/chroma_data /app/generated_projects /app/memory_store && \
     find . -type f -name '*.pyc' -delete
 RUN adduser --disabled-password --gecos '' appuser && chown -R appuser:appuser /app
 USER appuser
-EXPOSE 8000 8501
+EXPOSE 5000 8501

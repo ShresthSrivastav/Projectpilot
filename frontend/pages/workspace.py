@@ -8,7 +8,7 @@ import streamlit as st
 
 import frontend.auth as auth_client
 
-BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+BACKEND = os.getenv("BACKEND_URL", "http://localhost:5000").rstrip("/")
 
 
 def _headers():

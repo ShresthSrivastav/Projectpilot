@@ -13,7 +13,7 @@ GitHub Actions → GHCR (Docker Image)
                      ↓
          ┌───────────┴───────────┐
     Backend (FastAPI)      Frontend (Streamlit)
-    port 8000               port 8501
+    port 5000               port 8501
          └───────────┬───────────┘
               SQLite + ChromaDB
 ```

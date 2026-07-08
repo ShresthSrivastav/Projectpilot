@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 import streamlit as st
 
-BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+BACKEND = os.getenv("BACKEND_URL", "http://localhost:5000").rstrip("/")
 
 
 def _get(path: str, timeout: int = 10) -> dict | None:

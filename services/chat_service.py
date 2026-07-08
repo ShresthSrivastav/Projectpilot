@@ -363,7 +363,7 @@ def _run_action(tool_name: str, args: dict) -> dict:
 
     if tool_name == "fix_tests":
         jid = args.get("job_id", "")
-        resp = httpx.post(f"http://localhost:8000/fix-tests/{jid}", timeout=300)
+        resp = httpx.post(f"http://localhost:5000/fix-tests/{jid}", timeout=300)
         resp.raise_for_status()
         data = resp.json()
         return {"message": data.get("message", "Tests fixed.")}
@@ -371,7 +371,7 @@ def _run_action(tool_name: str, args: dict) -> dict:
     if tool_name == "iterate_project":
         jid = args.get("job_id", "")
         instructions = args.get("instructions", "")
-        resp = httpx.post(f"http://localhost:8000/iterate/{jid}", json={"instructions": instructions}, timeout=300)
+        resp = httpx.post(f"http://localhost:5000/iterate/{jid}", json={"instructions": instructions}, timeout=300)
         resp.raise_for_status()
         data = resp.json()
         return {"message": f"Iteration done. {data.get('test_summary', 'N/A')}"}
@@ -384,7 +384,7 @@ def _run_action(tool_name: str, args: dict) -> dict:
 
     if tool_name == "validate_project":
         jid = args.get("job_id", "")
-        resp = httpx.get(f"http://localhost:8000/validate/{jid}", timeout=120)
+        resp = httpx.get(f"http://localhost:5000/validate/{jid}", timeout=120)
         resp.raise_for_status()
         data = resp.json()
         return {"message": data.get("summary", "Validation complete.")}
@@ -394,7 +394,7 @@ def _run_action(tool_name: str, args: dict) -> dict:
         fp = args.get("file_path", "backend/main.py")
         note = args.get("correction_note", "")
         resp = httpx.post(
-            "http://localhost:8000/regenerate-file",
+            "http://localhost:5000/regenerate-file",
             json={"job_id": jid, "file_path": fp, "correction_note": note},
             timeout=120,
         )
