@@ -704,7 +704,7 @@ def test_clean_code_response_no_fences():
     assert clean_code_response("print('hello')") == "print('hello')"
 
 
-def test_llm_retry_on_timeout():
+def test_llm_retry_on_timeout(monkeypatch):
     """LLM call retries up to MAX_RETRIES times on APITimeoutError."""
     from openai import APITimeoutError
 
@@ -712,16 +712,17 @@ def test_llm_retry_on_timeout():
 
     call_count = 0
 
-    def fake_call_local(prompt, system_prompt, model, job_id=None, agent=None, **kwargs):
+    def fake_create(**kwargs):
         nonlocal call_count
         call_count += 1
-        if call_count > llm_service.MAX_RETRIES:
-            raise RuntimeError("Exceeded max retries in test mock")
         raise APITimeoutError(request=MagicMock())
 
-    with patch.object(llm_service, "_call_local", side_effect=fake_call_local):
-        with pytest.raises(RuntimeError, match="failed after"):
-            llm_service.call_model("test", model="local")
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.side_effect = fake_create
+    monkeypatch.setattr(llm_service, "_client", lambda: mock_client)
+
+    with pytest.raises(RuntimeError, match="failed after"):
+        llm_service.call_model("test", model="local")
 
     assert call_count == llm_service.MAX_RETRIES
 
