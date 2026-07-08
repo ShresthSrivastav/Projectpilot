@@ -29,11 +29,14 @@ resource "oci_core_instance" "app" {
   compartment_id      = var.compartment_ocid
   display_name        = "${var.project_name}-${var.environment}"
   shape               = var.shape
-  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[1].name
+  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
 
-  shape_config {
-    ocpus         = var.ocpus
-    memory_in_gbs = var.memory_gbs
+  dynamic "shape_config" {
+    for_each = var.shape == "VM.Standard.A1.Flex" ? [1] : []
+    content {
+      ocpus         = var.ocpus
+      memory_in_gbs = var.memory_gbs
+    }
   }
 
   source_details {
