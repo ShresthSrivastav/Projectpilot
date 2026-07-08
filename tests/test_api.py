@@ -712,14 +712,17 @@ def test_llm_retry_on_timeout(monkeypatch):
 
     call_count = 0
 
-    def fake_create(**kwargs):
-        nonlocal call_count
-        call_count += 1
-        raise APITimeoutError(request=MagicMock())
+    original_call_local = llm_service._call_local
 
-    mock_client = MagicMock()
-    mock_client.chat.completions.create.side_effect = fake_create
-    monkeypatch.setattr(llm_service, "_client", lambda: mock_client)
+    def wrapped_call_local(prompt, system_prompt, model, job_id=None, agent=None, **kwargs):
+        nonlocal call_count
+        if prompt == "test" and model == "local":
+            call_count += 1
+            if call_count <= llm_service.MAX_RETRIES:
+                raise APITimeoutError(request=MagicMock())
+        return original_call_local(prompt, system_prompt, model, job_id, agent, **kwargs)
+
+    monkeypatch.setattr(llm_service, "_call_local", wrapped_call_local)
 
     with pytest.raises(RuntimeError, match="failed after"):
         llm_service.call_model("test", model="local")
