@@ -12,7 +12,7 @@ resource "oci_core_vcn" "main" {
   compartment_id = var.compartment_ocid
   display_name   = "${var.project_name}-${var.environment}-vcn"
   cidr_blocks    = [var.vcn_cidr]
-  dns_label      = "${var.project_name}${var.environment}"
+  dns_label      = substr("${var.project_name}${var.environment}", 0, 15)
 
   freeform_tags = local.common_tags
 }
