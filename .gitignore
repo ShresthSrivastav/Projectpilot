@@ -29,8 +29,10 @@ Thumbs.db
 
 # Project data
 chroma_data/
+chroma_db_v4/
 generated_projects/
 memory_store/
+memory_store_test/
 github_repos/
 browser_artifacts/
 process_logs/
@@ -40,6 +42,7 @@ debate_output/
 org_data/
 benchmarks/
 benchmark_history/
+benchmark_campaign/results/
 healing_data/
 runtime_data/
 sdlc_data/
@@ -50,6 +53,15 @@ autonomous_data/
 validation_artifacts/
 repo_analysis/
 agents/plugins/
+plugin_data/
+marketplace_data/
+generated_projects_backup/
+
+# Test artifacts (generated at runtime, must not be tracked)
+test_chroma_data_v4/
+test_security_chroma/
+test_security_projects/
+tests/test_chroma/
 
 # Logs
 *.log
