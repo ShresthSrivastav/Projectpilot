@@ -186,19 +186,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Copy deployment files to VM
-        uses: appleboy/ssh-action@master
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.OCI_HOST }}
           username: ${{ secrets.OCI_USER }}
           key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
-          script: |
-            set -euo pipefail
-            cd /opt/projectpilot
-            curl -sL -o scripts/deploy.sh "https://raw.githubusercontent.com/ShresthSrivastav/Projectpilot/main/scripts/deploy.sh"
-            curl -sL -o docker-compose.prod.yml "https://raw.githubusercontent.com/ShresthSrivastav/Projectpilot/main/docker-compose.prod.yml"
-            curl -sL -o .env.example "https://raw.githubusercontent.com/ShresthSrivastav/Projectpilot/main/.env.example"
-            chmod +x scripts/deploy.sh
-            ls -la scripts/deploy.sh docker-compose.prod.yml .env.example
+          source: "scripts/deploy.sh,docker-compose.prod.yml,.env.example"
+          target: /opt/projectpilot/
+          strip_components: 0
+          debug: true
 
       - name: Deploy to OCI VM
         id: deploy
