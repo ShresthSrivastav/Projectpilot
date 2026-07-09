@@ -9,6 +9,7 @@ Uses contextvars for automatic workspace detection from request context.
 
 from __future__ import annotations
 
+import concurrent.futures
 import json
 import logging
 import os
@@ -21,6 +22,17 @@ import chromadb
 from chromadb.config import Settings
 
 logger = logging.getLogger(__name__)
+
+_CHROMA_TIMEOUT = 25
+_CHROMA_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=2, thread_name_prefix="chroma")
+
+def chroma_call(fn, timeout=_CHROMA_TIMEOUT, *args, **kwargs):
+    """Execute a ChromaDB call with a timeout. Raises TimeoutError if exceeded."""
+    fut = _CHROMA_EXECUTOR.submit(fn, *args, **kwargs)
+    try:
+        return fut.result(timeout=timeout)
+    except concurrent.futures.TimeoutError:
+        raise TimeoutError(f"ChromaDB operation '{fn.__name__}' timed out after {timeout}s")
 
 CHROMA_PATH = os.getenv(
     "CHROMA_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "chroma_data")

@@ -1,8 +1,8 @@
 """Pipeline/job routes extracted from backend/main.py."""
 
-import asyncio
 import json
 import logging
+import os
 import re
 import threading
 import uuid
@@ -34,6 +34,7 @@ from backend.routes.helpers import (
     VALID_DEPLOY,
 )
 from database.chroma_db import (
+    chroma_call,
     create_job,
     delete_job,
     get_blueprint,
@@ -189,6 +190,16 @@ def run_pipeline(
     """Run the generation pipeline through the orchestrator with explicit workspace context."""
     from agents.orchestrator_agent import Orchestrator
     from services.agent_context import AgentContext
+    from services.llm_service import is_available as ollama_is_available
+
+    if model == "local" and not ollama_is_available():
+        from database.chroma_db import update_job_status
+        err = (
+            f"Ollama is not reachable at {os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')}. "
+            f"Check that the Ollama container is running, or select a cloud model from the sidebar."
+        )
+        update_job_status(job_id, "failed", current_agent="", progress_pct=0, error_message=err)
+        return {"status": "failed", "error": err}
 
     context = AgentContext(
         workspace_id=workspace_id,
@@ -225,13 +236,20 @@ async def clarify_prompt(req: ClarifyRequest):
 
 
 @router.post("/generate-project")
-async def generate_project(req: GenerateRequest, request: Request = None):
+def generate_project(req: GenerateRequest, request: Request = None):
     """Queue a new project generation job and run it in a background thread."""
     job_id = str(uuid.uuid4())
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
     uid = getattr(request.state, "user_id", "") if request else ""
-    create_job(job_id, workspace_id=ws_id, user_id=uid)
-    save_prompt(job_id, req.prompt, req.project_name, workspace_id=ws_id, user_id=uid)
+
+    try:
+        chroma_call(create_job, 20, job_id, workspace_id=ws_id, user_id=uid)
+        chroma_call(save_prompt, 20, job_id, req.prompt, req.project_name, workspace_id=ws_id, user_id=uid)
+    except TimeoutError:
+        raise HTTPException(status_code=503, detail="Database is busy — try again in a moment")
+    except Exception as exc:
+        logger.error("Failed to create job %s: %s", job_id, exc)
+        raise HTTPException(status_code=503, detail="Could not create job. Please try again.")
 
     # Audit log
     try:

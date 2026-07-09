@@ -402,7 +402,20 @@ def _call_local(
             raise RuntimeError(str(exc)) from exc
         except Exception as exc:
             raise RuntimeError(f"LLM call failed: {exc}") from exc
-    raise RuntimeError(f"Ollama failed after {MAX_RETRIES} attempts: {last_exc}")
+    msg = str(last_exc)
+    if isinstance(last_exc, APIConnectionError):
+        msg = (
+            f"Ollama at {OLLAMA_BASE_URL} is not reachable. "
+            f"Make sure the Ollama container is running (`docker ps | grep ollama`) "
+            f"and a model is available (`ollama list`). "
+            f"You can also select a cloud model in the sidebar if GOOGLE_API_KEY is set."
+        )
+    elif isinstance(last_exc, APITimeoutError):
+        msg = (
+            f"Ollama at {OLLAMA_BASE_URL} is not responding. "
+            f"The model may still be loading. Wait a moment and try again."
+        )
+    raise RuntimeError(f"Ollama failed after {MAX_RETRIES} attempts: {msg}")
 
 
 def _call_cloud(

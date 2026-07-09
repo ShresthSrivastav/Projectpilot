@@ -250,6 +250,9 @@ def _post(path: str, payload: dict, timeout: int = 60) -> dict | None:
     except httpx.ConnectError:
         st.error(f" Cannot reach backend at `{BACKEND}`")
         return None
+    except httpx.ReadTimeout:
+        st.error(" Request timed out. Project generation is taking longer than expected — try again or use a simpler prompt.")
+        return None
 
 
 def _download(job_id: str) -> bytes | None:
@@ -755,7 +758,7 @@ with tab_gen:
             payload["clarification"] = st.session_state.clarify_answer.strip()
 
         with st.spinner("Submitting project generation..."):
-            resp = _post("/generate-project", payload)
+            resp = _post("/generate-project", payload, timeout=300)
         if resp:
             st.session_state.job_id = resp["job_id"]
             st.session_state.polling = True

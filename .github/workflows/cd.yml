@@ -212,6 +212,11 @@ jobs:
             set -euo pipefail
             chmod +x /opt/projectpilot/scripts/deploy.sh
             cp -n /opt/projectpilot/.env.example /opt/projectpilot/.env 2>/dev/null || true
+            if grep -q '^GOOGLE_API_KEY=' /opt/projectpilot/.env; then
+              sed -i 's|^GOOGLE_API_KEY=.*|GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}|' /opt/projectpilot/.env
+            else
+              echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> /opt/projectpilot/.env
+            fi
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             export DOMAIN_NAME="${{ secrets.DOMAIN_NAME }}"
             export DEPLOY_TIMEOUT="300"
