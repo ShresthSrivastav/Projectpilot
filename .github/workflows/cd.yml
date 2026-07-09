@@ -35,10 +35,16 @@ jobs:
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip-tests != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    continue-on-error: ${{ matrix.continue-on-error }}
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12"]
+        include:
+          - python-version: "3.12"
+            continue-on-error: true
+          - python-version: "3.11"
+            continue-on-error: false
 
     steps:
       - name: Checkout

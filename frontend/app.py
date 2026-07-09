@@ -1,15 +1,12 @@
 """ProjectPilot — Streamlit Frontend
-
-New in v4:
-  - Clarifying question flow before generation
-  - Tech stack selector (backend / frontend / db)
-  - Live file tree panel during generation
-  - Cancel button for running jobs
-  - Regenerate file panel on completed jobs
 """
 
 import os
+import sys
 import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import httpx
 import streamlit as st
