@@ -1,5 +1,4 @@
-"""ProjectPilot — Streamlit Frontend
-"""
+"""ProjectPilot — Streamlit Frontend"""
 
 import os
 import sys
