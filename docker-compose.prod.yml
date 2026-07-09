@@ -45,7 +45,7 @@ services:
       - "127.0.0.1:8501:8501"
     env_file: /opt/projectpilot/.env
     environment:
-      - BACKEND_URL=http://127.0.0.1:5000
+      - BACKEND_URL=http://backend:5000
     depends_on:
       backend:
         condition: service_healthy
