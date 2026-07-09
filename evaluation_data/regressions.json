@@ -1,0 +1,41 @@
+[
+  {
+    "id": "8cbede21-aeaf-4894-a8e2-b97eabf0e975",
+    "category": "autonomy",
+    "metric": "autonomy_score",
+    "previous_value": 0.9,
+    "current_value": 0.6,
+    "threshold": 33.333333333333336,
+    "severity": "high",
+    "message": "Autonomy score dropped 33.3% (0.90 \u2192 0.60)",
+    "run_id": "",
+    "detected_at": "2026-07-09T05:47:29.507854+00:00",
+    "dismissed": false
+  },
+  {
+    "id": "06d38058-180a-4b21-b374-1f17a259cb70",
+    "category": "cost",
+    "metric": "total_cost",
+    "previous_value": 100,
+    "current_value": 600,
+    "threshold": 500.0,
+    "severity": "high",
+    "message": "Cost increased 500.0% (100.00 \u2192 600.00)",
+    "run_id": "",
+    "detected_at": "2026-07-09T05:47:29.509854+00:00",
+    "dismissed": false
+  },
+  {
+    "id": "552f378f-7f34-41bb-97f9-8baeeef1c2ef",
+    "category": "autonomy",
+    "metric": "autonomy_score",
+    "previous_value": 0.9,
+    "current_value": 0.3,
+    "threshold": 66.66666666666667,
+    "severity": "high",
+    "message": "Autonomy score dropped 66.7% (0.90 \u2192 0.30)",
+    "run_id": "",
+    "detected_at": "2026-07-09T05:47:29.512854+00:00",
+    "dismissed": false
+  }
+]

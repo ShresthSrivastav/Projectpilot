@@ -1,0 +1,30 @@
+[
+  {
+    "id": "ed00d367-723e-48d5-b5a2-d7681a8e1792",
+    "from_version": "v11.0",
+    "to_version": "v12.0",
+    "autonomy_delta": 12.499999999999996,
+    "execution_time_delta": -33.33333333333333,
+    "healing_delta": 13.33333333333333,
+    "deployment_delta": 5.555555555555548,
+    "cost_efficiency_delta": 5.882352941176476,
+    "success_rate_delta": 7.954545454545449,
+    "benchmark_delta": 15.0,
+    "summary": "Comparison: v11.0 \u2192 v12.0. Autonomy improved 12.5%. Cost efficiency improved. Overall performance improved",
+    "created_at": "2026-07-09T05:47:29.517854+00:00"
+  },
+  {
+    "id": "e34e0ddd-5a71-4fbb-bb91-cc4368509c7a",
+    "from_version": "v11.0",
+    "to_version": "v12.0",
+    "autonomy_delta": 20.000000000000004,
+    "execution_time_delta": -57.14285714285714,
+    "healing_delta": 20.689655172413797,
+    "deployment_delta": 13.529411764705868,
+    "cost_efficiency_delta": 15.625,
+    "success_rate_delta": 16.564417177914113,
+    "benchmark_delta": 24.66666666666667,
+    "summary": "Comparison: v11.0 \u2192 v12.0. Autonomy improved 20.0%. Cost efficiency improved. Overall performance improved",
+    "created_at": "2026-07-09T05:47:29.521855+00:00"
+  }
+]

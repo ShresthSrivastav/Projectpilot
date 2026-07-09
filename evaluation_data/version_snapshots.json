@@ -1,0 +1,54 @@
+[
+  {
+    "id": "b10160dc-d6f9-4364-b3bc-56eb7999749d",
+    "version": "v11.0",
+    "autonomy_score": 0.8,
+    "execution_time_ms": 15000,
+    "healing_effectiveness": 0.75,
+    "deployment_success_rate": 0.9,
+    "cost_efficiency": 0.85,
+    "success_rate": 0.88,
+    "benchmark_score": 0.8,
+    "recorded_at": "2026-07-09T05:47:29.516874+00:00",
+    "run_id": ""
+  },
+  {
+    "id": "aefc9c28-c14f-4636-86b7-3b6b1a10b494",
+    "version": "v12.0",
+    "autonomy_score": 0.9,
+    "execution_time_ms": 10000,
+    "healing_effectiveness": 0.85,
+    "deployment_success_rate": 0.95,
+    "cost_efficiency": 0.9,
+    "success_rate": 0.95,
+    "benchmark_score": 0.92,
+    "recorded_at": "2026-07-09T05:47:29.516874+00:00",
+    "run_id": ""
+  },
+  {
+    "id": "660a243a-66a7-41a5-86f4-99020c713ab7",
+    "version": "v11.0",
+    "autonomy_score": 0.7,
+    "execution_time_ms": 20000,
+    "healing_effectiveness": 0.7,
+    "deployment_success_rate": 0.8,
+    "cost_efficiency": 0.75,
+    "success_rate": 0.75,
+    "benchmark_score": 0.7,
+    "recorded_at": "2026-07-09T05:47:29.520854+00:00",
+    "run_id": ""
+  },
+  {
+    "id": "1548c0e7-5983-4266-bd86-92ffa6ebab42",
+    "version": "v12.0",
+    "autonomy_score": 0.9,
+    "execution_time_ms": 5000,
+    "healing_effectiveness": 0.9,
+    "deployment_success_rate": 0.98,
+    "cost_efficiency": 0.95,
+    "success_rate": 0.95,
+    "benchmark_score": 0.95,
+    "recorded_at": "2026-07-09T05:47:29.520854+00:00",
+    "run_id": ""
+  }
+]

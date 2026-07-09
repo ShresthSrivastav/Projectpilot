@@ -1,0 +1,1216 @@
+[
+  {
+    "id": "e95bea39-f30a-4b05-89ed-f5d139dbc35c",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:26.034812+00:00",
+    "period_start": "2026-07-08T05:47:26.034812+00:00",
+    "period_end": "2026-07-09T05:47:26.034812+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "c8877b26-d3f4-41dc-82ba-797a7ad79588",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:26.107539+00:00",
+    "period_start": "2026-07-08T05:47:26.107539+00:00",
+    "period_end": "2026-07-09T05:47:26.107539+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "dc58efb0-1362-4c63-bbe1-8ffc08d9bbcd",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:26.181866+00:00",
+    "period_start": "2026-07-08T05:47:26.181866+00:00",
+    "period_end": "2026-07-09T05:47:26.181866+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "0f25a488-a8f2-4310-ac85-11e2fd7ebe6c",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:26.185866+00:00",
+    "period_start": "2026-07-08T05:47:26.185866+00:00",
+    "period_end": "2026-07-09T05:47:26.185866+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "05fa8672-6a3f-47bb-a6e8-d6693e070d92",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:26.188866+00:00",
+    "period_start": "2026-07-08T05:47:26.188866+00:00",
+    "period_end": "2026-07-09T05:47:26.188866+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "ff0e0bd8-7909-475e-bdbd-544000c0abb8",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:28.309959+00:00",
+    "period_start": "2026-07-08T05:47:28.309959+00:00",
+    "period_end": "2026-07-09T05:47:28.309959+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "a1fa791f-066e-4dc9-af2a-d5e5cf70cd6c",
+    "report_type": "weekly",
+    "title": "Weekly Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:28.386503+00:00",
+    "period_start": "2026-07-02T05:47:28.386503+00:00",
+    "period_end": "2026-07-09T05:47:28.386503+00:00",
+    "markdown": "# Weekly Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "17cbbb49-a3d9-4c52-9996-da696941e422",
+    "report_type": "release",
+    "title": "Release Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:28.458505+00:00",
+    "period_start": "2026-06-09T05:47:28.458505+00:00",
+    "period_end": "2026-07-09T05:47:28.458505+00:00",
+    "markdown": "# Release Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "10e28c45-a9cc-4cb6-95b2-932a22757aa4",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:28.907522+00:00",
+    "period_start": "2026-07-08T05:47:28.907522+00:00",
+    "period_end": "2026-07-09T05:47:28.907522+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "5a8605ea-f38b-4b33-811f-b8a8d08fb4c9",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: declining. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:29.129505+00:00",
+    "period_start": "2026-07-08T05:47:29.129505+00:00",
+    "period_end": "2026-07-09T05:47:29.129505+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: declining. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "1f2d30fb-8424-41bf-930a-f52483ff68d0",
+    "report_type": "weekly",
+    "title": "Weekly Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:29.207389+00:00",
+    "period_start": "2026-07-02T05:47:29.207389+00:00",
+    "period_end": "2026-07-09T05:47:29.207389+00:00",
+    "markdown": "# Weekly Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "cb025b90-9bcd-4303-9b4c-b74576cad1f8",
+    "report_type": "release",
+    "title": "Release Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:29.282815+00:00",
+    "period_start": "2026-06-09T05:47:29.282815+00:00",
+    "period_end": "2026-07-09T05:47:29.282815+00:00",
+    "markdown": "# Release Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "ba76cc81-3440-4b19-b673-78bf373b1a20",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:29.432814+00:00",
+    "period_start": "2026-07-08T05:47:29.432814+00:00",
+    "period_end": "2026-07-09T05:47:29.432814+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "a063759c-d14b-4de7-a548-310319790371",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:29.451854+00:00",
+    "period_start": "2026-07-08T05:47:29.451854+00:00",
+    "period_end": "2026-07-09T05:47:29.451854+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "539e2d48-10cb-4667-a9f2-f4acb54901a5",
+    "report_type": "weekly",
+    "title": "Weekly Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:29.453854+00:00",
+    "period_start": "2026-07-02T05:47:29.453854+00:00",
+    "period_end": "2026-07-09T05:47:29.453854+00:00",
+    "markdown": "# Weekly Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "891a1de2-3672-4d34-abd9-078ad1821ec3",
+    "report_type": "release",
+    "title": "Release Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:29.455855+00:00",
+    "period_start": "2026-06-09T05:47:29.455855+00:00",
+    "period_end": "2026-07-09T05:47:29.455855+00:00",
+    "markdown": "# Release Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "f4e83f92-0f84-4634-b2b2-993ecfeb92f7",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:29.462880+00:00",
+    "period_start": "2026-07-08T05:47:29.462880+00:00",
+    "period_end": "2026-07-09T05:47:29.462880+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "b8f06e3c-68cf-400b-ac5c-731b775568f2",
+    "report_type": "weekly",
+    "title": "Weekly Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:29.464878+00:00",
+    "period_start": "2026-07-02T05:47:29.464878+00:00",
+    "period_end": "2026-07-09T05:47:29.464878+00:00",
+    "markdown": "# Weekly Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "2648589b-67a4-4bbe-9b69-9bb0dda69a0a",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:29.468855+00:00",
+    "period_start": "2026-07-08T05:47:29.468855+00:00",
+    "period_end": "2026-07-09T05:47:29.468855+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "29ca3d77-12e7-4530-8429-40c49b7a13a7",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:29.472854+00:00",
+    "period_start": "2026-07-08T05:47:29.472854+00:00",
+    "period_end": "2026-07-09T05:47:29.472854+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "3815d767-6715-47b5-ac1c-ff6f417dba5c",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:29.476855+00:00",
+    "period_start": "2026-07-08T05:47:29.476855+00:00",
+    "period_end": "2026-07-09T05:47:29.476855+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "b3231440-1876-4066-b574-a96fe16beae9",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.90. Success rate: 0.95. Regressions: 0. Improvements: 4.",
+    "trend_analysis": "Autonomy: declining. Success rate: declining. Cost: declining. 2 evaluation run(s) in this period.",
+    "regressions": [],
+    "improvements": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.8,
+        "current": 0.9,
+        "improvement_pct": 12.5
+      },
+      {
+        "metric": "Success rate",
+        "previous": 0.85,
+        "current": 0.95,
+        "improvement_pct": 11.8
+      },
+      {
+        "metric": "Deployment success rate",
+        "previous": 0.9,
+        "current": 0.98,
+        "improvement_pct": 8.9
+      },
+      {
+        "metric": "Healing rate",
+        "previous": 0.75,
+        "current": 0.85,
+        "improvement_pct": 13.3
+      }
+    ],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "autonomy_score": 0.9,
+      "success_rate": 0.95,
+      "deployment_success_rate": 0.98,
+      "healing_rate": 0.85,
+      "total_cost": 100,
+      "avg_runtime_ms": 5000
+    },
+    "generated_at": "2026-07-09T05:47:29.486854+00:00",
+    "period_start": "2026-07-08T05:47:29.486854+00:00",
+    "period_end": "2026-07-09T05:47:29.486854+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.90. Success rate: 0.95. Regressions: 0. Improvements: 4.\n\n## Trend Analysis\nAutonomy: declining. Success rate: declining. Cost: declining. 2 evaluation run(s) in this period.\n\n## Regressions\n- No regressions detected\n\n## Improvements\n- Autonomy score: improved by 12.5% (0.80 \u2192 0.90)\n- Success rate: improved by 11.8% (0.85 \u2192 0.95)\n- Deployment success rate: improved by 8.9% (0.90 \u2192 0.98)\n- Healing rate: improved by 13.3% (0.75 \u2192 0.85)\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.9000\n- avg_runtime_ms: 5000\n- deployment_success_rate: 0.9800\n- healing_rate: 0.8500\n- success_rate: 0.9500\n- total_cost: 100"
+  },
+  {
+    "id": "dc111d47-bb95-4ebb-aed9-56cdcecd9478",
+    "report_type": "weekly",
+    "title": "Weekly Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.90. Success rate: 0.95. Regressions: 0. Improvements: 0.",
+    "trend_analysis": "Autonomy: insufficient data. Success rate: insufficient data. Cost: insufficient data. 1 evaluation run(s) in this period.",
+    "regressions": [],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "autonomy_score": 0.9,
+      "success_rate": 0.95,
+      "deployment_success_rate": 0.98,
+      "healing_rate": 0.85,
+      "total_cost": 100,
+      "avg_runtime_ms": 5000
+    },
+    "generated_at": "2026-07-09T05:47:29.489854+00:00",
+    "period_start": "2026-07-02T05:47:29.489854+00:00",
+    "period_end": "2026-07-09T05:47:29.489854+00:00",
+    "markdown": "# Weekly Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.90. Success rate: 0.95. Regressions: 0. Improvements: 0.\n\n## Trend Analysis\nAutonomy: insufficient data. Success rate: insufficient data. Cost: insufficient data. 1 evaluation run(s) in this period.\n\n## Regressions\n- No regressions detected\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.9000\n- avg_runtime_ms: 5000\n- deployment_success_rate: 0.9800\n- healing_rate: 0.8500\n- success_rate: 0.9500\n- total_cost: 100"
+  },
+  {
+    "id": "82793943-2655-4a9f-aad8-b4845eb3ec64",
+    "report_type": "release",
+    "title": "Release Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.90. Success rate: 0.95. Regressions: 0. Improvements: 0.",
+    "trend_analysis": "Autonomy: insufficient data. Success rate: insufficient data. Cost: insufficient data. 1 evaluation run(s) in this period.",
+    "regressions": [],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "autonomy_score": 0.9,
+      "success_rate": 0.95,
+      "deployment_success_rate": 0.98,
+      "healing_rate": 0.85,
+      "total_cost": 100,
+      "avg_runtime_ms": 5000
+    },
+    "generated_at": "2026-07-09T05:47:29.491854+00:00",
+    "period_start": "2026-06-09T05:47:29.491854+00:00",
+    "period_end": "2026-07-09T05:47:29.491854+00:00",
+    "markdown": "# Release Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.90. Success rate: 0.95. Regressions: 0. Improvements: 0.\n\n## Trend Analysis\nAutonomy: insufficient data. Success rate: insufficient data. Cost: insufficient data. 1 evaluation run(s) in this period.\n\n## Regressions\n- No regressions detected\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.9000\n- avg_runtime_ms: 5000\n- deployment_success_rate: 0.9800\n- healing_rate: 0.8500\n- success_rate: 0.9500\n- total_cost: 100"
+  },
+  {
+    "id": "940e4a90-aad3-4530-9f98-d244eff42d6d",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.60. Success rate: 0.70. Regressions: 6. Improvements: 0.",
+    "trend_analysis": "Autonomy: improving. Success rate: improving. Cost: improving. 2 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.9,
+        "current": 0.6,
+        "change_pct": -33.3,
+        "direction": "decreased"
+      },
+      {
+        "metric": "Success rate",
+        "previous": 0.95,
+        "current": 0.7,
+        "change_pct": -26.3,
+        "direction": "decreased"
+      },
+      {
+        "metric": "Deployment success rate",
+        "previous": 0.98,
+        "current": 0.8,
+        "change_pct": -18.4,
+        "direction": "decreased"
+      },
+      {
+        "metric": "Healing rate",
+        "previous": 0.9,
+        "current": 0.7,
+        "change_pct": -22.2,
+        "direction": "decreased"
+      },
+      {
+        "metric": "Total cost",
+        "previous": 100,
+        "current": 600,
+        "change_pct": 500.0,
+        "direction": "increased"
+      },
+      {
+        "metric": "Average runtime",
+        "previous": 5000,
+        "current": 40000,
+        "change_pct": 700.0,
+        "direction": "increased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "Improve autonomy score \u2014 review agent planning and execution pipelines",
+      "Increase success rate \u2014 investigate failing benchmark domains",
+      "Strengthen deployment pipeline \u2014 review rollback and verification steps",
+      "Enhance self-healing \u2014 review recovery strategies and retry logic",
+      "Optimize cost \u2014 review LLM token usage and caching strategies",
+      "Reduce execution time \u2014 parallelize independent benchmark domains"
+    ],
+    "metrics": {
+      "autonomy_score": 0.6,
+      "success_rate": 0.7,
+      "deployment_success_rate": 0.8,
+      "healing_rate": 0.7,
+      "total_cost": 600,
+      "avg_runtime_ms": 40000
+    },
+    "generated_at": "2026-07-09T05:47:29.494854+00:00",
+    "period_start": "2026-07-08T05:47:29.494854+00:00",
+    "period_end": "2026-07-09T05:47:29.494854+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.60. Success rate: 0.70. Regressions: 6. Improvements: 0.\n\n## Trend Analysis\nAutonomy: improving. Success rate: improving. Cost: improving. 2 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -33.3% (0.90 \u2192 0.60)\n- Success rate: decreased by -26.3% (0.95 \u2192 0.70)\n- Deployment success rate: decreased by -18.4% (0.98 \u2192 0.80)\n- Healing rate: decreased by -22.2% (0.90 \u2192 0.70)\n- Total cost: increased by 500.0% (100.00 \u2192 600.00)\n- Average runtime: increased by 700.0% (5000.00 \u2192 40000.00)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- Improve autonomy score \u2014 review agent planning and execution pipelines\n- Increase success rate \u2014 investigate failing benchmark domains\n- Strengthen deployment pipeline \u2014 review rollback and verification steps\n- Enhance self-healing \u2014 review recovery strategies and retry logic\n- Optimize cost \u2014 review LLM token usage and caching strategies\n- Reduce execution time \u2014 parallelize independent benchmark domains\n\n## Key Metrics\n- autonomy_score: 0.6000\n- avg_runtime_ms: 40000\n- deployment_success_rate: 0.8000\n- healing_rate: 0.7000\n- success_rate: 0.7000\n- total_cost: 600"
+  },
+  {
+    "id": "ff73445f-03ed-4beb-9f59-faf476ec7aa8",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.95. Success rate: 0.98. Regressions: 0. Improvements: 4.",
+    "trend_analysis": "Autonomy: declining. Success rate: declining. Cost: declining. 2 evaluation run(s) in this period.",
+    "regressions": [],
+    "improvements": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.7,
+        "current": 0.95,
+        "improvement_pct": 35.7
+      },
+      {
+        "metric": "Success rate",
+        "previous": 0.75,
+        "current": 0.98,
+        "improvement_pct": 30.7
+      },
+      {
+        "metric": "Deployment success rate",
+        "previous": 0.8,
+        "current": 0.99,
+        "improvement_pct": 23.7
+      },
+      {
+        "metric": "Healing rate",
+        "previous": 0.7,
+        "current": 0.95,
+        "improvement_pct": 35.7
+      }
+    ],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "autonomy_score": 0.95,
+      "success_rate": 0.98,
+      "deployment_success_rate": 0.99,
+      "healing_rate": 0.95,
+      "total_cost": 50,
+      "avg_runtime_ms": 3000
+    },
+    "generated_at": "2026-07-09T05:47:29.496854+00:00",
+    "period_start": "2026-07-08T05:47:29.496854+00:00",
+    "period_end": "2026-07-09T05:47:29.496854+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.95. Success rate: 0.98. Regressions: 0. Improvements: 4.\n\n## Trend Analysis\nAutonomy: declining. Success rate: declining. Cost: declining. 2 evaluation run(s) in this period.\n\n## Regressions\n- No regressions detected\n\n## Improvements\n- Autonomy score: improved by 35.7% (0.70 \u2192 0.95)\n- Success rate: improved by 30.7% (0.75 \u2192 0.98)\n- Deployment success rate: improved by 23.7% (0.80 \u2192 0.99)\n- Healing rate: improved by 35.7% (0.70 \u2192 0.95)\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.9500\n- avg_runtime_ms: 3000\n- deployment_success_rate: 0.9900\n- healing_rate: 0.9500\n- success_rate: 0.9800\n- total_cost: 50"
+  },
+  {
+    "id": "b2d47de4-f784-4354-9b4e-cdc5fdeb9518",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.50. Success rate: 0.60. Regressions: 0. Improvements: 0.",
+    "trend_analysis": "Autonomy: insufficient data. Success rate: insufficient data. Cost: insufficient data. 1 evaluation run(s) in this period.",
+    "regressions": [],
+    "improvements": [],
+    "recommendations": [
+      "Improve autonomy score \u2014 review agent planning and execution pipelines",
+      "Increase success rate \u2014 investigate failing benchmark domains",
+      "Strengthen deployment pipeline \u2014 review rollback and verification steps",
+      "Enhance self-healing \u2014 review recovery strategies and retry logic",
+      "Optimize cost \u2014 review LLM token usage and caching strategies",
+      "Reduce execution time \u2014 parallelize independent benchmark domains"
+    ],
+    "metrics": {
+      "autonomy_score": 0.5,
+      "success_rate": 0.6,
+      "deployment_success_rate": 0.7,
+      "healing_rate": 0.6,
+      "total_cost": 600,
+      "avg_runtime_ms": 40000
+    },
+    "generated_at": "2026-07-09T05:47:29.499854+00:00",
+    "period_start": "2026-07-08T05:47:29.499854+00:00",
+    "period_end": "2026-07-09T05:47:29.499854+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.50. Success rate: 0.60. Regressions: 0. Improvements: 0.\n\n## Trend Analysis\nAutonomy: insufficient data. Success rate: insufficient data. Cost: insufficient data. 1 evaluation run(s) in this period.\n\n## Regressions\n- No regressions detected\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- Improve autonomy score \u2014 review agent planning and execution pipelines\n- Increase success rate \u2014 investigate failing benchmark domains\n- Strengthen deployment pipeline \u2014 review rollback and verification steps\n- Enhance self-healing \u2014 review recovery strategies and retry logic\n- Optimize cost \u2014 review LLM token usage and caching strategies\n- Reduce execution time \u2014 parallelize independent benchmark domains\n\n## Key Metrics\n- autonomy_score: 0.5000\n- avg_runtime_ms: 40000\n- deployment_success_rate: 0.7000\n- healing_rate: 0.6000\n- success_rate: 0.6000\n- total_cost: 600"
+  },
+  {
+    "id": "db02e222-23e4-4d9f-806e-bc60f4c3f693",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.90. Success rate: 0.95. Regressions: 0. Improvements: 0.",
+    "trend_analysis": "Autonomy: insufficient data. Success rate: insufficient data. Cost: insufficient data. 1 evaluation run(s) in this period.",
+    "regressions": [],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "autonomy_score": 0.9,
+      "success_rate": 0.95,
+      "deployment_success_rate": 0.98,
+      "healing_rate": 0.85,
+      "total_cost": 100,
+      "avg_runtime_ms": 5000
+    },
+    "generated_at": "2026-07-09T05:47:29.501854+00:00",
+    "period_start": "2026-07-08T05:47:29.501854+00:00",
+    "period_end": "2026-07-09T05:47:29.501854+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.90. Success rate: 0.95. Regressions: 0. Improvements: 0.\n\n## Trend Analysis\nAutonomy: insufficient data. Success rate: insufficient data. Cost: insufficient data. 1 evaluation run(s) in this period.\n\n## Regressions\n- No regressions detected\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.9000\n- avg_runtime_ms: 5000\n- deployment_success_rate: 0.9800\n- healing_rate: 0.8500\n- success_rate: 0.9500\n- total_cost: 100"
+  },
+  {
+    "id": "53162357-3abe-49f1-bf99-d759205f0d23",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:29.595053+00:00",
+    "period_start": "2026-07-08T05:47:29.595053+00:00",
+    "period_end": "2026-07-09T05:47:29.595053+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  },
+  {
+    "id": "6299cca5-92e2-4792-8d3e-e84960dd4f58",
+    "report_type": "daily",
+    "title": "Daily Evaluation Report \u2014 2026-07-09",
+    "summary": "Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.",
+    "trend_analysis": "Autonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.",
+    "regressions": [
+      {
+        "metric": "Autonomy score",
+        "previous": 0.95,
+        "current": 0.85,
+        "change_pct": -10.5,
+        "direction": "decreased"
+      }
+    ],
+    "improvements": [],
+    "recommendations": [
+      "All metrics healthy \u2014 continue monitoring"
+    ],
+    "metrics": {
+      "id": "filter-test-1",
+      "schedule": "weekly",
+      "status": "completed",
+      "benchmark_domains": [],
+      "autonomy_score": 0.85,
+      "success_rate": 0.9,
+      "total_cost": 100.0,
+      "avg_runtime_ms": 5000.0,
+      "healing_rate": 0.8,
+      "deployment_success_rate": 0.95,
+      "score_breakdown": {},
+      "started_at": "8000.0",
+      "completed_at": "9000.0",
+      "triggered_by": "system",
+      "error": null
+    },
+    "generated_at": "2026-07-09T05:47:29.714095+00:00",
+    "period_start": "2026-07-08T05:47:29.714095+00:00",
+    "period_end": "2026-07-09T05:47:29.714095+00:00",
+    "markdown": "# Daily Evaluation Report \u2014 2026-07-09\n\n**Summary:** Autonomy score: 0.85. Success rate: 0.90. Regressions: 1. Improvements: 0.\n\n## Trend Analysis\nAutonomy: stable. Success rate: stable. Cost: improving. 50 evaluation run(s) in this period.\n\n## Regressions\n- Autonomy score: decreased by -10.5% (0.95 \u2192 0.85)\n\n## Improvements\n- No significant improvements\n\n## Recommendations\n- All metrics healthy \u2014 continue monitoring\n\n## Key Metrics\n- autonomy_score: 0.8500\n- avg_runtime_ms: 5000.0000\n- deployment_success_rate: 0.9500\n- healing_rate: 0.8000\n- success_rate: 0.9000\n- total_cost: 100.0000"
+  }
+]

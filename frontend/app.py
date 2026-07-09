@@ -251,7 +251,9 @@ def _post(path: str, payload: dict, timeout: int = 60) -> dict | None:
         st.error(f" Cannot reach backend at `{BACKEND}`")
         return None
     except httpx.ReadTimeout:
-        st.error(" Request timed out. Project generation is taking longer than expected — try again or use a simpler prompt.")
+        st.error(
+            " Request timed out. Project generation is taking longer than expected — try again or use a simpler prompt."
+        )
         return None
 
 

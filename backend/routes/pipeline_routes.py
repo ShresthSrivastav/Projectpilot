@@ -194,6 +194,7 @@ def run_pipeline(
 
     if model == "local" and not ollama_is_available():
         from database.chroma_db import update_job_status
+
         err = (
             f"Ollama is not reachable at {os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')}. "
             f"Check that the Ollama container is running, or select a cloud model from the sidebar."
