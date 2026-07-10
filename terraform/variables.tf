@@ -66,23 +66,23 @@ variable "subnet_cidr" {
   default     = "10.0.1.0/24"
 }
 
-# Compute — OCI Always Free: VM.Standard.E2.1.Micro (AMD, 1 OCPU, 1 GB RAM)
+# Compute — OCI Always Free: VM.Standard.A1.Flex (ARM, up to 4 OCPU / 24 GB)
 variable "instance_shape" {
   description = "Compute instance shape"
   type        = string
-  default     = "VM.Standard.E2.1.Micro"
+  default     = "VM.Standard.A1.Flex"
 }
 
 variable "instance_ocpus" {
   description = "Number of OCPUs for flex shape"
   type        = number
-  default     = 1
+  default     = 4
 }
 
 variable "instance_memory_gbs" {
   description = "Memory in GB for flex shape"
   type        = number
-  default     = 1
+  default     = 24
 }
 
 variable "instance_os" {
