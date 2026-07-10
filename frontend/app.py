@@ -230,7 +230,25 @@ def _get(path: str, timeout: int = 8) -> dict | None:
         r = httpx.get(f"{BACKEND}{path}", headers=_headers(), timeout=timeout)
         r.raise_for_status()
         return r.json()
-    except Exception:
+    except httpx.HTTPStatusError as exc:
+        detail = ""
+        try:
+            detail = exc.response.json().get("detail", str(exc))
+        except Exception:
+            detail = str(exc)
+        st.error(f" {detail}")
+        return None
+    except httpx.ConnectError:
+        st.error(f" Cannot reach backend at `{BACKEND}`")
+        return None
+    except httpx.ReadTimeout:
+        st.error(" Request timed out — backend may be busy.")
+        return None
+    except httpx.TimeoutException:
+        st.error(" Request timed out — backend may be busy.")
+        return None
+    except Exception as exc:
+        st.error(f" Request failed: {exc}")
         return None
 
 
@@ -775,11 +793,9 @@ with tab_gen:
     #  Progress panel
     if st.session_state.job_id:
         st.divider()
-        data = _get(f"/status/{st.session_state.job_id}")
+        data = _get(f"/status/{st.session_state.job_id}", timeout=30)
 
-        if not data:
-            st.warning(" Could not fetch job status.")
-        else:
+        if data:
             status = data.get("status", "unknown")
             pct = int(data.get("progress_pct", 0))
             agent = data.get("current_agent", "")

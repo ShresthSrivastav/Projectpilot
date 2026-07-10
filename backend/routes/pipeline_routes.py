@@ -1146,7 +1146,7 @@ async def review_project(job_id: str, req: ReviewRequest):
 
 
 @router.get("/status/{job_id}")
-async def get_status(job_id: str, request: Request = None):
+def get_status(job_id: str, request: Request = None):
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
     uid = getattr(request.state, "user_id", "") if request else ""
     _require_job_owner(job_id, ws_id, uid)
