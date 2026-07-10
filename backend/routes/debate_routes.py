@@ -21,7 +21,7 @@ class DebateQueryRequest(BaseModel):
 
 
 @router.post("/start")
-async def debate_start(req: DebateRequest):
+def debate_start(req: DebateRequest):
     from services.debate_system import ConsensusMethod, DebateConfig, get_debate_system
 
     ds = get_debate_system()
@@ -36,7 +36,7 @@ async def debate_start(req: DebateRequest):
 
 
 @router.get("/status/{session_id}")
-async def debate_status(session_id: str):
+def debate_status(session_id: str):
     from services.debate_system import get_debate_system
 
     ds = get_debate_system()
@@ -47,7 +47,7 @@ async def debate_status(session_id: str):
 
 
 @router.get("/sessions")
-async def debate_list():
+def debate_list():
     from services.debate_system import get_debate_system
 
     ds = get_debate_system()
@@ -55,7 +55,7 @@ async def debate_list():
 
 
 @router.get("/quality/{session_id}")
-async def debate_quality(session_id: str):
+def debate_quality(session_id: str):
     from services.debate_system import get_debate_system
 
     ds = get_debate_system()

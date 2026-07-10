@@ -228,7 +228,7 @@ def run_pipeline(
 
 
 @router.post("/clarify")
-async def clarify_prompt(req: ClarifyRequest):
+def clarify_prompt(req: ClarifyRequest):
     """Ask the requirement agent for one clarifying question when needed."""
     from agents.requirement_agent import clarify
 
@@ -293,7 +293,7 @@ def generate_project(req: GenerateRequest, request: Request = None):
 
 
 @router.post("/cancel/{job_id}")
-async def cancel_job(job_id: str):
+def cancel_job(job_id: str):
     """Cancel a queued or running generation job."""
     job = get_job(job_id)
     if not job:
@@ -321,7 +321,7 @@ async def cancel_job(job_id: str):
 
 
 @router.post("/regenerate-file")
-async def regenerate_file(req: RegenerateRequest, request: Request = None):
+def regenerate_file(req: RegenerateRequest, request: Request = None):
     """Regenerate a single file for a completed project."""
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
     uid = getattr(request.state, "user_id", "") if request else ""
@@ -365,7 +365,7 @@ async def regenerate_file(req: RegenerateRequest, request: Request = None):
 
 
 @router.get("/test-files/{job_id}")
-async def get_test_files(job_id: str, request: Request = None):
+def get_test_files(job_id: str, request: Request = None):
     """Return all test files for a project."""
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
     uid = getattr(request.state, "user_id", "") if request else ""
@@ -386,7 +386,7 @@ async def get_test_files(job_id: str, request: Request = None):
 
 
 @router.post("/fix-tests/{job_id}")
-async def fix_tests(job_id: str, req: FixTestsRequest):
+def fix_tests(job_id: str, req: FixTestsRequest):
     """
     Run tests, collect failures, send to LLM to fix source code,
     apply fixes, re-run tests. Returns before/after results.
@@ -678,7 +678,7 @@ async def fix_tests(job_id: str, req: FixTestsRequest):
 
 
 @router.post("/iterate/{job_id}")
-async def iterate_project(job_id: str, req: IterateRequest, request: Request = None):
+def iterate_project(job_id: str, req: IterateRequest, request: Request = None):
     """
     Modify an existing completed project with new instructions.
     Reads all generated files, sends to LLM with the new prompt,
@@ -923,7 +923,7 @@ async def iterate_project(job_id: str, req: IterateRequest, request: Request = N
 
 
 @router.get("/files/{job_id}")
-async def get_file_tree(job_id: str, request: Request = None):
+def get_file_tree(job_id: str, request: Request = None):
     """
     Return the live file tree for a job — shows files as they appear during generation.
     Works on running jobs (partial list) and completed jobs.
@@ -951,7 +951,7 @@ async def get_file_tree(job_id: str, request: Request = None):
 
 
 @router.get("/read-project-file/{job_id}/{path:path}")
-async def read_project_file(job_id: str, path: str, request: Request = None):
+def read_project_file(job_id: str, path: str, request: Request = None):
     """Read a single generated file's content."""
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
     uid = getattr(request.state, "user_id", "") if request else ""
@@ -967,7 +967,7 @@ async def read_project_file(job_id: str, path: str, request: Request = None):
 
 
 @router.get("/validate/{job_id}")
-async def validate_project(job_id: str, request: Request = None):
+def validate_project(job_id: str, request: Request = None):
     """
     Re-run syntax checks + pytest on an existing job's generated files.
     Useful after /regenerate-file.
@@ -1134,7 +1134,7 @@ def run_project_review(job_id: str, model: str = "local") -> dict[str, Any]:
 
 
 @router.post("/review/{job_id}")
-async def review_project(job_id: str, req: ReviewRequest):
+def review_project(job_id: str, req: ReviewRequest):
     """Run AI-powered project review on demand."""
     job = get_job(job_id)
     if not job:
@@ -1188,7 +1188,7 @@ def get_status(job_id: str, request: Request = None):
 
 
 @router.get("/changelog/{job_id}")
-async def get_changelog(job_id: str, request: Request = None):
+def get_changelog(job_id: str, request: Request = None):
     """Return the per-project CHANGELOG.md content."""
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
     uid = getattr(request.state, "user_id", "") if request else ""
@@ -1201,7 +1201,7 @@ async def get_changelog(job_id: str, request: Request = None):
 
 
 @router.get("/download/{job_id}")
-async def download(job_id: str, request: Request = None):
+def download(job_id: str, request: Request = None):
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
     uid = getattr(request.state, "user_id", "") if request else ""
     job = _require_job_owner(job_id, ws_id, uid)
@@ -1218,14 +1218,14 @@ async def download(job_id: str, request: Request = None):
 
 
 @router.get("/jobs")
-async def list_recent_jobs(request: Request = None):
+def list_recent_jobs(request: Request = None):
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
     uid = getattr(request.state, "user_id", "") if request else ""
     return {"jobs": list_jobs(workspace_id=ws_id, user_id=uid, limit=20)}
 
 
 @router.delete("/jobs/{job_id}")
-async def delete_project(job_id: str, request: Request = None):
+def delete_project(job_id: str, request: Request = None):
     """Delete a project: removes ChromaDB record, SQLite analytics, files, and zip."""
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
     uid = getattr(request.state, "user_id", "") if request else ""
