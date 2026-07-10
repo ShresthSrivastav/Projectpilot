@@ -678,7 +678,7 @@ def fix_tests(job_id: str, req: FixTestsRequest):
 
 
 @router.post("/iterate/{job_id}")
-def iterate_project(job_id: str, req: IterateRequest, request: Request = None):
+async def iterate_project(job_id: str, req: IterateRequest, request: Request = None):
     """
     Modify an existing completed project with new instructions.
     Reads all generated files, sends to LLM with the new prompt,

@@ -1,0 +1,133 @@
+---
+title: ProjectPilot Infrastructure Architecture (OCI)
+---
+
+graph TB
+  classDef cloud fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px,color:#1b5e20
+  classDef network fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#0d47a1
+  classDef compute fill:#fce4ec,stroke:#c62828,stroke-width:2px,color:#b71c1c
+  classDef security fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#bf360c
+  classDef config fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#4a148c
+  classDef output fill:#e0f2f1,stroke:#00695c,stroke-width:2px,color:#004d40
+  classDef provider fill:#ede7f6,stroke:#4527a0,stroke-width:2px,color:#311b92
+
+  subgraph OCI_Cloud["☁️ Oracle Cloud Infrastructure (OCI)"]
+    direction TB
+
+    subgraph Identity["Identity & Access"]
+      AD["Availability Domains"] --- AD1["AD-1"]
+    end
+
+    subgraph Compartment["Compartment: ProjectPilot"]
+      direction TB
+
+      subgraph Network["Network Layer"]
+        VCN["VCN<br/>10.0.0.0/16"]
+        IGW["Internet Gateway"]
+        RT["Route Table<br/>0.0.0.0/0 → IGW"]
+        SN["Public Subnet<br/>10.0.1.0/24<br/>dns_label: public<br/>public_ip: true"]
+
+        VCN --- IGW
+        IGW --- RT
+        RT --- SN
+      end
+
+      subgraph Security["Security Layer (NSG)"]
+        NSG["Network Security Group<br/>projectpilot-prod-nsg"]
+
+        subgraph Ingress["Ingress Rules"]
+          I_SSH["SSH :22"]
+          I_HTTP["HTTP :80"]
+          I_APP["App :5000"]
+          I_HTTPS["HTTPS :443"]
+        end
+
+        subgraph Egress["Egress Rules"]
+          E_TCP["TCP 1-65535"]
+          E_UDP["UDP 1-65535"]
+          E_ICMP["ICMP"]
+        end
+
+        NSG --- Ingress
+        NSG --- Egress
+      end
+
+      subgraph Compute["Compute Layer"]
+        CI["Compute Instance<br/>projectpilot-prod<br/>VM.Standard.A1.Flex<br/>4 OCPU · 24 GB RAM"]
+        OS["OS: Canonical Ubuntu 24.04"]
+        VNIC["VNIC<br/>assign_public_ip: true<br/>attached_subnet: public"]
+
+        subgraph CloudInit["Cloud-Init Bootstrap"]
+          CI_DOCKER["Docker Install"]
+          CI_GHCR["GHCR Login<br/>(github_username / ghcr_token)"]
+          CI_APP["App Container Deploy<br/>port 5000"]
+          CI_CADDY["Caddy Reverse Proxy<br/>port 80/443 → 5000"]
+        end
+
+        CI --- VNIC
+        CI --- OS
+        CI --- CloudInit
+      end
+    end
+
+    subgraph TerraformProviders["Terraform Providers"]
+      P_OCI["OCI Provider<br/>oracle/oci ~> 5.0"]
+      P_RANDOM["Random Provider<br/>hashicorp/random ~> 3.6"]
+    end
+  end
+
+  subgraph External["🌐 External"]
+    USERS["Users"]
+    GHCR["GitHub Container Registry"]
+    DOMAIN["Domain: projectpilot.ai"]
+  end
+
+  subgraph TerraformState["Terraform State"]
+    TF_FILES["Configuration Files"]
+    TFVARS["terraform.tfvars"]
+    ENV_DEV["dev.tfvars"]
+    ENV_STAG["staging.tfvars"]
+    ENV_PROD["prod.tfvars"]
+  end
+
+  subgraph Outputs["Terraform Outputs"]
+    O_ID["instance_id"]
+    O_IP["instance_public_ip"]
+    O_SSH["ssh_connection_string"]
+    O_URL["application_url"]
+  end
+
+  USERS -- "HTTPS :443 / HTTP :80" --> IGW
+  IGW -- "Routing" --> RT
+  RT -- "Subnet" --> SN
+  SN -- "Attached" --> VNIC
+  VNIC -- "Compute" --> CI
+  VNIC -. "Protected by" .-> NSG
+  I_SSH -- ":22" --> CI
+  I_HTTP -- ":80" --> CI
+  I_HTTPS -- ":443" --> CI
+  I_APP -- ":5000" --> CI
+  CI_DOCKER -.-> CI
+  CI_GHCR -- "pull images" --> GHCR
+  CI_CADDY -- "proxies" --> CI_APP
+  DOMAIN -- "CNAME → public_ip" --> CI
+  AD1 -- "selects" --> CI
+  OS -- "image source" --> CI
+
+  P_OCI -- "manages" --> Compartment
+  TF_FILES -- "applied by" --> P_OCI
+  TFVARS -.-> TF_FILES
+  ENV_DEV -.-> TF_FILES
+  ENV_STAG -.-> TF_FILES
+  ENV_PROD -.-> TF_FILES
+  CI -- "outputs" --> Outputs
+  O_SSH -- "ssh deploy@{public_ip}" --> USERS
+  O_URL -- "https://projectpilot.ai" --> USERS
+
+  class OCI_Cloud cloud
+  class Network,VCN,IGW,RT,SN network
+  class Compute,CI,OS,VNIC,CloudInit,CI_DOCKER,CI_GHCR,CI_APP,CI_CADDY compute
+  class Security,NSG,Ingress,Egress,I_SSH,I_HTTP,I_APP,I_HTTPS,E_TCP,E_UDP,E_ICMP security
+  class TerraformState,TF_FILES,TFVARS,ENV_DEV,ENV_STAG,ENV_PROD config
+  class Outputs,O_ID,O_IP,O_SSH,O_URL output
+  class P_OCI,P_RANDOM,Identity,AD,AD1 provider
