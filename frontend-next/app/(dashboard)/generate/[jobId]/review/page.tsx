@@ -1,0 +1,241 @@
+"use client"
+
+import { useParams } from "next/navigation"
+import { useState } from "react"
+import { PageHeader } from "@/components/shared/page-header"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { SkeletonCard, SkeletonChart } from "@/components/shared/loading-skeleton"
+import { FileTree } from "@/components/shared/file-tree"
+import { CodeViewer } from "@/components/shared/code-viewer"
+import { useJobStatus, useJobFiles } from "@/lib/hooks/use-job-polling"
+import { pipelineApi } from "@/lib/api/pipeline"
+import { useQuery } from "@tanstack/react-query"
+import {
+  CheckCircle2, XCircle, AlertTriangle, Info,
+  FileCode, ScrollText, Sparkles,
+} from "lucide-react"
+import Link from "next/link"
+import { motion } from "framer-motion"
+
+export default function ReviewPage() {
+  const params = useParams()
+  const jobId = params.jobId as string
+  const [selectedFile, setSelectedFile] = useState<string | null>(null)
+  const [selectedContent, setSelectedContent] = useState<string | undefined>(undefined)
+
+  const { data: job, isLoading } = useJobStatus(jobId)
+  const { data: files } = useJobFiles(job?.job_id ?? null)
+
+  const { data: review, isLoading: reviewLoading } = useQuery({
+    queryKey: ["job", jobId, "review"],
+    queryFn: () => pipelineApi.review(jobId, {}),
+    enabled: job?.status === "complete",
+  })
+
+  const handleFileSelect = (path: string, content?: string) => {
+    setSelectedFile(path)
+    setSelectedContent(content)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Review" />
+        <SkeletonCard count={3} />
+      </div>
+    )
+  }
+
+  const errorCount = review?.issues?.filter((i) => i.severity === "error").length ?? 0
+  const warningCount = review?.issues?.filter((i) => i.severity === "warning").length ?? 0
+  const infoCount = review?.issues?.filter((i) => i.severity === "info").length ?? 0
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <PageHeader title={`Review: ${job?.project_name ?? "Project"}`}>
+          <Link href={`/generate/${jobId}`}>
+            <Button variant="outline" size="sm">Back to Generation</Button>
+          </Link>
+        </PageHeader>
+      </motion.div>
+
+      {/* Summary badges */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <XCircle className="h-4 w-4 text-error" />
+              <span className="text-2xl font-semibold tabular-nums text-error">{errorCount}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Errors</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <AlertTriangle className="h-4 w-4 text-warning" />
+              <span className="text-2xl font-semibold tabular-nums text-warning">{warningCount}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Warnings</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Info className="h-4 w-4 text-primary" />
+              <span className="text-2xl font-semibold tabular-nums text-primary">{infoCount}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Suggestions</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Sparkles className="h-4 w-4 text-accent" />
+              <span className="text-2xl font-semibold tabular-nums text-accent">
+                {review?.score ?? "--"}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">AI Score</p>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <div className="grid gap-6 lg:grid-cols-5">
+        {/* File browser */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <FileCode className="h-4 w-4 text-muted-foreground" />
+                Files
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-2">
+              <FileTree
+                files={files}
+                selectedPath={selectedFile}
+                onSelect={handleFileSelect}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main content area */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* Code viewer */}
+          {selectedFile && selectedContent !== undefined ? (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <FileCode className="h-4 w-4 text-muted-foreground" />
+                      {selectedFile}
+                    </CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => { setSelectedFile(null); setSelectedContent(undefined) }}
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <CodeViewer content={selectedContent} fileName={selectedFile} height={500} />
+                </CardContent>
+              </Card>
+            </motion.div>
+          ) : null}
+
+          {/* AI Review */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <ScrollText className="h-4 w-4 text-muted-foreground" />
+                AI Review
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {reviewLoading ? (
+                <SkeletonChart />
+              ) : !review || !review.issues || review.issues.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex flex-col items-center py-8"
+                >
+                  <CheckCircle2 className="h-10 w-10 text-success mb-3" />
+                  <p className="text-sm font-medium">No issues found</p>
+                  <p className="text-xs text-muted-foreground mt-1">Your project looks clean</p>
+                </motion.div>
+              ) : (
+                <div className="space-y-2">
+                  {review.issues.map((issue, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="flex items-start gap-3 rounded-md border border-border p-3"
+                    >
+                      {issue.severity === "error" ? (
+                        <XCircle className="h-4 w-4 text-error mt-0.5 shrink-0" />
+                      ) : issue.severity === "warning" ? (
+                        <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                      ) : (
+                        <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={
+                              issue.severity === "error" ? "destructive" :
+                              issue.severity === "warning" ? "warning" : "secondary"
+                            }
+                            className="text-[10px]"
+                          >
+                            {issue.severity}
+                          </Badge>
+                          {issue.file && (
+                            <span className="text-[10px] font-mono text-muted-foreground/70">
+                              {issue.file}{issue.line ? `:${issue.line}` : ""}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm mt-1">{issue.message}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+
+                  {review.summary && (
+                    <div className="mt-4 rounded-md bg-muted/30 p-3">
+                      <p className="text-xs text-muted-foreground">{review.summary}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}
