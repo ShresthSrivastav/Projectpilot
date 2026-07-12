@@ -101,8 +101,7 @@ deploy_nginx_config() {
     fi
 
     log "INFO" "Deploying nginx config from ${nginx_src}"
-    local domain="${DOMAIN_NAME:-PROJECTPILOT_DOMAIN}"
-    sed "s/PROJECTPILOT_DOMAIN/${domain}/g" "$nginx_src" | sudo tee "$nginx_dest" > /dev/null
+    sudo cp "$nginx_src" "$nginx_dest"
     if sudo nginx -t; then
         sudo systemctl reload nginx
         log "INFO" "Nginx config deployed and reloaded"
@@ -111,24 +110,21 @@ deploy_nginx_config() {
     fi
 }
 
-setup_nginx_ssl() {
+setup_certbot() {
     local domain="${DOMAIN_NAME:-}"
     if [ -z "$domain" ]; then
-        log "INFO" "No DOMAIN_NAME set, skipping SSL setup"
+        log "INFO" "No DOMAIN_NAME set, skipping certbot"
         return 0
     fi
 
-    log "INFO" "Setting up SSL for domain: ${domain}"
-
-    deploy_nginx_config
-
+    log "INFO" "Running certbot for domain: ${domain}"
     certbot --nginx -d "$domain" --non-interactive --agree-tos --email "admin@${domain}" || {
-        log "WARN" "Certbot failed, keeping HTTP-only config"
+        log "WARN" "Certbot failed, keeping existing SSL config"
         return 0
     }
 
     systemctl reload nginx
-    log "INFO" "SSL setup complete for ${domain}"
+    log "INFO" "Certbot SSL setup complete for ${domain}"
 }
 
 verify_public_endpoint() {
@@ -180,7 +176,8 @@ if health_check "backend"; then
     health_check "frontend_next" || log "WARN" "Frontend-next not yet healthy (may need more time)"
     log "INFO" "Deployment successful!"
     docker image prune -af --filter "until=24h" > /dev/null 2>&1 || true
-    setup_nginx_ssl
+    deploy_nginx_config
+    setup_certbot
     verify_public_endpoint
     exit 0
 else
