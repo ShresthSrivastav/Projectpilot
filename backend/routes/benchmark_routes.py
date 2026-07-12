@@ -10,7 +10,7 @@ router = APIRouter(prefix="/benchmarks", tags=["Benchmarks"])
 
 class BenchmarkRunRequest(BaseModel):
     domain: str = Field(..., min_length=1, max_length=50)
-    model: str = "local"
+    model: str = "cloud"
     iteration: int = 1
 
 

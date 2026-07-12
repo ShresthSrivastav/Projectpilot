@@ -10,7 +10,7 @@ class AutonomousStartRequest(BaseModel):
     job_id: str
     max_iterations: int = 10
     quality_threshold: float = 0.85
-    model: str = "local"
+    model: str = "cloud"
 
 
 @router.post("/start")
@@ -21,7 +21,7 @@ async def autonomous_start(req: AutonomousStartRequest):
     config = AutonomousConfig(
         max_iterations=req.max_iterations or 10,
         quality_threshold=req.quality_threshold or 0.85,
-        model=req.model or "local",
+        model=req.model or "cloud",
     )
     session = engine.start_session(req.job_id, config=config)
     return {"session_id": session.id, "job_id": req.job_id, "status": session.status}

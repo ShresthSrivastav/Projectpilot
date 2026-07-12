@@ -42,7 +42,7 @@ class OrgAddRepoRequest(BaseModel):
 
 class OrgAnalyzeRequest(BaseModel):
     org_id: str
-    model: str = "local"
+    model: str = "cloud"
 
 
 class OrgImpactRequest(BaseModel):

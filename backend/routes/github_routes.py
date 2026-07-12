@@ -434,7 +434,7 @@ async def github_delete_webhook(full_name: str, hook_id: int, username: str = ""
 
 
 @router.post("/agent/analyze-repo")
-async def github_agent_analyze(full_name: str = Body(...), username: str = Body(...), model: str = "local"):
+async def github_agent_analyze(full_name: str = Body(...), username: str = Body(...), model: str = "cloud"):
     conn = get_connection(username)
     if not conn:
         raise HTTPException(status_code=404, detail="No connection found")
@@ -445,7 +445,7 @@ async def github_agent_analyze(full_name: str = Body(...), username: str = Body(
 
 @router.post("/agent/review-pr")
 async def github_agent_review_pr(
-    full_name: str = Body(...), pr_number: int = Body(...), username: str = Body(...), model: str = "local"
+    full_name: str = Body(...), pr_number: int = Body(...), username: str = Body(...), model: str = "cloud"
 ):
     conn = get_connection(username)
     if not conn:
@@ -457,7 +457,7 @@ async def github_agent_review_pr(
 
 @router.post("/agent/fix-issue")
 async def github_agent_fix_issue(
-    full_name: str = Body(...), issue_number: int = Body(...), username: str = Body(...), model: str = "local"
+    full_name: str = Body(...), issue_number: int = Body(...), username: str = Body(...), model: str = "cloud"
 ):
     conn = get_connection(username)
     if not conn:
@@ -468,7 +468,7 @@ async def github_agent_fix_issue(
 
 
 @router.post("/agent/suggest-improvements")
-async def github_agent_suggest(full_name: str = Body(...), username: str = Body(...), model: str = "local"):
+async def github_agent_suggest(full_name: str = Body(...), username: str = Body(...), model: str = "cloud"):
     conn = get_connection(username)
     if not conn:
         raise HTTPException(status_code=404, detail="No connection found")
@@ -504,7 +504,7 @@ async def github_webhook_receiver(full_name: str, request: Request):
         try:
             from services.github_agent_service import review_pull_request
 
-            result = review_pull_request("", full_name, pr_number, model="local")
+            result = review_pull_request("", full_name, pr_number, model="cloud")
             return {"event": event, "pr": pr_number, "result": result}
         except Exception as exc:
             return {"event": event, "error": str(exc)}

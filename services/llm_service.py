@@ -328,7 +328,7 @@ def call_model(
     agent: str | None = None,
     **kwargs: Any,
 ) -> str:
-    preset = (model or "local").lower()
+    preset = (model or "cloud").lower()
     model_name = resolve_model(preset)
     ctx = context_setup or get_context(preset)
     full_sys = f"{system_prompt}\n\n{ctx}".strip() if ctx else system_prompt

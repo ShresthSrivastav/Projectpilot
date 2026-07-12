@@ -9,7 +9,7 @@ router = APIRouter(prefix="/sdlc", tags=["SDLC Pipeline"])
 class SDLCStartRequest(BaseModel):
     job_id: str
     prompt: str
-    model: str = "local"
+    model: str = "cloud"
 
 
 @router.post("/start")

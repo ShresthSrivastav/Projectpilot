@@ -152,7 +152,7 @@ class SelfHealingEngine:
             if project_dir:
                 prompt += f"\nProject directory: {project_dir}"
 
-            result = call_model(prompt, model="local", agent="SelfHealing")
+            result = call_model(prompt, model="cloud", agent="SelfHealing")
             patches = self._parse_patches(result, project_dir)
             if not patches:
                 logger.warning("No patches generated for healing %s", session.id[:8])

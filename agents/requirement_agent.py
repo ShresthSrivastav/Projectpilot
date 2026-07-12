@@ -99,7 +99,7 @@ def clarify(prompt: str, model: str = None) -> str | None:
     Designed to be called BEFORE run_pipeline — the answer is appended to the prompt.
     """
     try:
-        resp = call_model(prompt, system_prompt=_CLARIFY_SYSTEM, model=model or "local")
+        resp = call_model(prompt, system_prompt=_CLARIFY_SYSTEM, model=model or "cloud")
         resp = resp.strip()
         if resp.upper() == "CLEAR" or len(resp) < 5:
             return None
@@ -124,7 +124,7 @@ def run(
     user_msg = f"Project Name: {project_name or 'Auto-detect'}\nDescription: {prompt}\n\nExtract requirements as JSON."
     try:
         raw = call_model(
-            user_msg, system_prompt=_SYSTEM, model=model or "local", job_id=job_id, agent="RequirementAgent"
+            user_msg, system_prompt=_SYSTEM, model=model or "cloud", job_id=job_id, agent="RequirementAgent"
         )
         log_to_db(job_id, "RequirementAgent", "LLM response received.")
     except RuntimeError as exc:

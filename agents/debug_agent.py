@@ -154,7 +154,7 @@ def run(
     errors: list[dict[str, Any]] = []
     fixes = 0
     job_dir = BASE_DIR / job_id
-    fix_model = model or "local"
+    fix_model = model or "cloud"
 
     py_files = [f for f in generated_files if f.endswith(".py")]
 

@@ -153,7 +153,7 @@ def get_db():
 
 def _gen(prompt: str, model: str, job_id: str, agent: str = "CodeAgent") -> str:
     result = clean_code_response(
-        call_model(prompt, system_prompt=_CODE_SYS, model=model or "local", job_id=job_id, agent=agent)
+        call_model(prompt, system_prompt=_CODE_SYS, model=model or "cloud", job_id=job_id, agent=agent)
     )
     if not result.strip():
         raise RuntimeError(f"LLM returned empty content for {agent} prompt")
@@ -318,7 +318,7 @@ def _gen_requirements(req: dict, bp: dict, model: str, job_id: str) -> str:
         f"Must include: {', '.join(must_have)}\n"
         "Pinned versions only (package==x.y.z). One package per line.",
         system_prompt=_REQS_SYS,
-        model=model or "local",
+        model=model or "cloud",
         job_id=job_id,
         agent="CodeAgent",
     )
@@ -348,7 +348,7 @@ def run(
     job_id: str,
     model: str = None,
 ) -> list[str]:
-    effective_model = _pick_model(model or "local", requirements, blueprint)
+    effective_model = _pick_model(model or "cloud", requirements, blueprint)
     log_to_db(job_id, "CodeAgent", f"Starting code generation (model={effective_model}, original={model or 'local'}).")
     create_job_directory(job_id)
 

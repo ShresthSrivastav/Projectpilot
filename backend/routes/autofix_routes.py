@@ -12,7 +12,7 @@ router = APIRouter(tags=["Utilities"])
 
 
 class AutoFixRequest(BaseModel):
-    model: str | None = "local"
+    model: str | None = "cloud"
     max_attempts: int = 5
 
 
@@ -23,7 +23,7 @@ async def autofix_project(job_id: str, req: AutoFixRequest):
     job = get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found.")
-    result = run_autofix(job_id, model=req.model or "local", max_attempts=req.max_attempts)
+    result = run_autofix(job_id, model=req.model or "cloud", max_attempts=req.max_attempts)
     return result
 
 
@@ -75,7 +75,7 @@ async def memory_insights(insight_type: str | None = None, limit: int = 50):
 
 class DeployRequest(BaseModel):
     target: str = "docker"
-    model: str | None = "local"
+    model: str | None = "cloud"
 
 
 @router.post("/deploy/{job_id}")
@@ -85,7 +85,7 @@ async def deploy_project(job_id: str, req: DeployRequest):
     job = get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found.")
-    result = deploy_project(job_id, target=req.target, model=req.model or "local")
+    result = deploy_project(job_id, target=req.target, model=req.model or "cloud")
     return result
 
 
