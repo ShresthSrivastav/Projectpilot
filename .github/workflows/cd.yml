@@ -105,6 +105,7 @@ jobs:
       image-tag: ${{ steps.meta.outputs.tags }}
       image-digest: ${{ steps.build.outputs.digest }}
       image-tag-short: ${{ steps.meta.outputs.version }}
+      frontend-tag: ${{ steps.meta-frontend.outputs.version }}
 
     steps:
       - name: Checkout
@@ -147,16 +148,27 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
 
-      - name: Scan image for vulnerabilities
-        id: trivy-scan
-        continue-on-error: true
-        uses: aquasecurity/trivy-action@v0.36.0
+      - name: Extract metadata for frontend-next
+        id: meta-frontend
+        uses: docker/metadata-action@v5
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          format: "table"
-          exit-code: "0"
-          severity: "CRITICAL,HIGH"
-          ignore-unfixed: true
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend-next
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=,format=short
+            type=ref,event=branch
+
+      - name: Build and push frontend-next
+        id: build-frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend-next
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
 
       - name: Generate build summary
         run: |
@@ -165,6 +177,10 @@ jobs:
           echo "- **Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Tags**: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Digest**: ${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend-next Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend-next\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend-next Tags**: ${{ steps.meta-frontend.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend-next Digest**: ${{ steps.build-frontend.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Platform**: linux/amd64,linux/arm64" >> $GITHUB_STEP_SUMMARY
 
   check-secrets:
@@ -202,7 +218,6 @@ jobs:
           key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
           script: |
             sudo chattr -i /opt/projectpilot/docker-compose.prod.yml 2>/dev/null || true
-            sudo rm -rf /opt/projectpilot/frontend-next/
 
       - name: Copy deployment files to VM
         uses: appleboy/scp-action@master
@@ -210,7 +225,7 @@ jobs:
           host: ${{ secrets.OCI_HOST }}
           username: ${{ secrets.OCI_USER }}
           key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
-          source: "scripts/deploy.sh,docker-compose.prod.yml,.env.example,frontend-next/"
+          source: "scripts/deploy.sh,docker-compose.prod.yml,.env.example"
           target: /opt/projectpilot/
           strip_components: 0
 
@@ -221,6 +236,7 @@ jobs:
           host: ${{ secrets.OCI_HOST }}
           username: ${{ secrets.OCI_USER }}
           key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          command_timeout: 30m
           script: |
             set -euo pipefail
             chmod +x /opt/projectpilot/scripts/deploy.sh
@@ -233,6 +249,7 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             export DOMAIN_NAME="${{ secrets.DOMAIN_NAME }}"
             export DEPLOY_TIMEOUT="300"
+            export FRONTEND_TAG="${{ needs.docker-build.outputs.frontend-tag }}"
             /opt/projectpilot/scripts/deploy.sh "${{ inputs.tag || 'latest' }}"
 
       - name: Public Health Check
