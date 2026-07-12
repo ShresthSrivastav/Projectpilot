@@ -92,14 +92,35 @@ health_check() {
     return 1
 }
 
+deploy_nginx_config() {
+    local nginx_src="${DEPLOY_DIR}/nginx/nginx.conf"
+    local nginx_dest="/etc/nginx/sites-available/projectpilot.conf"
+    if [ ! -f "$nginx_src" ]; then
+        log "INFO" "No nginx config found at ${nginx_src}, skipping"
+        return 0
+    fi
+
+    log "INFO" "Deploying nginx config from ${nginx_src}"
+    local domain="${DOMAIN_NAME:-PROJECTPILOT_DOMAIN}"
+    sed "s/PROJECTPILOT_DOMAIN/${domain}/g" "$nginx_src" | sudo tee "$nginx_dest" > /dev/null
+    if sudo nginx -t; then
+        sudo systemctl reload nginx
+        log "INFO" "Nginx config deployed and reloaded"
+    else
+        log "WARN" "Nginx config test failed, keeping existing config"
+    fi
+}
+
 setup_nginx_ssl() {
     local domain="${DOMAIN_NAME:-}"
     if [ -z "$domain" ]; then
-        log "INFO" "No DOMAIN_NAME set, using HTTP-only nginx config"
+        log "INFO" "No DOMAIN_NAME set, skipping SSL setup"
         return 0
     fi
 
     log "INFO" "Setting up SSL for domain: ${domain}"
+
+    deploy_nginx_config
 
     certbot --nginx -d "$domain" --non-interactive --agree-tos --email "admin@${domain}" || {
         log "WARN" "Certbot failed, keeping HTTP-only config"
