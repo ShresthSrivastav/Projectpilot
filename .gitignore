@@ -43,6 +43,8 @@ org_data/
 benchmarks/
 benchmark_history/
 benchmark_campaign/results/
+benchmark_campaign/reports/
+evaluation_data/
 healing_data/
 runtime_data/
 sdlc_data/

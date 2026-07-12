@@ -79,6 +79,11 @@ health_check() {
             return 0
         fi
 
+        if [ "$service" = "frontend_next" ] && curl -sf "http://localhost:3000" > /dev/null 2>&1; then
+            log "INFO" "${service} responded on port 3000"
+            return 0
+        fi
+
         attempt=$((attempt + 1))
         sleep "$POLL_INTERVAL"
     done
@@ -150,6 +155,7 @@ sleep 15
 if health_check "backend"; then
     log "INFO" "Backend healthy!"
     health_check "frontend" || log "WARN" "Frontend not yet healthy (may need more time)"
+    health_check "frontend_next" || log "WARN" "Frontend-next not yet healthy (may need more time)"
     log "INFO" "Deployment successful!"
     docker image prune -af --filter "until=24h" > /dev/null 2>&1 || true
     setup_nginx_ssl
