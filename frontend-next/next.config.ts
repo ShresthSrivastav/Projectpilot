@@ -13,6 +13,7 @@ const cspHeader = `
 `
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   productionBrowserSourceMaps: false,
   transpilePackages: ["lucide-react"],
   images: {
