@@ -147,7 +147,8 @@ if [ ! -f .env ]; then
 fi
 
 log "INFO" "Recreating containers with tag: ${TAG}"
-IMAGE_TAG="${TAG}" docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans
+docker pull "ghcr.io/shresthsrivastav/projectpilot-frontend-next:${FRONTEND_TAG:-latest}" || true
+IMAGE_TAG="${TAG}" FRONTEND_TAG="${FRONTEND_TAG:-latest}" docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans --pull always
 
 log "INFO" "Waiting for containers to initialize..."
 sleep 15
