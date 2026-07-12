@@ -200,7 +200,7 @@ jobs:
           host: ${{ secrets.OCI_HOST }}
           username: ${{ secrets.OCI_USER }}
           key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
-          source: "scripts/deploy.sh,docker-compose.prod.yml,.env.example"
+          source: "scripts/deploy.sh,docker-compose.prod.yml,.env.example,frontend-next/"
           target: /opt/projectpilot/
           strip_components: 0
 
