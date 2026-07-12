@@ -16,7 +16,7 @@ def campaign_run(data: dict = Body(...)):
     name = data.get("name", "")
     parallel = data.get("parallel", True)
     max_workers = data.get("max_workers", 4)
-    model = data.get("model", "local")
+    model = data.get("model", "cloud")
     skip_run = data.get("skip_run", False)
 
     campaign = service.create_campaign(

@@ -129,7 +129,7 @@ class StackConfig(BaseModel):
 class GenerateRequest(BaseModel):
     prompt: str = Field(..., min_length=10, max_length=500)
     project_name: str = Field("My Project", min_length=1, max_length=100)
-    model: str | None = "local"
+    model: str | None = "cloud"
     stack: StackConfig | None = None
     clarification: str | None = Field(
         None, max_length=300, description="Answer to the clarifying question, appended to prompt"
@@ -150,28 +150,28 @@ class GenerateRequest(BaseModel):
 
 class ClarifyRequest(BaseModel):
     prompt: str = Field(..., min_length=10, max_length=500)
-    model: str | None = "local"
+    model: str | None = "cloud"
 
 
 class RegenerateRequest(BaseModel):
     job_id: str
     file_path: str = Field(..., description="Relative path, e.g. backend/main.py")
     correction_note: str | None = Field(None, max_length=500, description="What to fix / improve in this file")
-    model: str | None = "local"
+    model: str | None = "cloud"
 
 
 class FixTestsRequest(BaseModel):
-    model: str | None = "local"
+    model: str | None = "cloud"
 
 
 class IterateRequest(BaseModel):
     prompt: str = Field(..., min_length=3, max_length=1000, description="What to add/change in the existing project")
-    model: str | None = "local"
+    model: str | None = "cloud"
     job_id: str | None = None
 
 
 class ReviewRequest(BaseModel):
-    model: str | None = "local"
+    model: str | None = "cloud"
 
 
 # ── Pipeline runner ───────────────────────────────────────────────────────────
@@ -181,7 +181,7 @@ def run_pipeline(
     job_id: str,
     prompt: str,
     project_name: str,
-    model: str = "local",
+    model: str = "cloud",
     stack: dict[str, Any] | None = None,
     cancel_flag: threading.Event | None = None,
     workspace_id: str = "",
@@ -207,13 +207,13 @@ def run_pipeline(
         user_id=user_id,
         job_id=job_id,
         project_name=project_name,
-        extra={"model": model or "local", "stack": stack or {}},
+        extra={"model": model or "cloud", "stack": stack or {}},
     )
 
     orchestrator = Orchestrator(
         context=context,
         prompt=prompt,
-        model=model or "local",
+        model=model or "cloud",
         stack=stack,
         cancel_flag=cancel_flag,
     )
@@ -232,7 +232,7 @@ def clarify_prompt(req: ClarifyRequest):
     """Ask the requirement agent for one clarifying question when needed."""
     from agents.requirement_agent import clarify
 
-    question = clarify(req.prompt, model=req.model or "local")
+    question = clarify(req.prompt, model=req.model or "cloud")
     return {"question": question}
 
 
@@ -274,7 +274,7 @@ def generate_project(req: GenerateRequest, request: Request = None):
             "job_id": job_id,
             "prompt": prompt,
             "project_name": req.project_name,
-            "model": req.model or "local",
+            "model": req.model or "cloud",
             "stack": stack,
             "cancel_flag": cancel_flag,
             "workspace_id": ws_id,
@@ -344,7 +344,7 @@ def regenerate_file(req: RegenerateRequest, request: Request = None):
     )
     regenerated = call_model(
         prompt,
-        model=req.model or "local",
+        model=req.model or "cloud",
         job_id=req.job_id,
         agent="RegenerateFileEndpoint",
     ).strip()
@@ -592,7 +592,7 @@ def fix_tests(job_id: str, req: FixTestsRequest):
 
         try:
             result = call_model(
-                prompt, system_prompt=system, model=req.model or "local", job_id=job_id, agent="FixTestsEndpoint"
+                prompt, system_prompt=system, model=req.model or "cloud", job_id=job_id, agent="FixTestsEndpoint"
             )
         except RuntimeError as exc:
             raise HTTPException(status_code=500, detail=f"LLM call failed: {exc}")
@@ -759,7 +759,7 @@ async def iterate_project(job_id: str, req: IterateRequest, request: Request = N
     )
     try:
         result = call_model(
-            prompt, system_prompt=system, model=req.model or "local", job_id=job_id, agent="IterateEndpoint"
+            prompt, system_prompt=system, model=req.model or "cloud", job_id=job_id, agent="IterateEndpoint"
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=f"LLM call failed: {exc}")
@@ -868,7 +868,7 @@ async def iterate_project(job_id: str, req: IterateRequest, request: Request = N
         # Auto-fix failing tests after iteration
         if not pr.get("passed", False):
             for attempt in range(2):
-                fr = await fix_tests(job_id, FixTestsRequest(model=req.model or "local"))
+                fr = await fix_tests(job_id, FixTestsRequest(model=req.model or "cloud"))
                 if fr.get("after", {}).get("passed"):
                     pytest_result = {
                         "passed": True,
@@ -890,7 +890,7 @@ async def iterate_project(job_id: str, req: IterateRequest, request: Request = N
 
     # Auto-run AI review after iteration
     try:
-        review = run_project_review(job_id, model=req.model or "local")
+        review = run_project_review(job_id, model=req.model or "cloud")
         update_job_status(job_id, "complete", progress_pct=100, review_summary=json.dumps(review))
     except Exception:
         pass
@@ -1007,7 +1007,7 @@ def validate_project(job_id: str, request: Request = None):
 # ── AI Project Review ──────────────────────────────────────────────────────────
 
 
-def run_project_review(job_id: str, model: str = "local") -> dict[str, Any]:
+def run_project_review(job_id: str, model: str = "cloud") -> dict[str, Any]:
     """AI-powered review of the entire project. Sync so it can run from pipeline threads."""
     job_dir = BASE_DIR / job_id
     if not job_dir.exists():
@@ -1139,7 +1139,7 @@ def review_project(job_id: str, req: ReviewRequest):
     job = get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found.")
-    review = run_project_review(job_id, model=req.model or "local")
+    review = run_project_review(job_id, model=req.model or "cloud")
     # Store in DB for display
     update_job_status(job_id, job.get("status", "complete"), progress_pct=100, review_summary=json.dumps(review))
     return review

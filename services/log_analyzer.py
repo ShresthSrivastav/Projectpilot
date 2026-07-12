@@ -236,7 +236,7 @@ Output JSON:
   "root_cause": "brief description",
   "suggested_fix": "actionable fix instruction"
 }}"""
-            result = call_model(prompt, model="local", agent="LogAnalyzer")
+            result = call_model(prompt, model="cloud", agent="LogAnalyzer")
             result = re.sub(r"```\w*", "", result).strip()
             parsed = json.loads(result)
             return AnalysisResult(

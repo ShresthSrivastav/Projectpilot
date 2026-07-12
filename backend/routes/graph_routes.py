@@ -11,7 +11,7 @@ router = APIRouter(prefix="/graph", tags=["Graph Engine"])
 class GraphBuildRequest(BaseModel):
     prompt: str
     job_id: str
-    model: str = "local"
+    model: str = "cloud"
     stack: dict | None = None
 
 

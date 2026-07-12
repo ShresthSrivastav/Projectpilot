@@ -65,7 +65,7 @@ CRITICAL REQUIREMENT:
     t0 = time.monotonic()
     try:
         content = clean_code_response(
-            call_model(prompt, system_prompt=_SYS, model=model or "local", job_id=job_id, agent="TestGenAgent")
+            call_model(prompt, system_prompt=_SYS, model=model or "cloud", job_id=job_id, agent="TestGenAgent")
         )
         elapsed = int((time.monotonic() - t0) * 1000)
         if len(content) < 100:

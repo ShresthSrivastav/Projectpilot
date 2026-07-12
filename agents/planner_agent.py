@@ -122,7 +122,7 @@ def run(requirements: dict[str, Any], job_id: str, model: str = None) -> dict[st
     blueprint: dict = {}
     t0 = time.monotonic()
     try:
-        blueprint = _parse_json(call_model(prompt, system_prompt=_SYSTEM, model=model or "local"))
+        blueprint = _parse_json(call_model(prompt, system_prompt=_SYSTEM, model=model or "cloud"))
         elapsed = int((time.monotonic() - t0) * 1000)
         log_to_db(job_id, "PlannerAgent", f"Blueprint received from LLM ({elapsed}ms).")
     except (RuntimeError, ValueError) as exc:

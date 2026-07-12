@@ -86,7 +86,7 @@ def run(
         "Include: overview, features, tech stack, quick start, API docs, docker, usage."
     )
     try:
-        readme = call_model(prompt, system_prompt=_SYS, model=model or "local")
+        readme = call_model(prompt, system_prompt=_SYS, model=model or "cloud")
         if len(readme) < 200:
             raise ValueError("README too short")
     except (RuntimeError, ValueError) as exc:
