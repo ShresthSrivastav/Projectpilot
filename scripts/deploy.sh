@@ -167,6 +167,11 @@ if [ ! -f .env ]; then
     log "WARN" "No .env file found; services may not start correctly"
 fi
 
+if [ -f frontend-next/.env.production.example ] && [ ! -f frontend-next/.env.production ]; then
+    cp frontend-next/.env.production.example frontend-next/.env.production
+    log "INFO" "Created frontend-next/.env.production from template"
+fi
+
 log "INFO" "Recreating containers with tag: ${TAG}"
 docker pull "ghcr.io/shresthsrivastav/projectpilot-frontend-next:${FRONTEND_TAG:-latest}" || true
 IMAGE_TAG="${TAG}" FRONTEND_TAG="${FRONTEND_TAG:-latest}" docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans --pull always
