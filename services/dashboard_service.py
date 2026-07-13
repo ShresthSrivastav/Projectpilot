@@ -46,7 +46,7 @@ class DashboardEvent:
 
 
 _agents: dict[str, AgentTelemetry] = {}
-_agent_lock = threading.Lock()
+_agent_lock = threading.RLock()
 _timeline: list[DashboardEvent] = []
 _timeline_lock = threading.Lock()
 _MAX_TIMELINE = 1000
