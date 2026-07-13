@@ -230,6 +230,13 @@ jobs:
             else
               echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> /opt/projectpilot/.env
             fi
+            if [ -f /opt/projectpilot/frontend-next/.env.production.example ] && [ ! -f /opt/projectpilot/frontend-next/.env.production ]; then
+              cp /opt/projectpilot/frontend-next/.env.production.example /opt/projectpilot/frontend-next/.env.production
+              echo "Created frontend-next/.env.production from template (CI step)"
+            else
+              echo "frontend-next/.env.production.example exists: $([ -f /opt/projectpilot/frontend-next/.env.production.example ] && echo 'yes' || echo 'no')"
+              echo "frontend-next/.env.production exists: $([ -f /opt/projectpilot/frontend-next/.env.production ] && echo 'yes' || echo 'no')"
+            fi
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             export DOMAIN_NAME="${{ secrets.DOMAIN_NAME }}"
             export DEPLOY_TIMEOUT="300"
