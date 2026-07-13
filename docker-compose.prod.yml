@@ -77,7 +77,6 @@ services:
     container_name: projectpilot_frontend_next
     ports:
       - "127.0.0.1:3000:3000"
-    env_file: /opt/projectpilot/frontend-next/.env.production
     depends_on:
       backend:
         condition: service_healthy
