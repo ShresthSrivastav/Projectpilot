@@ -66,33 +66,18 @@ services:
     networks:
       - projectpilot
 
-  portfolio:
-    image: ghcr.io/shresthsrivastav/projectpilot-portfolio:${PORTFOLIO_TAG:-latest}
-    container_name: portfolio
-    ports:
-      - "127.0.0.1:3456:80"
-    deploy:
-      resources:
-        limits:
-          memory: 64M
-          cpus: "0.25"
-        reservations:
-          memory: 32M
-          cpus: "0.1"
-    restart: unless-stopped
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-    networks:
-      - projectpilot
-
   frontend-next:
-    image: ghcr.io/shresthsrivastav/projectpilot-frontend-next:${FRONTEND_TAG:-latest}
+    build:
+      context: ./frontend-next
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=https://zivio.tech
+        - NEXT_PUBLIC_WS_URL=wss://zivio.tech
+    image: projectpilot-frontend-next:latest
     container_name: projectpilot_frontend_next
     ports:
       - "127.0.0.1:3000:3000"
+    env_file: /opt/projectpilot/frontend-next/.env.production
     depends_on:
       backend:
         condition: service_healthy

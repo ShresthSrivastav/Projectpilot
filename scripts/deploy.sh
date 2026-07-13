@@ -101,7 +101,8 @@ deploy_nginx_config() {
     fi
 
     log "INFO" "Deploying nginx config from ${nginx_src}"
-    sudo cp "$nginx_src" "$nginx_dest"
+    local domain="${DOMAIN_NAME:-PROJECTPILOT_DOMAIN}"
+    sed "s/PROJECTPILOT_DOMAIN/${domain}/g" "$nginx_src" | sudo tee "$nginx_dest" > /dev/null
     if sudo nginx -t; then
         sudo systemctl reload nginx
         log "INFO" "Nginx config deployed and reloaded"
@@ -110,21 +111,24 @@ deploy_nginx_config() {
     fi
 }
 
-setup_certbot() {
+setup_nginx_ssl() {
     local domain="${DOMAIN_NAME:-}"
     if [ -z "$domain" ]; then
-        log "INFO" "No DOMAIN_NAME set, skipping certbot"
+        log "INFO" "No DOMAIN_NAME set, skipping SSL setup"
         return 0
     fi
 
-    log "INFO" "Running certbot for domain: ${domain}"
+    log "INFO" "Setting up SSL for domain: ${domain}"
+
+    deploy_nginx_config
+
     certbot --nginx -d "$domain" --non-interactive --agree-tos --email "admin@${domain}" || {
-        log "WARN" "Certbot failed, keeping existing SSL config"
+        log "WARN" "Certbot failed, keeping HTTP-only config"
         return 0
     }
 
     systemctl reload nginx
-    log "INFO" "Certbot SSL setup complete for ${domain}"
+    log "INFO" "SSL setup complete for ${domain}"
 }
 
 verify_public_endpoint() {
@@ -165,8 +169,7 @@ fi
 
 log "INFO" "Recreating containers with tag: ${TAG}"
 docker pull "ghcr.io/shresthsrivastav/projectpilot-frontend-next:${FRONTEND_TAG:-latest}" || true
-docker pull "ghcr.io/shresthsrivastav/projectpilot-portfolio:${PORTFOLIO_TAG:-latest}" || true
-IMAGE_TAG="${TAG}" FRONTEND_TAG="${FRONTEND_TAG:-latest}" PORTFOLIO_TAG="${PORTFOLIO_TAG:-latest}" docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans --pull always
+IMAGE_TAG="${TAG}" FRONTEND_TAG="${FRONTEND_TAG:-latest}" docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans --pull always
 
 log "INFO" "Waiting for containers to initialize..."
 sleep 15
@@ -175,11 +178,9 @@ if health_check "backend"; then
     log "INFO" "Backend healthy!"
     health_check "frontend" || log "WARN" "Frontend not yet healthy (may need more time)"
     health_check "frontend_next" || log "WARN" "Frontend-next not yet healthy (may need more time)"
-    health_check "portfolio" || log "WARN" "Portfolio not yet healthy (may need more time)"
     log "INFO" "Deployment successful!"
     docker image prune -af --filter "until=24h" > /dev/null 2>&1 || true
-    deploy_nginx_config
-    setup_certbot
+    setup_nginx_ssl
     verify_public_endpoint
     exit 0
 else
