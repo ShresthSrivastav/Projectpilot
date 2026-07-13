@@ -165,7 +165,8 @@ fi
 
 log "INFO" "Recreating containers with tag: ${TAG}"
 docker pull "ghcr.io/shresthsrivastav/projectpilot-frontend-next:${FRONTEND_TAG:-latest}" || true
-IMAGE_TAG="${TAG}" FRONTEND_TAG="${FRONTEND_TAG:-latest}" docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans --pull always
+docker pull "ghcr.io/shresthsrivastav/projectpilot-portfolio:${PORTFOLIO_TAG:-latest}" || true
+IMAGE_TAG="${TAG}" FRONTEND_TAG="${FRONTEND_TAG:-latest}" PORTFOLIO_TAG="${PORTFOLIO_TAG:-latest}" docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans --pull always
 
 log "INFO" "Waiting for containers to initialize..."
 sleep 15
@@ -174,6 +175,7 @@ if health_check "backend"; then
     log "INFO" "Backend healthy!"
     health_check "frontend" || log "WARN" "Frontend not yet healthy (may need more time)"
     health_check "frontend_next" || log "WARN" "Frontend-next not yet healthy (may need more time)"
+    health_check "portfolio" || log "WARN" "Portfolio not yet healthy (may need more time)"
     log "INFO" "Deployment successful!"
     docker image prune -af --filter "until=24h" > /dev/null 2>&1 || true
     deploy_nginx_config

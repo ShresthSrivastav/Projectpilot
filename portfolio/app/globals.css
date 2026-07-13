@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --color-surface: #F7F6F3;
+  --color-text: #1A1A18;
+  --color-muted: rgba(0, 0, 0, 0.45);
+  --color-muted-strong: rgba(0, 0, 0, 0.65);
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-hud: rgba(0, 0, 0, 0.25);
+  --color-surface-glass: rgba(255, 255, 255, 0.55);
+  --color-surface-glass-hover: rgba(255, 255, 255, 0.6);
+  --color-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --color-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.dark {
+  --color-surface: #0B0D12;
+  --color-text: #F0F0ED;
+  --color-muted: rgba(255, 255, 255, 0.45);
+  --color-muted-strong: rgba(255, 255, 255, 0.7);
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-hud: rgba(255, 255, 255, 0.25);
+  --color-surface-glass: rgba(255, 255, 255, 0.08);
+  --color-surface-glass-hover: rgba(255, 255, 255, 0.12);
+  --color-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  --color-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+@theme inline {
+  --color-accent: #2DD4BF;
+  --color-accent-dim: #1a9e8e;
+  --font-sans: var(--font-voice);
+  --font-mono: var(--font-chrome);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: rgba(45, 212, 191, 0.3);
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  :root::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+  }
+}
+
+@utility glass {
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  background: var(--color-surface-glass);
+  border-radius: 12px;
+  box-shadow: var(--color-glass-shadow), var(--color-glass-inset);
+}
+
+@utility glass-pill {
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  background: var(--color-surface-glass);
+  border-radius: 999px;
+  box-shadow: var(--color-glass-shadow), var(--color-glass-inset);
+}
+
+@utility glass-card {
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  background: var(--color-surface-glass);
+  border-radius: 16px;
+  box-shadow: var(--color-glass-shadow), var(--color-glass-inset);
+  transition: background 200ms ease-out;
+}
+
+.glass-card:hover {
+  background: var(--color-surface-glass-hover);
+}
+
+@utility hud-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-hud);
+}
+
+@utility chrome {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* ── Liquid Blob Animation ─────────────────────────── */
+
+@keyframes blobFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(100px, -80px) scale(1.1); }
+  50% { transform: translate(-60px, 120px) scale(0.9); }
+  75% { transform: translate(80px, 60px) scale(1.05); }
+}
+
+@keyframes blobFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-80px, 100px) scale(1.15); }
+  66% { transform: translate(120px, -60px) scale(0.85); }
+}
+
+@keyframes blobFloat3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(100px, 100px) scale(1.2); }
+}
+
+.blob-1 { animation: blobFloat 18s ease-in-out infinite; }
+.blob-2 { animation: blobFloat2 22s ease-in-out infinite; }
+.blob-3 { animation: blobFloat3 26s ease-in-out infinite; }
+
+.dark .blob-1 { opacity: 0.08; }
+.dark .blob-2 { opacity: 0.06; }
+.dark .blob-3 { opacity: 0.05; }
+:root .blob-1 { opacity: 0.1; }
+:root .blob-2 { opacity: 0.08; }
+:root .blob-3 { opacity: 0.07; }
+
+/* ── Reduced Motion ────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .blob-1, .blob-2, .blob-3 {
+    animation: none;
+  }
+}

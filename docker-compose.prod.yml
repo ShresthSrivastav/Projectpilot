@@ -66,6 +66,28 @@ services:
     networks:
       - projectpilot
 
+  portfolio:
+    image: ghcr.io/shresthsrivastav/portfolio:${PORTFOLIO_TAG:-latest}
+    container_name: portfolio
+    ports:
+      - "127.0.0.1:3456:80"
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: "0.25"
+        reservations:
+          memory: 32M
+          cpus: "0.1"
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - projectpilot
+
   frontend-next:
     image: ghcr.io/shresthsrivastav/projectpilot-frontend-next:${FRONTEND_TAG:-latest}
     container_name: projectpilot_frontend_next
