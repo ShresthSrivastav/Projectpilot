@@ -179,10 +179,23 @@ def _normalize_job_dir(job_dir: Path) -> None:
             pass
 
 
+TEXT_EXTENSIONS = {
+    ".py", ".js", ".ts", ".jsx", ".tsx", ".vue", ".svelte",
+    ".html", ".css", ".scss", ".less",
+    ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf",
+    ".md", ".txt", ".rst",
+    ".sh", ".bat", ".ps1", ".env",
+    ".xml", ".svg",
+    ".c", ".cpp", ".h", ".hpp", ".java", ".go", ".rs", ".rb", ".php",
+    ".sql", ".graphql",
+    ".dockerfile", ".gitignore",
+}
+
+
 async def _read_all_project_files(job_dir: Path) -> dict[str, str]:
     files: dict[str, str] = {}
     for fp in job_dir.rglob("*"):
-        if fp.is_file():
+        if fp.is_file() and fp.suffix.lower() in TEXT_EXTENSIONS:
             try:
                 rel = str(fp.relative_to(job_dir))
                 files[rel] = fp.read_text(encoding="utf-8")

@@ -195,17 +195,30 @@ def _collect_failure_context(job_id: str, gate_results: dict, failed_gates: list
     return context
 
 
+TEXT_EXTENSIONS = {
+    ".py", ".js", ".ts", ".jsx", ".tsx", ".vue", ".svelte",
+    ".html", ".css", ".scss", ".less",
+    ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf",
+    ".md", ".txt", ".rst",
+    ".sh", ".bat", ".ps1", ".env",
+    ".xml", ".svg",
+    ".c", ".cpp", ".h", ".hpp", ".java", ".go", ".rs", ".rb", ".php",
+    ".sql", ".graphql",
+    ".dockerfile", ".gitignore",
+}
+
+
 def _read_project_files(job_dir: Path) -> dict[str, str]:
-    """Read all source files (excluding __pycache__)."""
+    """Read all source files (excluding __pycache__ and binary files)."""
     files = {}
     for path in sorted(job_dir.rglob("*")):
         if not path.is_file():
             continue
-        if "__pycache__" in path.parts:
+        if "__pycache__" in path.parts or path.suffix.lower() not in TEXT_EXTENSIONS:
             continue
         rel = str(path.relative_to(job_dir))
         try:
-            files[rel] = path.read_text(encoding="utf-8", errors="replace")
+            files[rel] = path.read_text(encoding="utf-8")
         except Exception:
             pass
     return files

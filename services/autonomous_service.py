@@ -17,6 +17,18 @@ logger = logging.getLogger(__name__)
 
 AUTONOMOUS_DIR = Path(os.getenv("AUTONOMOUS_DIR", "./autonomous_data"))
 
+TEXT_EXTENSIONS = {
+    ".py", ".js", ".ts", ".jsx", ".tsx", ".vue", ".svelte",
+    ".html", ".css", ".scss", ".less",
+    ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf",
+    ".md", ".txt", ".rst",
+    ".sh", ".bat", ".ps1", ".env",
+    ".xml", ".svg",
+    ".c", ".cpp", ".h", ".hpp", ".java", ".go", ".rs", ".rb", ".php",
+    ".sql", ".graphql",
+    ".dockerfile", ".gitignore",
+}
+
 
 class IterationStage(Enum):
     GENERATE = "generate"
@@ -234,12 +246,15 @@ class AutonomousEngine:
 
         files = {}
         for fpath in sorted(job_dir.rglob("*")):
-            if fpath.is_file() and "__pycache__" not in str(fpath):
-                try:
-                    rel = str(fpath.relative_to(job_dir))
-                    files[rel] = fpath.read_text(encoding="utf-8", errors="replace")
-                except Exception:
-                    files[rel] = "[binary]"
+            if not fpath.is_file() or "__pycache__" in str(fpath):
+                continue
+            if fpath.suffix.lower() not in TEXT_EXTENSIONS:
+                continue
+            try:
+                rel = str(fpath.relative_to(job_dir))
+                files[rel] = fpath.read_text(encoding="utf-8")
+            except Exception:
+                pass
 
         files_block = "\n\n".join(f"--- {k} ---\n{v[:2000]}" for k, v in sorted(files.items())[:15])
         prompt = (
