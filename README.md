@@ -72,12 +72,14 @@ docker-compose up --build
 ```bash
 pip install -r requirements.txt
 
-# Terminal 1 — backend
-uvicorn backend.main:app --reload --port 5000
+# Terminal 1 — backend (auto-detects port, falls back from 5000 to 8080 if occupied)
+python backend/run.py
 
-# Terminal 2 — frontend
-streamlit run frontend/app.py
+# Terminal 2 — Next.js frontend
+cd frontend-next && npm run dev
 ```
+
+> **Note:** On macOS, port 5000 may be occupied by AirPlay Receiver. The `backend/run.py` script auto-detects this and falls back to port 8080. Set `NEXT_PUBLIC_API_URL=http://localhost:8080` in `frontend-next/.env.local` to match.
 
 ## Running tests
 
