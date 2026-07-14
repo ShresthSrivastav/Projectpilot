@@ -73,7 +73,7 @@ function unwrapResponse(data: unknown): unknown {
 
   const knownEnvelopeKeys = [
     "results", "items", "data",
-    "plugins", "packages", "agents", "workflows",
+    "plugins", "packages", "agents", "workflows", "projects",
     "conversations", "messages",
     "repos", "branches", "files", "pull_requests", "issues",
     "runs", "events", "entries", "comparisons", "regressions",

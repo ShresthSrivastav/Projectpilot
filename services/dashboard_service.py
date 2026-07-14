@@ -166,18 +166,28 @@ def get_dashboard_status() -> dict[str, Any]:
         uptime_s = int(time.time() - _START_TIME)
         avg_runtime = sum(a.get("runtime_ms", 0) for a in agents) / max(len(agents), 1)
 
+    try:
+        import psutil
+        proc = psutil.Process(os.getpid())
+        cpu_usage = proc.cpu_percent(interval=0.1)
+        mem = proc.memory_info()
+        memory_usage = round(mem.rss / 1024 / 1024, 1)
+        gpu_usage = 0
+    except ImportError:
+        cpu_usage = memory_usage = gpu_usage = 0
+
     return {
-        "active_agents": len(agents),
-        "running_agents": running,
-        "idle_agents": len(agents) - running,
+        "total_projects": len(agents),
+        "active_jobs": running,
+        "total_files": sum(a.get("success_count", 0) for a in agents),
         "total_tokens": total_tokens,
+        "avg_duration": round(avg_runtime / 1000, 1),
+        "cpu_usage": cpu_usage,
+        "memory_usage": memory_usage,
+        "gpu_usage": gpu_usage,
         "estimated_cost": round(total_cost, 4),
-        "total_tasks": total_success + total_failure,
-        "success_count": total_success,
-        "failure_count": total_failure,
         "success_rate": round(total_success / max(total_success + total_failure, 1) * 100, 1),
         "uptime_seconds": uptime_s,
-        "average_runtime_ms": round(avg_runtime, 0),
         "agents": agents,
         "timestamp": datetime.utcnow().isoformat(),
     }

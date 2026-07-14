@@ -52,20 +52,22 @@ export default function DashboardPage() {
   )
 
   const chartData = useMemo(
-    () => projectAnalytics
-      ? (projectAnalytics as Array<{ name?: string; duration?: number; files?: number; tokens?: number }>)
-          .slice(0, 10)
-          .map((p, i) => ({
-            name: p.name ?? `Project ${i + 1}`,
-            duration: p.duration ?? 0,
-            files: p.files ?? 0,
-            tokens: p.tokens ?? 0,
-          }))
-      : [],
+    () => {
+      if (!projectAnalytics) return []
+      const raw = Array.isArray(projectAnalytics) ? projectAnalytics : []
+      return raw
+        .slice(0, 10)
+        .map((p, i) => ({
+          name: (p as Record<string, unknown>)?.name as string ?? `Project ${i + 1}`,
+          duration: (p as Record<string, unknown>)?.duration as number ?? 0,
+          files: (p as Record<string, unknown>)?.files as number ?? 0,
+          tokens: (p as Record<string, unknown>)?.tokens as number ?? 0,
+        }))
+    },
     [projectAnalytics]
   )
 
-  const recentActivity = (timeline ?? []) as Array<{ description?: string; created_at?: string; type?: string }>
+  const timelineEvents = (Array.isArray(timeline) ? timeline : []) as Array<{ description?: string; created_at?: string; type?: string }>
 
   return (
     <div className="space-y-6">
@@ -197,11 +199,11 @@ export default function DashboardPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {recentActivity.length === 0 ? (
+          {timelineEvents.length === 0 ? (
             <div className="flex flex-col items-center py-8 text-center"><Activity className="h-8 w-8 text-muted-foreground mb-2 opacity-40" /><p className="text-sm text-muted-foreground">No recent activity</p></div>
           ) : (
             <div className="space-y-0">
-              {recentActivity.slice(0, 8).map((event, i) => (
+              {timelineEvents.slice(0, 8).map((event, i) => (
                 <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }} className="flex items-center gap-3 py-2.5 border-b border-border last:border-0">
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted shrink-0"><Zap className="h-3 w-3 text-muted-foreground" /></div>
                   <div className="flex-1 min-w-0"><p className="text-sm truncate">{event.description ?? "Activity"}</p></div>
