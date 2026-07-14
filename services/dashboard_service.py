@@ -168,6 +168,7 @@ def get_dashboard_status() -> dict[str, Any]:
 
     try:
         import psutil
+
         proc = psutil.Process(os.getpid())
         cpu_usage = proc.cpu_percent(interval=0.1)
         mem = proc.memory_info()

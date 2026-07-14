@@ -167,6 +167,62 @@ jobs:
           echo "- **Digest**: ${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Platform**: linux/amd64,linux/arm64" >> $GITHUB_STEP_SUMMARY
 
+  frontend-build:
+    name: Build & Push Frontend-Next Image
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: ${{ always() && (success() || github.event.inputs.skip-tests == 'true') }}
+
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-tag-short: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/projectpilot-frontend-next
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=,format=short
+            type=ref,event=branch
+            type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend-next
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://${{ secrets.DOMAIN_NAME || 'zivio.tech' }}
+            NEXT_PUBLIC_WS_URL=wss://${{ secrets.DOMAIN_NAME || 'zivio.tech' }}
+
+      - name: Generate build summary
+        run: |
+          echo "## Frontend-Next Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: \`${{ env.REGISTRY }}/projectpilot-frontend-next\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags**: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+
   check-secrets:
     name: Check Deployment Secrets
     runs-on: ubuntu-latest
@@ -187,7 +243,7 @@ jobs:
   deploy:
     name: Deploy to OCI Production
     runs-on: ubuntu-latest
-    needs: docker-build
+    needs: [docker-build, frontend-build]
     if: success()
 
     steps:
@@ -240,6 +296,7 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             export DOMAIN_NAME="${{ secrets.DOMAIN_NAME }}"
             export DEPLOY_TIMEOUT="300"
+            export FRONTEND_TAG="${{ needs.frontend-build.outputs.image-tag-short || inputs.tag || 'latest' }}"
             /opt/projectpilot/scripts/deploy.sh "${{ inputs.tag || 'latest' }}"
 
       - name: Public Health Check
