@@ -195,7 +195,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/projectpilot-frontend-next
+          images: ${{ env.REGISTRY }}/shresthsrivastav/projectpilot-frontend-next
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=,format=short
@@ -220,7 +220,7 @@ jobs:
         run: |
           echo "## Frontend-Next Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image**: \`${{ env.REGISTRY }}/projectpilot-frontend-next\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: \`${{ env.REGISTRY }}/shresthsrivastav/projectpilot-frontend-next\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Tags**: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
 
   check-secrets:
