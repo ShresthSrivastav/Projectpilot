@@ -1,12 +1,17 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { authApi } from "@/lib/api/auth"
 
 export function useAuth() {
-  const store = useAuthStore()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const isLoading = useAuthStore((s) => s.isLoading)
+  const accessToken = useAuthStore((s) => s.accessToken)
+  const refreshToken = useAuthStore((s) => s.refreshToken)
+  const user = useAuthStore((s) => s.user)
+  const workspace = useAuthStore((s) => s.workspace)
   const router = useRouter()
   const initialized = useRef(false)
 
@@ -15,48 +20,49 @@ export function useAuth() {
     initialized.current = true
 
     const initAuth = async () => {
-      const refreshToken = localStorage.getItem("refreshToken")
-      if (refreshToken && !store.isAuthenticated) {
-        try {
-          const data = await authApi.refresh(refreshToken)
-          store.setAuth(data.access_token, data.refresh_token, data.user)
-        } catch {
-          localStorage.removeItem("refreshToken")
-          store.setLoading(false)
-        }
-      } else {
-        store.setLoading(false)
+      const token = localStorage.getItem("refreshToken")
+      if (!token || useAuthStore.getState().isAuthenticated) {
+        useAuthStore.getState().setLoading(false)
+        return
+      }
+      try {
+        const data = await authApi.refresh(token)
+        useAuthStore.getState().setAuth(data.access_token, data.refresh_token, data.user)
+      } catch {
+        localStorage.removeItem("refreshToken")
+        useAuthStore.getState().setLoading(false)
       }
     }
     initAuth()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     const data = await authApi.login({ email, password })
-    store.setAuth(data.access_token, data.refresh_token, data.user)
-    router.push("/dashboard")
-  }
+    useAuthStore.getState().setAuth(data.access_token, data.refresh_token, data.user)
+    router.replace("/dashboard")
+  }, [router])
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = useCallback(async (name: string, email: string, password: string) => {
     const data = await authApi.register({
       name,
       email,
       password,
       confirm_password: password,
     })
-    store.setAuth(data.access_token, data.refresh_token, data.user)
-    router.push("/dashboard")
-  }
+    useAuthStore.getState().setAuth(data.access_token, data.refresh_token, data.user)
+    router.replace("/dashboard")
+  }, [router])
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
-      if (store.refreshToken) await authApi.logout(store.refreshToken)
+      const rt = useAuthStore.getState().refreshToken
+      if (rt) await authApi.logout(rt)
     } catch {
       // ignore server-side logout failure; clear local state regardless
     }
-    store.logout()
-    router.push("/login")
-  }
+    useAuthStore.getState().logout()
+    router.replace("/login")
+  }, [router])
 
-  return { ...store, login, register, logout }
+  return { isAuthenticated, isLoading, accessToken, refreshToken, user, workspace, login, register, logout }
 }
