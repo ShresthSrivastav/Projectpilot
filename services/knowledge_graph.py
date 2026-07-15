@@ -49,6 +49,19 @@ class ImpactResult:
     recommendations: list[str]
 
 
+TEXT_EXTENSIONS = {
+    ".py", ".js", ".ts", ".jsx", ".tsx", ".vue", ".svelte",
+    ".html", ".css", ".scss", ".less",
+    ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf",
+    ".md", ".txt", ".rst",
+    ".sh", ".bat", ".ps1", ".env",
+    ".xml", ".svg",
+    ".c", ".cpp", ".h", ".hpp", ".java", ".go", ".rs", ".rb", ".php",
+    ".sql", ".graphql",
+    ".dockerfile", ".gitignore",
+}
+
+
 class KnowledgeGraph:
     def __init__(self, repo_path: str | None = None):
         self.repo_path = Path(repo_path) if repo_path else None
@@ -69,9 +82,11 @@ class KnowledgeGraph:
                 continue
             if "__pycache__" in str(fpath) or ".git" in str(fpath) or "node_modules" in str(fpath):
                 continue
+            if fpath.suffix.lower() not in TEXT_EXTENSIONS:
+                continue
             rel = str(fpath.relative_to(self.repo_path))
             try:
-                content = fpath.read_text(encoding="utf-8", errors="replace")
+                content = fpath.read_text(encoding="utf-8")
             except Exception:
                 content = ""
             node = FileNode(

@@ -45,10 +45,23 @@ def deploy_project(
         return {"job_id": job_id, "status": "error", "error": str(exc)[:500]}
 
 
+TEXT_EXTENSIONS = {
+    ".py", ".js", ".ts", ".jsx", ".tsx", ".vue", ".svelte",
+    ".html", ".css", ".scss", ".less",
+    ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf",
+    ".md", ".txt", ".rst",
+    ".sh", ".bat", ".ps1", ".env",
+    ".xml", ".svg",
+    ".c", ".cpp", ".h", ".hpp", ".java", ".go", ".rs", ".rb", ".php",
+    ".sql", ".graphql",
+    ".dockerfile", ".gitignore",
+}
+
+
 def _read_project_files(job_dir: Path) -> dict[str, str]:
     files = {}
     for fp in sorted(job_dir.rglob("*")):
-        if fp.is_file() and "__pycache__" not in str(fp):
+        if fp.is_file() and "__pycache__" not in str(fp) and fp.suffix.lower() in TEXT_EXTENSIONS:
             try:
                 files[str(fp.relative_to(job_dir))] = fp.read_text(encoding="utf-8")
             except Exception:

@@ -950,6 +950,19 @@ def get_file_tree(job_id: str, request: Request = None):
     }
 
 
+TEXT_EXTENSIONS = {
+    ".py", ".js", ".ts", ".jsx", ".tsx", ".vue", ".svelte",
+    ".html", ".css", ".scss", ".less",
+    ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf",
+    ".md", ".txt", ".rst",
+    ".sh", ".bat", ".ps1", ".env",
+    ".xml", ".svg",
+    ".c", ".cpp", ".h", ".hpp", ".java", ".go", ".rs", ".rb", ".php",
+    ".sql", ".graphql",
+    ".dockerfile", ".gitignore",
+}
+
+
 @router.get("/read-project-file/{job_id}/{path:path}")
 def read_project_file(job_id: str, path: str, request: Request = None):
     """Read a single generated file's content."""
@@ -960,6 +973,8 @@ def read_project_file(job_id: str, path: str, request: Request = None):
     full = _validate_file_path(job_dir, path)
     if not full.is_file():
         raise HTTPException(status_code=404, detail="File not found.")
+    if full.suffix.lower() not in TEXT_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Cannot read binary file: {full.name}")
     try:
         return Response(full.read_text(encoding="utf-8"), media_type="text/plain")
     except OSError as exc:
