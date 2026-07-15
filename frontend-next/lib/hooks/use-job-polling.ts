@@ -44,7 +44,7 @@ export function useJobFiles(jobId: string | null) {
     }
   }, [jobId, fileContent])
 
-  const fileTree: Record<string, string> | null = filesQuery.data
+  const fileTree: Record<string, string> | null = Array.isArray(filesQuery.data)
     ? Object.fromEntries(filesQuery.data.map((p: string) => [p, fileContent[p] ?? ""]))
     : null
 

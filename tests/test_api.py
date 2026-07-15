@@ -206,6 +206,23 @@ def test_status_has_required_fields(client):
     d = client.get(f"/status/{jid}").json()
     for field in ("job_id", "status", "current_agent", "progress_pct", "logs"):
         assert field in d, f"Missing field: {field}"
+    assert d["progress"] == d["progress_pct"]
+    assert d["tests_total"] == d["test_total"]
+
+
+def test_read_project_file_returns_json_content(client):
+    import os
+
+    jid = _make_job(client)
+    path = Path(os.environ["GENERATED_PROJECTS_DIR"]) / jid / "main.py"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("print('ok')\n", encoding="utf-8")
+    try:
+        response = client.get(f"/read-project-file/{jid}/main.py")
+        assert response.status_code == 200
+        assert response.json() == {"content": "print('ok')\n"}
+    finally:
+        shutil.rmtree(path.parent, ignore_errors=True)
 
 
 # ── Cancel ────────────────────────────────────────────────────────────────────

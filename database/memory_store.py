@@ -22,13 +22,21 @@ MEMORY_DB = os.path.join(MEMORY_DIR, "projectpilot_memory.db")
 _local = threading.local()
 
 
+def _get_memory_db_path() -> str:
+    return os.path.join(os.getenv("MEMORY_STORE_DIR", MEMORY_DIR), "projectpilot_memory.db")
+
+
 def _get_conn() -> sqlite3.Connection:
-    if not hasattr(_local, "conn") or _local.conn is None:
-        Path(MEMORY_DIR).mkdir(parents=True, exist_ok=True)
-        _local.conn = sqlite3.connect(MEMORY_DB, check_same_thread=False)
+    db_path = _get_memory_db_path()
+    if not hasattr(_local, "conn") or _local.conn is None or getattr(_local, "db_path", None) != db_path:
+        if getattr(_local, "conn", None) is not None:
+            _local.conn.close()
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        _local.conn = sqlite3.connect(db_path, check_same_thread=False)
         _local.conn.row_factory = sqlite3.Row
         _local.conn.execute("PRAGMA journal_mode=WAL")
         _local.conn.execute("PRAGMA synchronous=NORMAL")
+        _local.db_path = db_path
     return _local.conn
 
 
@@ -734,7 +742,7 @@ def init_db() -> None:
     from services.audit_service import init_audit_db
 
     init_audit_db()
-    logger.info("Memory store ready at %s", MEMORY_DB)
+    logger.info("Memory store ready at %s", _get_memory_db_path())
 
 
 def store_agent_memory(agent_name: str, job_id: str, key: str, value: str, workspace_id: str = "") -> None:

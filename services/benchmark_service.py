@@ -566,16 +566,15 @@ class BenchmarkService:
             trend["execution_times"].append(r.metrics.execution_time)
             trend["token_usages"].append(r.metrics.token_usage)
 
-        trend["improvement_rate"] = self._calculate_improvement_rate(completed)
+        trend["improvement_rate"] = self._calculate_improvement_rate(completed[-limit:])
         return trend
 
     def _calculate_improvement_rate(self, results: list[BenchmarkResult]) -> float:
-        if len(results) < 2:
+        scored = [result for result in results if result.autonomy_score > 0][-3:]
+        if len(scored) < 2:
             return 0.0
-        first = results[0].autonomy_score
-        last = results[-1].autonomy_score
-        if first <= 0:
-            return 0.0
+        first = scored[0].autonomy_score
+        last = scored[-1].autonomy_score
         return round(((last - first) / first) * 100.0, 1)
 
     def get_statistics(self) -> dict[str, Any]:

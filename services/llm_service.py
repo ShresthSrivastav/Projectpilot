@@ -48,7 +48,7 @@ CLOUD_BASE_URL: str = os.getenv(
     "https://generativelanguage.googleapis.com/v1beta/openai/",
 )
 GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
-CLOUD_MODEL: str = os.getenv("CLOUD_MODEL", "gemma-4-31b-it")
+CLOUD_MODEL: str = os.getenv("CLOUD_MODEL", "gemma-4-31b-it").removeprefix("models/")
 
 # ── OpenRouter / Anthropic ─────────────────────────────────────────────────────
 ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
@@ -178,7 +178,7 @@ def diagnose_google_credentials() -> dict[str, Any]:
             # List models as a lightweight auth check
             response = client.models.list()
             diag["can_authenticate"] = True
-            available_models = [m.id for m in response.data]
+            available_models = [m.id.removeprefix("models/") for m in response.data]
             diag["available_models"] = available_models[:10]
             diag["model_available"] = CLOUD_MODEL in available_models
         except Exception as exc:
