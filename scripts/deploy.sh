@@ -101,7 +101,7 @@ deploy_nginx_config() {
     fi
 
     log "INFO" "Deploying nginx config from ${nginx_src}"
-    local domain="${DOMAIN_NAME:-PROJECTPILOT_DOMAIN}"
+    local domain="${DOMAIN_NAME:-zivio.tech}"
     sed "s/PROJECTPILOT_DOMAIN/${domain}/g" "$nginx_src" | sudo tee "$nginx_dest" > /dev/null
     if sudo nginx -t; then
         sudo systemctl reload nginx
@@ -119,8 +119,6 @@ setup_nginx_ssl() {
     fi
 
     log "INFO" "Setting up SSL for domain: ${domain}"
-
-    deploy_nginx_config
 
     certbot --nginx -d "$domain" --non-interactive --agree-tos --email "admin@${domain}" || {
         log "WARN" "Certbot failed, keeping HTTP-only config"
@@ -185,6 +183,7 @@ if health_check "backend"; then
     health_check "frontend_next" || log "WARN" "Frontend-next not yet healthy (may need more time)"
     log "INFO" "Deployment successful!"
     docker image prune -af --filter "until=24h" > /dev/null 2>&1 || true
+    deploy_nginx_config
     setup_nginx_ssl
     verify_public_endpoint
     exit 0
