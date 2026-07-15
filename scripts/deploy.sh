@@ -103,6 +103,7 @@ deploy_nginx_config() {
     log "INFO" "Deploying nginx config from ${nginx_src}"
     local domain="${DOMAIN_NAME:-zivio.tech}"
     sed "s/PROJECTPILOT_DOMAIN/${domain}/g" "$nginx_src" | sudo tee "$nginx_dest" > /dev/null
+    sudo ln -sfn "$nginx_dest" /etc/nginx/sites-enabled/projectpilot.conf
     if sudo nginx -t; then
         sudo systemctl reload nginx
         log "INFO" "Nginx config deployed and reloaded"
