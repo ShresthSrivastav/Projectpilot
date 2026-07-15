@@ -42,6 +42,32 @@ save_previous_version() {
         log "WARN" "No previous :latest image to tag"
 }
 
+ensure_jwt_secret() {
+    local env_file="${DEPLOY_DIR}/.env"
+    local current_secret=""
+
+    if [ -f "$env_file" ]; then
+        current_secret=$(sed -n 's/^JWT_SECRET_KEY=//p' "$env_file" | tail -n 1)
+    fi
+
+    if [ ${#current_secret} -ge 32 ] && [[ "$current_secret" != your-* ]]; then
+        log "INFO" "Persistent JWT secret configured"
+        return 0
+    fi
+
+    local generated_secret
+    if command -v openssl >/dev/null 2>&1; then
+        generated_secret=$(openssl rand -hex 32)
+    else
+        generated_secret=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
+    fi
+
+    sed -i '/^JWT_SECRET_KEY=/d' "$env_file"
+    printf '\nJWT_SECRET_KEY=%s\n' "$generated_secret" >> "$env_file"
+    chmod 600 "$env_file"
+    log "INFO" "Generated persistent JWT secret"
+}
+
 rollback() {
     log "WARN" "ROLLBACK: Restoring ${IMAGE}:${ROLLBACK_TAG}"
     docker tag "${IMAGE}:${ROLLBACK_TAG}" "${IMAGE}:latest" 2>/dev/null || true
@@ -163,8 +189,11 @@ log "INFO" "Pulling image: ${FULL_IMAGE}"
 docker pull "${FULL_IMAGE}"
 
 if [ ! -f .env ]; then
-    log "WARN" "No .env file found; services may not start correctly"
+    cp .env.example .env
+    log "INFO" "Created .env from template"
 fi
+
+ensure_jwt_secret
 
 if [ -f frontend-next/.env.production.example ] && [ ! -f frontend-next/.env.production ]; then
     cp frontend-next/.env.production.example frontend-next/.env.production

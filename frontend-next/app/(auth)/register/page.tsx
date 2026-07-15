@@ -28,7 +28,8 @@ export default function RegisterPage() {
     try {
       await registerUser(data.name, data.email, data.password)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Registration failed")
+      const message = err instanceof Error ? err.message : "Registration failed"
+      setError(message === "Email already registered" ? "Email already registered. Sign in instead." : message)
     } finally {
       setLoading(false)
     }

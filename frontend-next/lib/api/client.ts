@@ -17,12 +17,20 @@ class ApiError extends Error {
   data: unknown
 
   constructor(status: number, data: unknown) {
-    super(`API Error: ${status}`)
+    const details = data && typeof data === "object" ? data as Record<string, unknown> : null
+    const message = details && typeof details.detail === "string"
+      ? details.detail
+      : details && typeof details.message === "string"
+        ? details.message
+        : `API Error: ${status}`
+    super(message)
     this.name = "ApiError"
     this.status = status
     this.data = data
   }
 }
+
+let refreshInFlight: Promise<boolean> | null = null
 
 async function fetchWithTimeout(url: string, opts: RequestInit, timeoutMs = REQUEST_TIMEOUT): Promise<Response> {
   const controller = new AbortController()
@@ -35,7 +43,7 @@ async function fetchWithTimeout(url: string, opts: RequestInit, timeoutMs = REQU
   }
 }
 
-async function attemptTokenRefresh(): Promise<boolean> {
+async function performTokenRefresh(): Promise<boolean> {
   const refreshToken = useAuthStore.getState().refreshToken
   if (!refreshToken) return false
 
@@ -56,6 +64,15 @@ async function attemptTokenRefresh(): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+async function attemptTokenRefresh(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = performTokenRefresh().finally(() => {
+      refreshInFlight = null
+    })
+  }
+  return refreshInFlight
 }
 
 function getHeaders(): Record<string, string> {
@@ -154,6 +171,36 @@ export function apiGet<T>(path: string, params?: Record<string, unknown>): Promi
 
 export function apiPost<T>(path: string, body?: unknown): Promise<T> {
   return execFetch<T>("POST", path, body)
+}
+
+export async function apiPublicPost<T>(path: string, body?: unknown, retryCount = 0): Promise<T> {
+  const opts: RequestInit = {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  }
+  if (body) opts.body = JSON.stringify(body)
+
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}${path}`, opts)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      if (retryCount < MAX_RETRIES && RETRYABLE_CODES.includes(res.status)) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1)))
+        return apiPublicPost<T>(path, body, retryCount + 1)
+      }
+      throw new ApiError(res.status, data)
+    }
+
+    const text = await res.text()
+    if (!text) return undefined as T
+    return unwrapResponse(JSON.parse(text)) as T
+  } catch (err) {
+    if (err instanceof ApiError) throw err
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new ApiError(0, { message: "Request timed out" })
+    }
+    throw new ApiError(0, { message: "Network error", original: err instanceof Error ? err.message : String(err) })
+  }
 }
 
 export function apiDelete<T>(path: string): Promise<T> {

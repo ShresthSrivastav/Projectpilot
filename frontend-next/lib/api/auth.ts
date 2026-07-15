@@ -1,19 +1,19 @@
-import { apiGet, apiPost } from "./client"
+import { apiGet, apiPost, apiPublicPost } from "./client"
 import type { AuthResponse, User } from "@/lib/utils/types"
 import { API_BASE } from "@/lib/utils/constants"
 
 export const authApi = {
   register: (data: { name: string; email: string; password: string; confirm_password: string }) =>
-    apiPost<AuthResponse>("/api/auth/register", data),
+    apiPublicPost<AuthResponse>("/api/auth/register", data),
 
   login: (data: { email: string; password: string }) =>
-    apiPost<AuthResponse>("/api/auth/login", data),
+    apiPublicPost<AuthResponse>("/api/auth/login", data),
 
   logout: (refreshToken: string) =>
     apiPost<{ message: string }>("/api/auth/logout", { refresh_token: refreshToken }),
 
   refresh: (refreshToken: string) =>
-    apiPost<AuthResponse>("/api/auth/refresh", { refresh_token: refreshToken }),
+    apiPublicPost<AuthResponse>("/api/auth/refresh", { refresh_token: refreshToken }),
 
   me: () => apiGet<User>("/api/auth/me"),
 }

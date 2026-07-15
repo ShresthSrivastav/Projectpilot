@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { apiGet, apiPost, ApiError, AuthError } from "../client"
+import { apiGet, apiPost, apiPublicPost, ApiError, AuthError } from "../client"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import type { User } from "@/lib/utils/types"
 
@@ -112,6 +112,20 @@ describe("apiPost", () => {
   })
 })
 
+describe("apiPublicPost", () => {
+  it("does not attach auth or recursively refresh on a 401", async () => {
+    useAuthStore.getState().setAuth("stale-access", "stale-refresh", testUser)
+    mockFetch.mockResolvedValueOnce(errorResponse(401, { detail: "Invalid email or password" }))
+
+    await expect(apiPublicPost("/api/auth/login", { email: "x@y.z", password: "bad" }))
+      .rejects.toThrow("Invalid email or password")
+
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    const [, options] = mockFetch.mock.calls[0]
+    expect(options.headers).toEqual({ "Content-Type": "application/json" })
+  })
+})
+
 describe("retry logic", () => {
   beforeEach(() => {
     vi.spyOn(global, "setTimeout").mockImplementation(((fn: VoidFunction) => {
@@ -180,6 +194,33 @@ describe("401 token refresh", () => {
     await expect(apiGet("/protected")).rejects.toThrow(AuthError)
     expect(useAuthStore.getState().accessToken).toBeNull()
   })
+
+  it("shares one rotating refresh request across concurrent 401 responses", async () => {
+    useAuthStore.getState().setAuth("old-token", "refresh-token-abc", testUser)
+    mockFetch
+      .mockResolvedValueOnce(errorResponse(401, {}))
+      .mockResolvedValueOnce(errorResponse(401, {}))
+      .mockResolvedValueOnce(
+        okResponse({
+          access_token: "new-token",
+          refresh_token: "new-refresh",
+          user: testUser,
+        })
+      )
+      .mockResolvedValueOnce(okResponse({ id: 1 }))
+      .mockResolvedValueOnce(okResponse({ id: 2 }))
+
+    const results = await Promise.all([
+      apiGet<{ id: number }>("/protected/one"),
+      apiGet<{ id: number }>("/protected/two"),
+    ])
+
+    expect(results).toEqual([{ id: 1 }, { id: 2 }])
+    const refreshCalls = mockFetch.mock.calls.filter(([url]) =>
+      String(url).endsWith("/api/auth/refresh")
+    )
+    expect(refreshCalls).toHaveLength(1)
+  })
 })
 
 describe("error handling", () => {
@@ -212,6 +253,7 @@ describe("error handling", () => {
       expect(e).toBeInstanceOf(ApiError)
       expect((e as ApiError).status).toBe(400)
       expect((e as ApiError).data).toEqual({ detail: "Bad request" })
+      expect((e as ApiError).message).toBe("Bad request")
     }
   })
 })
