@@ -39,7 +39,7 @@ export default function GeneratePage() {
   const handleClarify = async () => {
     if (prompt.length < 10) return
     try {
-      const res = await pipelineApi.clarify({ prompt })
+      const res = await pipelineApi.clarify({ prompt, model: "cloud" })
       if (res.question) setClarifyQuestion(res.question)
     } catch {
       // ignore
@@ -52,7 +52,7 @@ export default function GeneratePage() {
       const res = await pipelineApi.generate({
         prompt: data.prompt,
         project_name: data.projectName,
-        model: data.model,
+        model: data.model ?? "cloud",
         stack: stack as unknown as Record<string, string>,
       })
       toast.success("Project generation started")

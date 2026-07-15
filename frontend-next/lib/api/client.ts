@@ -71,6 +71,9 @@ function unwrapResponse(data: unknown): unknown {
 
   const obj = data as Record<string, unknown>
 
+  // Dashboard status contains an `agents` array alongside scalar metrics.
+  if ("total_projects" in obj && "active_jobs" in obj) return data
+
   const knownEnvelopeKeys = [
     "results", "items", "data",
     "plugins", "packages", "agents", "workflows", "projects",

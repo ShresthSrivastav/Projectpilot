@@ -1007,7 +1007,7 @@ def read_project_file(job_id: str, path: str, request: Request = None):
     if full.suffix.lower() not in TEXT_EXTENSIONS:
         raise HTTPException(status_code=400, detail=f"Cannot read binary file: {full.name}")
     try:
-        return Response(full.read_text(encoding="utf-8"), media_type="text/plain")
+        return {"content": full.read_text(encoding="utf-8")}
     except OSError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -1209,17 +1209,27 @@ def get_status(job_id: str, request: Request = None):
         job_dir = _resolve_job_path(job_id)
     except HTTPException:
         job_dir = None
+    progress = int(job.get("progress_pct", 0))
+    message = job.get("error_message", "")
+    test_total = int(job.get("test_total", 0))
+    test_passed = int(job.get("test_passed", 0))
+    test_failed = int(job.get("test_failed", 0))
     return {
         "job_id": job_id,
         "status": job.get("status"),
         "project_name": job.get("project_name"),
         "current_agent": job.get("current_agent"),
-        "progress_pct": int(job.get("progress_pct", 0)),
-        "error_message": job.get("error_message", ""),
+        "progress_pct": progress,
+        "progress": progress,
+        "error_message": message,
+        "message": message,
         "file_count": int(job.get("file_count", 0)),
-        "test_total": int(job.get("test_total", 0)),
-        "test_passed": int(job.get("test_passed", 0)),
-        "test_failed": int(job.get("test_failed", 0)),
+        "test_total": test_total,
+        "tests_total": test_total,
+        "test_passed": test_passed,
+        "tests_passed": test_passed,
+        "test_failed": test_failed,
+        "tests_failed": test_failed,
         "test_skipped": int(job.get("test_skipped", 0)),
         "test_summary": job.get("test_summary", ""),
         "test_details": test_details,
@@ -1267,7 +1277,14 @@ def download(job_id: str, request: Request = None):
 def list_recent_jobs(request: Request = None):
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
     uid = getattr(request.state, "user_id", "") if request else ""
-    return {"jobs": list_jobs(workspace_id=ws_id, user_id=uid, limit=20)}
+    jobs = list_jobs(workspace_id=ws_id, user_id=uid, limit=20)
+    for job in jobs:
+        job["progress"] = int(job.get("progress_pct", 0))
+        job["message"] = job.get("error_message", "")
+        job["tests_total"] = int(job.get("test_total", 0))
+        job["tests_passed"] = int(job.get("test_passed", 0))
+        job["tests_failed"] = int(job.get("test_failed", 0))
+    return {"jobs": jobs}
 
 
 @router.delete("/jobs/{job_id}")
