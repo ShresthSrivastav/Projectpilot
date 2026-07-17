@@ -1,18 +1,11 @@
 """Global test configuration — ensures clean state between tests."""
 
-import threading
-
 import pytest
 
 
 @pytest.fixture(autouse=True, scope="session")
 def _clean_memory_store():
-    """Reset singletons and clear memory store at start of session."""
-    from services.evaluation_scheduler import EvaluationScheduler
-
-    EvaluationScheduler._instance = None
-    EvaluationScheduler._instance_lock = threading.Lock()
-
+    """Clear memory store data at start of session to ensure clean initial state."""
     from database.memory_store import _get_conn
 
     try:

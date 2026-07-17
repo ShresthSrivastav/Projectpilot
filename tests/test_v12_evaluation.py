@@ -2,7 +2,6 @@
 
 import os
 import sys
-import threading
 from unittest.mock import patch
 
 import pytest
@@ -43,9 +42,11 @@ class MockBenchmarkService:
 def reset_db():
     from services.evaluation_scheduler import EvaluationScheduler
 
-    # Reset the EvaluationScheduler singleton so each test gets a fresh instance
-    EvaluationScheduler._instance = None
-    EvaluationScheduler._instance_lock = threading.Lock()
+    # Reset internal state without destroying the singleton (preserves handler registrations)
+    scheduler = EvaluationScheduler()
+    scheduler._runs.clear()
+    scheduler._running = False
+    scheduler._weekly_running = False
 
     init_db()
     # Clean evaluation, learning, and related tables to prevent cross-test pollution
