@@ -2,6 +2,7 @@
 
 import os
 import sys
+import threading
 from unittest.mock import patch
 
 import pytest
@@ -40,7 +41,32 @@ class MockBenchmarkService:
 
 @pytest.fixture(autouse=True)
 def reset_db():
+    from services.evaluation_scheduler import EvaluationScheduler
+
+    # Reset the EvaluationScheduler singleton so each test gets a fresh instance
+    EvaluationScheduler._instance = None
+    EvaluationScheduler._instance_lock = threading.Lock()
+
     init_db()
+    # Clean evaluation, learning, and related tables to prevent cross-test pollution
+    from database.memory_store import _get_conn
+
+    try:
+        conn = _get_conn()
+        conn.execute("DELETE FROM evaluation_runs")
+        conn.execute("DELETE FROM evaluation_reports")
+        conn.execute("DELETE FROM regressions")
+        conn.execute("DELETE FROM leaderboards")
+        conn.execute("DELETE FROM version_history")
+        conn.execute("DELETE FROM version_comparisons")
+        conn.execute("DELETE FROM learning_feedback")
+        conn.execute("DELETE FROM learning_feedback_patterns")
+        conn.execute("DELETE FROM learning_feedback_recommendations")
+        conn.execute("DELETE FROM campaign_runs")
+        conn.execute("DELETE FROM campaigns")
+        conn.commit()
+    except Exception:
+        pass
 
 
 @pytest.fixture
