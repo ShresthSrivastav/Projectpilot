@@ -51,6 +51,6 @@ jobs:
           push: false
           tags: projectpilot:test
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=inline
         env:
           DOCKER_BUILDKIT: 1

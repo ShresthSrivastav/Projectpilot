@@ -20,6 +20,7 @@ MEMORY_DIR = os.getenv("MEMORY_STORE_DIR", "./memory_store")
 MEMORY_DB = os.path.join(MEMORY_DIR, "projectpilot_memory.db")
 
 _local = threading.local()
+_db_generation = 0
 
 
 def _get_memory_db_path() -> str:
@@ -27,8 +28,14 @@ def _get_memory_db_path() -> str:
 
 
 def _get_conn() -> sqlite3.Connection:
+    global _db_generation
     db_path = _get_memory_db_path()
-    if not hasattr(_local, "conn") or _local.conn is None or getattr(_local, "db_path", None) != db_path:
+    if (
+        not hasattr(_local, "conn")
+        or _local.conn is None
+        or getattr(_local, "db_path", None) != db_path
+        or getattr(_local, "db_generation", None) != _db_generation
+    ):
         if getattr(_local, "conn", None) is not None:
             _local.conn.close()
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -37,6 +44,7 @@ def _get_conn() -> sqlite3.Connection:
         _local.conn.execute("PRAGMA journal_mode=WAL")
         _local.conn.execute("PRAGMA synchronous=NORMAL")
         _local.db_path = db_path
+        _local.db_generation = _db_generation
     return _local.conn
 
 
@@ -71,6 +79,8 @@ def _migrate_workspace_id():
 
 
 def init_db() -> None:
+    global _db_generation
+    _db_generation += 1
     conn = _get_conn()
     _migrate_workspace_id()
     conn.executescript("""
