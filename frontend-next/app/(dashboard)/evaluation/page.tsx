@@ -1,6 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
+import { useQueryClient } from "@tanstack/react-query"
 import { evaluationApi } from "@/lib/api/evaluation"
 import { PageHeader } from "@/components/shared/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,63 +18,21 @@ const MetricChart = dynamic(
 )
 import {
   ClipboardCheck, TrendingUp, Trophy, Play,
-  Loader2,
+  Loader2, BarChart3, Target,
 } from "lucide-react"
 import { toast } from "sonner"
 import { formatRelativeTime } from "@/lib/utils/formatters"
 import { motion } from "framer-motion"
-import { useState } from "react"
-
-function EvaluationRow({
-  run,
-}: {
-  run: Record<string, unknown>
-  rank?: number
-}) {
-  return (
-    <motion.div className="flex items-center gap-3 rounded-md border border-border p-3 hover:bg-muted/50 transition-colors">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <Badge
-            variant={(run.status as string) === "complete" ? "success" : (run.status as string) === "failed" ? "destructive" : "warning"}
-            className="text-[10px]"
-          >
-            {run.status as string}
-          </Badge>
-          <span className="text-xs text-muted-foreground font-mono">
-            {(run.id as string)?.substring(0, 8)}
-          </span>
-        </div>
-        <p className="text-xs text-muted-foreground mt-1">
-          {run.created_at ? formatRelativeTime(run.created_at as string) : ""}
-        </p>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="text-right">
-          <p className="text-sm font-semibold tabular-nums">{(run.autonomy_score as number)?.toFixed(1) ?? "-"}</p>
-          <p className="text-[10px] text-muted-foreground">Autonomy</p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-semibold tabular-nums">{(run.success_rate as number)?.toFixed(0) ?? "-"}%</p>
-          <p className="text-[10px] text-muted-foreground">Success</p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-semibold tabular-nums">
-            {run.cost != null ? `$${(run.cost as number).toFixed(2)}` : "-"}
-          </p>
-          <p className="text-[10px] text-muted-foreground">Cost</p>
-        </div>
-      </div>
-    </motion.div>
-  )
-}
+import { useState, useMemo } from "react"
 
 export default function EvaluationPage() {
   const [running, setRunning] = useState(false)
+  const queryClient = useQueryClient()
 
   const { data: history, isLoading: hLoading } = useQuery({
     queryKey: ["evaluation-history"],
-    queryFn: () => evaluationApi.history({ limit: 20 }),
+    queryFn: () => evaluationApi.history({ limit: 50 }),
+    refetchInterval: 10000,
   })
 
   const { data: leaderboards } = useQuery({
@@ -81,15 +40,22 @@ export default function EvaluationPage() {
     queryFn: () => evaluationApi.leaderboards({ limit: 20 }),
   })
 
-  useQuery({
-    queryKey: ["evaluation-comparison"],
-    queryFn: () => evaluationApi.comparison({ limit: 20 }),
+  const { data: reports } = useQuery({
+    queryKey: ["evaluation-reports"],
+    queryFn: () => evaluationApi.reports({ limit: 5 }),
+  })
+
+  const { data: regressions } = useQuery({
+    queryKey: ["evaluation-regressions"],
+    queryFn: () => evaluationApi.regressions({ dismissed: false, limit: 10 }),
   })
 
   const handleRun = async () => {
     setRunning(true)
     try {
       await evaluationApi.run()
+      await queryClient.invalidateQueries({ queryKey: ["evaluation-history"] })
+      await queryClient.invalidateQueries({ queryKey: ["evaluation-reports"] })
       toast.success("Evaluation started")
     } catch {
       toast.error("Failed to start evaluation")
@@ -100,17 +66,29 @@ export default function EvaluationPage() {
 
   const historyData = Array.isArray(history) ? history : []
   const leaderboardData = Array.isArray(leaderboards) ? leaderboards : []
+  const reportList = Array.isArray(reports) ? reports : []
+  const regressionList = Array.isArray(regressions) ? regressions : []
 
-  // Build trend chart data
+  const avgAutonomy = historyData.length > 0
+    ? historyData.reduce((s, h) => s + Number((h as Record<string, unknown>).autonomy_score ?? 0), 0) / historyData.length
+    : 0
+  const avgSuccess = historyData.length > 0
+    ? historyData.reduce((s, h) => s + Number((h as Record<string, unknown>).success_rate ?? 0), 0) / historyData.length
+    : 0
+  const avgCost = historyData.length > 0
+    ? historyData.reduce((s, h) => s + Number((h as Record<string, unknown>).cost ?? (h as Record<string, unknown>).total_cost ?? 0), 0) / historyData.length
+    : 0
+
   const trendData = historyData
-    .slice(0, 15)
+    .slice(0, 20)
     .reverse()
     .map((h: Record<string, unknown>, i) => ({
       name: h.created_at
         ? new Date(h.created_at as string).toLocaleDateString()
         : `#${i + 1}`,
-      autonomy: (h.autonomy_score as number) ?? 0,
-      success: (h.success_rate as number) ?? 0,
+      autonomy: Number(h.autonomy_score ?? 0),
+      success: Number(h.success_rate ?? 0),
+      cost: Number(h.cost ?? h.total_cost ?? 0),
     }))
 
   return (
@@ -120,7 +98,7 @@ export default function EvaluationPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <PageHeader title="Evaluation" description="Continuous evaluation and quality metrics">
+        <PageHeader title="Evaluation" description="Quality metrics and analytics">
           <Button onClick={handleRun} disabled={running}>
             {running ? (
               <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
@@ -131,6 +109,47 @@ export default function EvaluationPage() {
           </Button>
         </PageHeader>
       </motion.div>
+
+      {historyData.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-semibold tabular-nums text-primary">{avgAutonomy.toFixed(1)}</p>
+              <div className="flex items-center justify-center gap-1 mt-1">
+                <Target className="h-3 w-3 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">Avg Autonomy Score</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-semibold tabular-nums text-success">{(avgSuccess * 100).toFixed(0)}%</p>
+              <div className="flex items-center justify-center gap-1 mt-1">
+                <BarChart3 className="h-3 w-3 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">Avg Success Rate</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-semibold tabular-nums text-warning">${avgCost.toFixed(2)}</p>
+              <div className="flex items-center justify-center gap-1 mt-1">
+                <TrendingUp className="h-3 w-3 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">Avg Cost per Run</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-semibold tabular-nums text-accent">{regressionList.length}</p>
+              <div className="flex items-center justify-center gap-1 mt-1">
+                <ClipboardCheck className="h-3 w-3 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">Open Regressions</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Tabs defaultValue="history" className="space-y-4">
         <TabsList>
@@ -160,9 +179,42 @@ export default function EvaluationPage() {
                   description="Run your first evaluation to track quality metrics"
                 />
               ) : (
-                historyData.map((run, i) => (
-                  <EvaluationRow key={(run.id as string) ?? i} run={run} />
-                ))
+                historyData.map((run, i) => {
+                  const r = run as Record<string, unknown>
+                  return (
+                    <motion.div
+                      key={(r.id as string) ?? i}
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.02 }}
+                      className="flex items-center gap-3 rounded-md border border-border p-3 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge
+                            variant={(r.status as string) === "complete" ? "success" : (r.status as string) === "failed" ? "destructive" : "warning"}
+                            className="text-[10px]"
+                          >
+                            {r.status as string}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {r.created_at ? formatRelativeTime(r.created_at as string) : ""}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="tabular-nums">
+                          <span className="text-muted-foreground text-[10px]">Autonomy: </span>
+                          <span className="font-medium">{(r.autonomy_score as number)?.toFixed(1) ?? "-"}</span>
+                        </span>
+                        <span className="tabular-nums">
+                          <span className="text-muted-foreground text-[10px]">Success: </span>
+                          <span className="font-medium">{(r.success_rate as number)?.toFixed(0) ?? "-"}%</span>
+                        </span>
+                      </div>
+                    </motion.div>
+                  )
+                })
               )}
             </CardContent>
           </Card>
@@ -198,7 +250,7 @@ export default function EvaluationPage() {
                     dataKey="success"
                     color="var(--color-success)"
                     height={280}
-                    formatY={(v) => `${v}%`}
+                    formatY={(v) => `${(v * 100).toFixed(0)}%`}
                   />
                 </motion.div>
               </>
@@ -263,6 +315,36 @@ export default function EvaluationPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader><CardTitle className="text-sm font-medium">Latest Report</CardTitle></CardHeader>
+          <CardContent>
+            {reportList.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">{String((reportList[0] as Record<string, unknown>).title ?? "Evaluation report")}</p>
+                <p className="text-xs text-muted-foreground">{String((reportList[0] as Record<string, unknown>).summary ?? "No summary available")}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Run an evaluation to create a report.</p>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="text-sm font-medium">Open Regressions</CardTitle></CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold">{regressionList.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">Issues needing attention</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="text-sm font-medium">Total Runs</CardTitle></CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold">{historyData.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">Evaluation runs completed</p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

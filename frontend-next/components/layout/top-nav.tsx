@@ -1,6 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { useSyncExternalStore } from "react"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { useUIStore } from "@/lib/stores/ui-store"
 import { useMediaQuery } from "@/lib/hooks/use-media-query"
@@ -26,13 +27,21 @@ import {
   Menu,
 } from "lucide-react"
 import { useTheme } from "next-themes"
+import { useQuery } from "@tanstack/react-query"
+import { workspaceApi } from "@/lib/api/workspace"
 
 export function TopNav() {
   const { user, logout } = useAuthStore()
   const { setCommandPaletteOpen, setSidebarOpen } = useUIStore()
   const { theme, setTheme } = useTheme()
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
   const router = useRouter()
   const isMobile = useMediaQuery("(max-width: 768px)")
+  const { data: notifications } = useQuery({
+    queryKey: ["workspace-notifications", "unread"],
+    queryFn: () => workspaceApi.notifications(true, 20),
+    refetchInterval: 30_000,
+  })
 
   const initials = user?.name
     ?.split(" ")
@@ -85,19 +94,21 @@ export function TopNav() {
           variant="ghost"
           size="icon"
           className="text-muted-foreground"
-          aria-label="Toggle dark mode"
+          aria-label={mounted ? (theme === "dark" ? "Switch to light mode" : "Switch to dark mode") : "Toggle theme"}
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
         >
-          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {mounted && theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
 
         <Button
           variant="ghost"
           size="icon"
-          className="text-muted-foreground"
+          className="relative text-muted-foreground"
           aria-label="Notifications"
+          onClick={() => router.push("/settings/notifications")}
         >
           <Bell className="h-4 w-4" />
+          {!!notifications?.length && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" />}
         </Button>
 
         <DropdownMenu>

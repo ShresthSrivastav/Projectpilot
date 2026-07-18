@@ -6,13 +6,11 @@ import { useUIStore } from "@/lib/stores/ui-store"
 import { useHotkeys } from "@/lib/hooks/use-hotkeys"
 import { Command } from "cmdk"
 import {
-  LayoutDashboard,
   Sparkles,
   Clock,
   MessageSquare,
   Users,
   BarChart3,
-  Gauge,
   ClipboardCheck,
   Building2,
   Puzzle,
@@ -23,16 +21,14 @@ import {
 import { useJobs } from "@/lib/hooks/use-job-polling"
 
 const pages = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { id: "generate", label: "Generate Project", icon: Sparkles, href: "/generate" },
   { id: "history", label: "History", icon: Clock, href: "/history" },
   { id: "chat", label: "Chat", icon: MessageSquare, href: "/chat" },
   { id: "workspace", label: "Workspace", icon: Users, href: "/workspace" },
+  { id: "ecosystem", label: "Ecosystem", icon: Puzzle, href: "/ecosystem" },
   { id: "analytics", label: "Analytics", icon: BarChart3, href: "/analytics" },
-  { id: "benchmarks", label: "Benchmarks", icon: Gauge, href: "/benchmarks" },
   { id: "evaluation", label: "Evaluation", icon: ClipboardCheck, href: "/evaluation" },
   { id: "org", label: "Organization", icon: Building2, href: "/organization" },
-  { id: "ecosystem", label: "Ecosystem", icon: Puzzle, href: "/ecosystem" },
   { id: "settings", label: "Settings", icon: Settings, href: "/settings" },
 ]
 

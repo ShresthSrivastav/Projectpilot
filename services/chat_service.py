@@ -9,7 +9,7 @@ from services.llm_service import call_model
 
 logger = logging.getLogger(__name__)
 
-CHAT_MODEL = "local"
+CHAT_MODEL = "cloud"
 
 # In-memory store for pending confirmations per conversation
 _pending_actions: dict[str, dict] = {}
@@ -69,7 +69,7 @@ def _find_project(query: str, workspace_id: str = "") -> list[dict]:
     return [j for _, j in scored[:5]]
 
 
-def _get_project_context(job) -> str:
+def _get_project_context(job, workspace_id: str = "") -> str:
     """Build a rich text context for a project."""
     jid = job.get("job_id", "")
     lines = []
@@ -111,7 +111,7 @@ def _get_project_context(job) -> str:
         pass
     # analytics
     try:
-        all_ana = memory_store.get_project_analytics(limit=100)
+        all_ana = memory_store.get_project_analytics(workspace_id=workspace_id, limit=100)
         match = next((a for a in all_ana if a.get("job_id") == jid), {})
         if match:
             lines.append(f"Model: {match.get('model_used', '?')}")
@@ -159,7 +159,7 @@ def process_message(message: str, conversation_id: str, context: dict = None, wo
             _pending_actions.pop(conversation_id, None)
             reply = "Action cancelled."
             memory_store.add_chat_message(conversation_id, "assistant", reply)
-            return {"reply": reply, "conversation_id": conversation_id}
+            return {"response": reply, "conversation_id": conversation_id}
         # Non-confirm/cancel response while action is pending - let it fall through
 
     # Check for action keywords
@@ -175,13 +175,13 @@ def process_message(message: str, conversation_id: str, context: dict = None, wo
         _last_project_id[conversation_id] = projects[0].get("job_id", "")
         context_parts.append(f"Found {len(projects)} matching project(s):\n")
         for i, p in enumerate(projects, 1):
-            ctx = _get_project_context(p)
+            ctx = _get_project_context(p, workspace_id=workspace_id)
             context_parts.append(f"--- Project {i} ---\n{ctx}\n")
     else:
         context_parts.append("No matching projects found in the database.")
 
     try:
-        summary = memory_store.get_analytics_summary()
+        summary = memory_store.get_analytics_summary(workspace_id=workspace_id)
         context_parts.append(
             f"Overall stats: {summary.get('total_projects', 0)} projects, "
             f"{summary.get('total_tokens', 0)} tokens used, "
@@ -207,7 +207,7 @@ Answer the user's question based on the project data above. Be concise and helpf
 
     reply = (raw or "Sorry, I couldn't process that.").strip()
     memory_store.add_chat_message(conversation_id, "assistant", reply)
-    return {"reply": reply, "conversation_id": conversation_id}
+    return {"response": reply, "conversation_id": conversation_id}
 
 
 def execute_confirmed_action(conversation_id: str, tool_name: str, args: dict) -> dict:
@@ -217,12 +217,12 @@ def execute_confirmed_action(conversation_id: str, tool_name: str, args: dict) -
         result = _run_action(tool_name, args)
         reply = result.get("message", json.dumps(result))
         memory_store.add_chat_message(conversation_id, "assistant", reply)
-        return {"reply": reply, "conversation_id": conversation_id}
+        return {"response": reply, "conversation_id": conversation_id}
     except Exception as exc:
         err = f"Action failed: {exc}"
         logger.error("Action %s failed: %s", tool_name, exc)
         memory_store.add_chat_message(conversation_id, "assistant", err)
-        return {"reply": err, "conversation_id": conversation_id}
+        return {"response": err, "conversation_id": conversation_id}
 
 
 def _detect_action(message: str, conversation_id: str = "", workspace_id: str = "") -> dict:
@@ -351,7 +351,7 @@ def _handle_action(conversation_id: str, action: dict, message: str) -> dict:
     reply = f"I can run `{tool_name}` on project **{project_name}**. Type **yes** to proceed or **no** to cancel."
     memory_store.add_chat_message(conversation_id, "assistant", reply)
     return {
-        "reply": reply,
+        "response": reply,
         "conversation_id": conversation_id,
         "pending_confirm": {"tool_name": tool_name, "args": args},
     }

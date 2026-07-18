@@ -32,7 +32,7 @@ export interface AuthResponse {
 
 export interface JobStatus {
   job_id: string
-  status: "queued" | "running" | "complete" | "failed" | "cancelled"
+  status: "queued" | "running" | "complete" | "partial" | "failed" | "cancelled"
   progress: number
   message: string
   project_name?: string
@@ -41,6 +41,7 @@ export interface JobStatus {
   tests_failed?: number
   logs?: string[]
   agents?: AgentStatus[]
+  review_summary?: string
 }
 
 export interface AgentStatus {
@@ -119,6 +120,7 @@ export interface ReviewResponse {
   issues: ReviewIssue[]
   summary: string
   score: number
+  error?: string
 }
 
 export interface ReviewIssue {

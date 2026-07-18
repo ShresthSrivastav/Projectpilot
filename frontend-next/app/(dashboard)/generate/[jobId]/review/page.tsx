@@ -1,7 +1,7 @@
 "use client"
 
 import { useParams } from "next/navigation"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { PageHeader } from "@/components/shared/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { motion } from "framer-motion"
+import type { ReviewResponse } from "@/lib/utils/types"
 
 export default function ReviewPage() {
   const params = useParams()
@@ -28,11 +29,23 @@ export default function ReviewPage() {
   const { data: job, isLoading } = useJobStatus(jobId)
   const { data: files } = useJobFiles(job?.job_id ?? null)
 
-  const { data: review, isLoading: reviewLoading } = useQuery({
+  const reviewFromJob = useMemo(() => {
+    if (!job?.review_summary) return null
+    try {
+      const parsed = JSON.parse(job.review_summary as string)
+      return parsed as ReviewResponse
+    } catch {
+      return null
+    }
+  }, [job?.review_summary])
+
+  const { data: review, isLoading: reviewLoading, isFetching: reviewFetching, refetch: refetchReview } = useQuery({
     queryKey: ["job", jobId, "review"],
-    queryFn: () => pipelineApi.review(jobId, {}),
-    enabled: job?.status === "complete",
+    queryFn: () => pipelineApi.review(jobId, { model: "cloud" }),
+    enabled: (job?.status === "complete" || job?.status === "partial") && !reviewFromJob,
   })
+
+  const effectiveReview = review || reviewFromJob
 
   const handleFileSelect = (path: string, content?: string) => {
     setSelectedFile(path)
@@ -48,9 +61,9 @@ export default function ReviewPage() {
     )
   }
 
-  const errorCount = review?.issues?.filter((i) => i.severity === "error").length ?? 0
-  const warningCount = review?.issues?.filter((i) => i.severity === "warning").length ?? 0
-  const infoCount = review?.issues?.filter((i) => i.severity === "info").length ?? 0
+  const errorCount = effectiveReview?.issues?.filter((i) => i.severity === "error").length ?? 0
+  const warningCount = effectiveReview?.issues?.filter((i) => i.severity === "warning").length ?? 0
+  const infoCount = effectiveReview?.issues?.filter((i) => i.severity === "info").length ?? 0
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -60,6 +73,10 @@ export default function ReviewPage() {
         transition={{ duration: 0.3 }}
       >
         <PageHeader title={`Review: ${job?.project_name ?? "Project"}`}>
+          <Button variant="outline" size="sm" onClick={() => refetchReview()} disabled={reviewFetching}>
+            <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+            {reviewFetching ? "Reviewing..." : "Run review again"}
+          </Button>
           <Link href={`/generate/${jobId}`}>
             <Button variant="outline" size="sm">Back to Generation</Button>
           </Link>
@@ -105,7 +122,7 @@ export default function ReviewPage() {
             <div className="flex items-center justify-center gap-2 mb-1">
               <Sparkles className="h-4 w-4 text-accent" />
               <span className="text-2xl font-semibold tabular-nums text-accent">
-                {review?.score ?? "--"}
+                {                effectiveReview?.score ?? "--"}
               </span>
             </div>
             <p className="text-xs text-muted-foreground">AI Score</p>
@@ -174,9 +191,13 @@ export default function ReviewPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {reviewLoading ? (
+              {reviewLoading || reviewFetching ? (
                 <SkeletonChart />
-              ) : !review || !review.issues || review.issues.length === 0 ? (
+              ) : effectiveReview?.error ? (
+                <div className="rounded-md border border-warning/30 bg-warning/5 p-4 text-sm text-muted-foreground">
+                  {String(effectiveReview.error)}
+                </div>
+              ) : !effectiveReview || !effectiveReview.issues || effectiveReview.issues.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -188,7 +209,7 @@ export default function ReviewPage() {
                 </motion.div>
               ) : (
                 <div className="space-y-2">
-                  {review.issues.map((issue, i) => (
+                  {effectiveReview.issues.map((issue, i) => (
                     <motion.div
                       key={i}
                       initial={{ opacity: 0, x: -10 }}
@@ -220,14 +241,14 @@ export default function ReviewPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-sm mt-1">{issue.message}</p>
+                        <p className="text-sm mt-1">{issue.message || (issue as unknown as { description?: string }).description}</p>
                       </div>
                     </motion.div>
                   ))}
 
-                  {review.summary && (
+                  {effectiveReview.summary && (
                     <div className="mt-4 rounded-md bg-muted/30 p-3">
-                      <p className="text-xs text-muted-foreground">{review.summary}</p>
+                      <p className="text-xs text-muted-foreground">{effectiveReview.summary}</p>
                     </div>
                   )}
                 </div>

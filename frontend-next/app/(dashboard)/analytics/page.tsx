@@ -34,10 +34,10 @@ export default function AnalyticsPage() {
       .slice(0, 15)
       .map((p, i) => ({
         name: (p.project_name as string) ?? `Project ${i + 1}`,
-        duration: (p.duration as number) ?? 0,
-        files: (p.files as number) ?? 0,
-        tokens: (p.tokens as number) ?? 0,
-        success_rate: (p.success_rate as number) ?? 0,
+        duration: Number(p.total_duration_ms ?? p.duration ?? 0) / (p.total_duration_ms ? 1000 : 1),
+        files: Number(p.file_count ?? p.files ?? 0),
+        tokens: Number(p.token_usage ?? p.tokens ?? 0),
+        success_rate: ["success", "complete"].includes(String(p.status)) ? 100 : 0,
       }))
   }, [projects])
 
