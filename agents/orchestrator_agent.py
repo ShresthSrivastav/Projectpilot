@@ -182,7 +182,9 @@ class Orchestrator:
             "test_summary": self.test_results.get("summary", ""),
             "test_details": json.dumps(self.test_results.get("details", [])),
         }
-        update_job_status(self.job_id, "running", workspace_id=self._ws, current_agent="Orchestrator", progress_pct=85, **meta)
+        update_job_status(
+            self.job_id, "running", workspace_id=self._ws, current_agent="Orchestrator", progress_pct=85, **meta
+        )
 
     def _replace_test_with_fallback(self) -> None:
         """Replace tests with ones that import and test the REAL generated project."""
@@ -320,7 +322,14 @@ def test_health(client):
             if missing_critical:
                 error_msg = f"Critical files missing after code generation: {missing_critical}"
                 self._log("CodeAgent", error_msg, level="CRITICAL")
-                update_job_status(self.job_id, "failed", workspace_id=self._ws, current_agent="", progress_pct=55, error_message=error_msg)
+                update_job_status(
+                    self.job_id,
+                    "failed",
+                    workspace_id=self._ws,
+                    current_agent="",
+                    progress_pct=55,
+                    error_message=error_msg,
+                )
                 return {"status": "failed", "error": error_msg, "files": len(self.generated_files)}
 
             # ── 4. TestGen ────────────────────────────────────────────────────
@@ -506,5 +515,7 @@ def test_health(client):
             cancelled = self._cancel.is_set()
             status = "cancelled" if cancelled else "failed"
             logger.exception('{"event":"pipeline_error","job_id":"%s","cancelled":%s}', self.job_id, cancelled)
-            update_job_status(self.job_id, status, workspace_id=self._ws, current_agent="", progress_pct=0, error_message=str(exc))
+            update_job_status(
+                self.job_id, status, workspace_id=self._ws, current_agent="", progress_pct=0, error_message=str(exc)
+            )
             return {"status": status, "error": str(exc)}

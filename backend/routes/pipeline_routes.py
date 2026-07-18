@@ -202,7 +202,9 @@ def run_pipeline(
             f"Ollama is not reachable at {os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')}. "
             f"Check that the Ollama container is running, or select a cloud model from the sidebar."
         )
-        update_job_status(job_id, "failed", workspace_id=workspace_id, current_agent="", progress_pct=0, error_message=err)
+        update_job_status(
+            job_id, "failed", workspace_id=workspace_id, current_agent="", progress_pct=0, error_message=err
+        )
         return {"status": "failed", "error": err}
 
     context = AgentContext(
@@ -366,7 +368,13 @@ def regenerate_file(req: RegenerateRequest, request: Request = None):
     _append_changelog(req.job_id, "File Regenerated", f"- **File**: {req.file_path}\n- **Note**: {instructions}\n")
     if ws_id:
         log_activity(ws_id, uid, "project.changed", f"Regenerated {req.file_path}", "project", req.job_id)
-        notify_workspace_change(ws_id, uid, job.get("project_name", req.job_id), req.job_id, f"{uid or 'A workspace member'} regenerated {req.file_path}")
+        notify_workspace_change(
+            ws_id,
+            uid,
+            job.get("project_name", req.job_id),
+            req.job_id,
+            f"{uid or 'A workspace member'} regenerated {req.file_path}",
+        )
 
     return {
         "job_id": req.job_id,
@@ -899,7 +907,9 @@ async def iterate_project(job_id: str, req: IterateRequest, request: Request = N
                     "failures": fr["after"].get("failures", []),
                 }
 
-    update_job_status(job_id, "complete", workspace_id=ws_id, current_agent="", progress_pct=100, error_message="", review_summary="")
+    update_job_status(
+        job_id, "complete", workspace_id=ws_id, current_agent="", progress_pct=100, error_message="", review_summary=""
+    )
 
     # Auto-run AI review after iteration
     try:
