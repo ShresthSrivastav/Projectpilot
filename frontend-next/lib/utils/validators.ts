@@ -17,7 +17,7 @@ export const registerSchema = z.object({
 
 export const generateSchema = z.object({
   prompt: z.string().min(10, "Prompt must be at least 10 characters").max(500, "Prompt too long"),
-  projectName: z.string().min(1, "Project name is required").max(100),
+  projectName: z.string().max(100).optional(),
   model: z.string().optional(),
 })
 

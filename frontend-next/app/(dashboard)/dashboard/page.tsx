@@ -183,7 +183,6 @@ export default function DashboardPage() {
             <CardHeader><CardTitle className="text-sm font-medium">Quick Actions</CardTitle></CardHeader>
             <CardContent className="space-y-2">
               <Link href="/generate"><Button variant="default" size="sm" className="w-full justify-start"><Sparkles className="mr-2 h-4 w-4" />New Project</Button></Link>
-              <Link href="/benchmarks"><Button variant="outline" size="sm" className="w-full justify-start"><BarChart3 className="mr-2 h-4 w-4" />Run Benchmark</Button></Link>
               <Link href="/chat"><Button variant="outline" size="sm" className="w-full justify-start"><Zap className="mr-2 h-4 w-4" />Open Chat</Button></Link>
               <Link href="/workspace"><Button variant="outline" size="sm" className="w-full justify-start"><Users className="mr-2 h-4 w-4" />Manage Workspace</Button></Link>
             </CardContent>

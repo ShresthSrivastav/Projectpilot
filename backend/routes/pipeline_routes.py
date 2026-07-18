@@ -42,6 +42,7 @@ from database.chroma_db import (
     get_logs,
     list_jobs,
     save_prompt,
+    set_workspace_context,
     update_job_status,
 )
 from services.test_service import run_pytest, run_syntax_check
@@ -49,6 +50,8 @@ from services.llm_service import call_model
 from services.file_service import BASE_DIR, list_files
 from services.zip_service import get_zip_path, zip_exists
 from services.audit_service import log_audit_event
+from services.activity_service import log_activity
+from services.notification_service import notify_generation_started, notify_workspace_change
 from database.memory_store import delete_project_analytics
 
 logger = logging.getLogger(__name__)
@@ -199,7 +202,7 @@ def run_pipeline(
             f"Ollama is not reachable at {os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')}. "
             f"Check that the Ollama container is running, or select a cloud model from the sidebar."
         )
-        update_job_status(job_id, "failed", current_agent="", progress_pct=0, error_message=err)
+        update_job_status(job_id, "failed", workspace_id=workspace_id, current_agent="", progress_pct=0, error_message=err)
         return {"status": "failed", "error": err}
 
     context = AgentContext(
@@ -218,6 +221,9 @@ def run_pipeline(
         cancel_flag=cancel_flag,
     )
     try:
+        # Background threads do not inherit the request workspace context.
+        # Set it once here so every agent storage call stays in the same workspace.
+        set_workspace_context(workspace_id)
         return orchestrator.run()
     finally:
         with _flags_lock:
@@ -256,6 +262,9 @@ def generate_project(req: GenerateRequest, request: Request = None):
     try:
         if ws_id:
             log_audit_event(ws_id, uid, "Project Created", "project", job_id)
+            log_activity(ws_id, uid, "project.created", f"Started generating '{req.project_name}'", "project", job_id)
+        if uid:
+            notify_generation_started(uid, ws_id, req.project_name, job_id)
     except Exception:
         pass
 
@@ -293,11 +302,11 @@ def generate_project(req: GenerateRequest, request: Request = None):
 
 
 @router.post("/cancel/{job_id}")
-def cancel_job(job_id: str):
+def cancel_job(job_id: str, request: Request = None):
     """Cancel a queued or running generation job."""
-    job = get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found.")
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
+    job = _require_job_owner(job_id, ws_id, uid)
 
     status = job.get("status", "")
     if status not in {"queued", "running"}:
@@ -313,6 +322,7 @@ def cancel_job(job_id: str):
     update_job_status(
         job_id,
         "cancelled",
+        workspace_id=ws_id,
         current_agent="",
         progress_pct=int(job.get("progress_pct", 0)),
         error_message="Cancelled by user.",
@@ -354,6 +364,9 @@ def regenerate_file(req: RegenerateRequest, request: Request = None):
     target.write_text(regenerated + ("\n" if regenerated and not regenerated.endswith("\n") else ""), encoding="utf-8")
     syntax_result = run_syntax_check(target) if target.suffix == ".py" else {"valid": True, "error": ""}
     _append_changelog(req.job_id, "File Regenerated", f"- **File**: {req.file_path}\n- **Note**: {instructions}\n")
+    if ws_id:
+        log_activity(ws_id, uid, "project.changed", f"Regenerated {req.file_path}", "project", req.job_id)
+        notify_workspace_change(ws_id, uid, job.get("project_name", req.job_id), req.job_id, f"{uid or 'A workspace member'} regenerated {req.file_path}")
 
     return {
         "job_id": req.job_id,
@@ -886,12 +899,12 @@ async def iterate_project(job_id: str, req: IterateRequest, request: Request = N
                     "failures": fr["after"].get("failures", []),
                 }
 
-    update_job_status(job_id, "complete", current_agent="", progress_pct=100, error_message="", review_summary="")
+    update_job_status(job_id, "complete", workspace_id=ws_id, current_agent="", progress_pct=100, error_message="", review_summary="")
 
     # Auto-run AI review after iteration
     try:
         review = run_project_review(job_id, model=req.model or "cloud")
-        update_job_status(job_id, "complete", progress_pct=100, review_summary=json.dumps(review))
+        update_job_status(job_id, "complete", workspace_id=ws_id, progress_pct=100, review_summary=json.dumps(review))
     except Exception:
         pass
 
@@ -909,6 +922,23 @@ async def iterate_project(job_id: str, req: IterateRequest, request: Request = N
         if tp is not None:
             details += f"- **Tests**: {pytest_result.get('collected', 0)} collected, {'PASS' if tp else 'FAIL'}\n"
         _append_changelog(job_id, "Project Iterated", details)
+        if ws_id:
+            changed_files = ", ".join(modified + added + deleted)
+            log_activity(
+                ws_id,
+                uid,
+                "project.changed",
+                f"Updated {job.get('project_name', job_id)} with a prompt ({changed_files})",
+                "project",
+                job_id,
+            )
+            notify_workspace_change(
+                ws_id,
+                uid,
+                job.get("project_name", job_id),
+                job_id,
+                f"A workspace member changed {changed_files or 'the project'} with a prompt",
+            )
 
     return {
         "job_id": job_id,
@@ -1173,6 +1203,35 @@ def run_project_review(job_id: str, model: str = "cloud") -> dict[str, Any]:
     parsed.setdefault("issues", [])
     parsed.setdefault("recommendations", [])
 
+    # Keep the review contract stable for every model response. Older prompts
+    # used `description`; the UI consumes `message` and `score`.
+    normalized_issues = []
+    for issue in parsed.get("issues", []):
+        if not isinstance(issue, dict):
+            continue
+        severity = str(issue.get("severity", "info")).lower()
+        if severity not in {"error", "warning", "info"}:
+            severity = "info"
+        normalized_issues.append(
+            {
+                "severity": severity,
+                "message": str(issue.get("message") or issue.get("description") or "Review finding"),
+                "file": issue.get("file", ""),
+                "line": issue.get("line"),
+            }
+        )
+    parsed["issues"] = normalized_issues
+    parsed.setdefault(
+        "score",
+        max(
+            0,
+            100
+            - sum(25 for i in normalized_issues if i["severity"] == "error")
+            - sum(8 for i in normalized_issues if i["severity"] == "warning"),
+        ),
+    )
+    parsed.setdefault("summary", parsed.get("error") or "Review completed.")
+
     parsed["job_id"] = job_id
     parsed["syntax_ok"] = len(syntax_errors) == 0
     parsed["tests_passed"] = tests_passed
@@ -1180,14 +1239,20 @@ def run_project_review(job_id: str, model: str = "cloud") -> dict[str, Any]:
 
 
 @router.post("/review/{job_id}")
-def review_project(job_id: str, req: ReviewRequest):
+def review_project(job_id: str, req: ReviewRequest, request: Request = None):
     """Run AI-powered project review on demand."""
-    job = get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found.")
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
+    job = _require_job_owner(job_id, ws_id, uid)
     review = run_project_review(job_id, model=req.model or "cloud")
     # Store in DB for display
-    update_job_status(job_id, job.get("status", "complete"), progress_pct=100, review_summary=json.dumps(review))
+    update_job_status(
+        job_id,
+        job.get("status", "complete"),
+        workspace_id=ws_id,
+        progress_pct=100,
+        review_summary=json.dumps(review),
+    )
     return review
 
 
@@ -1197,7 +1262,7 @@ def get_status(job_id: str, request: Request = None):
     uid = getattr(request.state, "user_id", "") if request else ""
     _require_job_owner(job_id, ws_id, uid)
 
-    job = get_job(job_id)
+    job = get_job(job_id, workspace_id=ws_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     test_details_raw = job.get("test_details", "")
@@ -1234,7 +1299,7 @@ def get_status(job_id: str, request: Request = None):
         "test_summary": job.get("test_summary", ""),
         "test_details": test_details,
         "review_summary": job.get("review_summary", ""),
-        "logs": get_logs(job_id),
+        "logs": get_logs(job_id, workspace_id=ws_id),
         "file_list": [str(p.relative_to(job_dir)) for p in list_files(job_id)] if job_dir and job_dir.exists() else [],
         "gates_passed": int(job.get("gates_passed", 0)),
         "gates_total": int(job.get("gates_total", 0)),

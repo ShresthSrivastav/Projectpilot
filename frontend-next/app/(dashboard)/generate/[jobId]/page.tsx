@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/shared/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 import { SkeletonCard } from "@/components/shared/loading-skeleton"
 import { AgentPipeline } from "@/components/generate/agent-pipeline"
 import { FileTree } from "@/components/shared/file-tree"
@@ -22,9 +23,11 @@ import {
   BarChart3,
   Bug,
   FileCode,
+  Sparkles,
 } from "lucide-react"
 import { motion } from "framer-motion"
 import { toast } from "sonner"
+import { useQueryClient } from "@tanstack/react-query"
 
 export default function JobDetailPage() {
   const params = useParams()
@@ -32,6 +35,9 @@ export default function JobDetailPage() {
   const jobId = params.jobId as string
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [selectedContent, setSelectedContent] = useState<string | undefined>(undefined)
+  const [iteratePrompt, setIteratePrompt] = useState("")
+  const [iterating, setIterating] = useState(false)
+  const queryClient = useQueryClient()
 
   const { data: job, isLoading } = useJobStatus(jobId)
   const { data: files } = useJobFiles(job?.job_id ?? null)
@@ -91,6 +97,7 @@ export default function JobDetailPage() {
 
   const isRunning = job.status === "running" || job.status === "queued"
   const isComplete = job.status === "complete"
+  const isReviewable = isComplete || job.status === "partial"
   const isFailed = job.status === "failed"
   const testPassRate = job.tests_total ? Math.round((job.tests_passed ?? 0) / job.tests_total * 100) : 0
 
@@ -283,7 +290,7 @@ export default function JobDetailPage() {
               <CardTitle className="text-sm font-medium">Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {isComplete && (
+              {isReviewable && (
                 <Button className="w-full" size="sm" onClick={() => router.push(`/generate/${jobId}/review`)}>
                   Review Project <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
@@ -293,10 +300,39 @@ export default function JobDetailPage() {
                   <Download className="mr-2 h-4 w-4" /> Download
                 </Button>
               )}
-              {(isRunning || isComplete) && (
-                <Button variant="outline" size="sm" className="w-full">
-                  <Loader2 className="mr-2 h-4 w-4" /> Iterate
-                </Button>
+              {isReviewable && (
+                <div className="space-y-2 pt-2">
+                  <Textarea
+                    value={iteratePrompt}
+                    onChange={(e) => setIteratePrompt(e.target.value)}
+                    placeholder="Describe a change to make to the shared project..."
+                    rows={3}
+                    aria-label="Project change prompt"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={iterating || iteratePrompt.trim().length < 3}
+                    onClick={async () => {
+                      setIterating(true)
+                      try {
+                        await pipelineApi.iterate(jobId, { prompt: iteratePrompt.trim(), model: "cloud" })
+                        setIteratePrompt("")
+                        await queryClient.invalidateQueries({ queryKey: ["job", jobId, "status"] })
+                        await queryClient.invalidateQueries({ queryKey: ["job", jobId, "files"] })
+                        toast.success("Project updated from your prompt")
+                      } catch {
+                        toast.error("Could not update the project")
+                      } finally {
+                        setIterating(false)
+                      }
+                    }}
+                  >
+                    {iterating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    {iterating ? "Updating..." : "Update with prompt"}
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>

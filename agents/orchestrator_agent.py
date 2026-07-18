@@ -45,10 +45,12 @@ class Orchestrator:
     ):
         if context:
             self._ws = context.workspace_id
+            self._user_id = context.user_id
             self.job_id = context.job_id or job_id
             self.project_name = context.project_name or project_name
         else:
             self._ws = ""
+            self._user_id = ""
             self.job_id = job_id
             self.project_name = project_name
         self.prompt = prompt
@@ -62,14 +64,14 @@ class Orchestrator:
     # ── Internal helpers ──────────────────────────────────────────────────────
 
     def _step(self, agent: str, pct: int) -> None:
-        update_job_status(self.job_id, "running", current_agent=agent, progress_pct=pct)
+        update_job_status(self.job_id, "running", workspace_id=self._ws, current_agent=agent, progress_pct=pct)
 
     def _check_cancel(self) -> None:
         if self._cancel.is_set():
             raise RuntimeError("Job cancelled by user.")
 
     def _log(self, agent: str, msg: str, level: str = "INFO") -> None:
-        log_to_db(self.job_id, agent, msg, level)
+        log_to_db(self.job_id, agent, msg, level, workspace_id=self._ws)
 
     # ── Test validation helpers ────────────────────────────────────────────────
 
@@ -180,14 +182,14 @@ class Orchestrator:
             "test_summary": self.test_results.get("summary", ""),
             "test_details": json.dumps(self.test_results.get("details", [])),
         }
-        update_job_status(self.job_id, "running", current_agent="Orchestrator", progress_pct=85, **meta)
+        update_job_status(self.job_id, "running", workspace_id=self._ws, current_agent="Orchestrator", progress_pct=85, **meta)
 
     def _replace_test_with_fallback(self) -> None:
         """Replace tests with ones that import and test the REAL generated project."""
         from database.chroma_db import get_blueprint
         from services.file_service import write_file
 
-        bp = get_blueprint(self.job_id) or {}
+        bp = get_blueprint(self.job_id, workspace_id=self._ws) or {}
         routes = bp.get("routes", [])
         backend = (self.stack or {}).get("backend", "fastapi")
 
@@ -318,7 +320,7 @@ def test_health(client):
             if missing_critical:
                 error_msg = f"Critical files missing after code generation: {missing_critical}"
                 self._log("CodeAgent", error_msg, level="CRITICAL")
-                update_job_status(self.job_id, "failed", current_agent="", progress_pct=55, error_message=error_msg)
+                update_job_status(self.job_id, "failed", workspace_id=self._ws, current_agent="", progress_pct=55, error_message=error_msg)
                 return {"status": "failed", "error": error_msg, "files": len(self.generated_files)}
 
             # ── 4. TestGen ────────────────────────────────────────────────────
@@ -404,7 +406,7 @@ def test_health(client):
             self._step("ZipService", 100)
             zip_path = create_zip(self.job_id) if self.generated_files else None
             if zip_path:
-                save_generated_project(self.job_id, len(self.generated_files), str(zip_path))
+                save_generated_project(self.job_id, len(self.generated_files), str(zip_path), workspace_id=self._ws)
 
             # ── 11. Determine status based on gates + generation ─────────────
             failed = [k for k, v in gates_result.get("gates", {}).items() if not v["passed"]]
@@ -418,6 +420,7 @@ def test_health(client):
                 update_job_status(
                     self.job_id,
                     "failed",
+                    workspace_id=self._ws,
                     current_agent="",
                     progress_pct=99,
                     error_message=error_msg,
@@ -435,6 +438,7 @@ def test_health(client):
                 update_job_status(
                     self.job_id,
                     "partial",
+                    workspace_id=self._ws,
                     current_agent="",
                     progress_pct=99,
                     error_message=error_msg,
@@ -450,6 +454,7 @@ def test_health(client):
                 update_job_status(
                     self.job_id,
                     "complete",
+                    workspace_id=self._ws,
                     current_agent="",
                     progress_pct=100,
                     review_summary="",
@@ -476,6 +481,8 @@ def test_health(client):
                     total_duration_ms=elapsed_ms,
                     model_used=self.model,
                     status=status.lower(),
+                    workspace_id=self._ws,
+                    user_id=getattr(self, "_user_id", ""),
                 )
             except Exception as ana_err:
                 logger.debug("Analytics recording skipped: %s", ana_err)
@@ -499,5 +506,5 @@ def test_health(client):
             cancelled = self._cancel.is_set()
             status = "cancelled" if cancelled else "failed"
             logger.exception('{"event":"pipeline_error","job_id":"%s","cancelled":%s}', self.job_id, cancelled)
-            update_job_status(self.job_id, status, current_agent="", progress_pct=0, error_message=str(exc))
+            update_job_status(self.job_id, status, workspace_id=self._ws, current_agent="", progress_pct=0, error_message=str(exc))
             return {"status": status, "error": str(exc)}

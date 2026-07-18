@@ -958,12 +958,19 @@ def get_analytics_summary(workspace_id: str = "") -> dict[str, Any]:
             f"SELECT COALESCE(AVG(total_duration_ms),0) as a FROM project_analytics WHERE total_duration_ms>0{avg_duration_ws}",
             (workspace_id,) if workspace_id else (),
         ).fetchone()
+        completed = conn.execute(
+            f"SELECT COUNT(*) as c FROM project_analytics WHERE status IN ('success','complete'){avg_duration_ws}",
+            (workspace_id,) if workspace_id else (),
+        ).fetchone()
+        total = projects["c"] if projects else 0
         return {
-            "total_projects": projects["c"] if projects else 0,
+            "total_projects": total,
             "total_tokens": total_tokens["t"] if total_tokens else 0,
             "total_files": total_files["f"] if total_files else 0,
             "total_tests": total_tests["t"] if total_tests else 0,
             "avg_duration_ms": round(avg_duration["a"], 0) if avg_duration else 0,
+            "avg_duration": round((avg_duration["a"] or 0) / 1000, 1) if avg_duration else 0,
+            "success_rate": round((completed["c"] or 0) / total * 100, 1) if total else 0,
         }
     except Exception:
         return {}

@@ -6,13 +6,11 @@ import { cn } from "@/lib/utils/cn"
 import { useUIStore } from "@/lib/stores/ui-store"
 import { Button } from "@/components/ui/button"
 import {
-  LayoutDashboard,
   Sparkles,
   Clock,
   MessageSquare,
   Users,
   BarChart3,
-  Gauge,
   ClipboardCheck,
   Building2,
   Puzzle,
@@ -23,18 +21,16 @@ import {
 } from "lucide-react"
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/generate", label: "Generate", icon: Sparkles },
   { href: "/history", label: "History", icon: Clock },
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { separator: true },
   { href: "/workspace", label: "Workspace", icon: Users },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/benchmarks", label: "Benchmarks", icon: Gauge },
-  { href: "/evaluation", label: "Evaluation", icon: ClipboardCheck },
-  { separator: true },
-  { href: "/organization", label: "Organization", icon: Building2 },
   { href: "/ecosystem", label: "Ecosystem", icon: Puzzle },
+  { separator: true },
+  { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/evaluation", label: "Evaluation", icon: ClipboardCheck },
+  { href: "/organization", label: "Organization", icon: Building2 },
   { separator: true },
   { href: "/settings", label: "Settings", icon: Settings },
 ]
