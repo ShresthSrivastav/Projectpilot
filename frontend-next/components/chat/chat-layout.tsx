@@ -9,8 +9,9 @@ import { ConversationSidebar } from "./conversation-sidebar"
 import { ChatInput } from "./chat-input"
 import { ChatMessage } from "./chat-message"
 import { ThinkingIndicator } from "./thinking-indicator"
-import { Sparkles } from "lucide-react"
+import { Sparkles, MessageSquare } from "lucide-react"
 import { Card } from "@/components/ui/card"
+import { toast } from "sonner"
 import type { ChatMessage as ChatMessageType } from "@/lib/utils/types"
 
 interface ChatLayoutProps {
@@ -21,9 +22,7 @@ export function ChatLayout({ conversationId }: ChatLayoutProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const { data: conversations } = useConversations()
-  const { data: apiMessages } = useMessages(
-    conversationId ?? null
-  )
+  const { data: apiMessages, isLoading: msgsLoading } = useMessages(conversationId ?? null)
   const [localMessages, setLocalMessages] = useState<ChatMessageType[]>([])
   const [sending, setSending] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
@@ -71,14 +70,11 @@ export function ChatLayout({ conversationId }: ChatLayoutProps) {
           queryClient.invalidateQueries({ queryKey: ["conversations"] })
         }
       } catch {
+        const errMsg = { role: "assistant" as const, content: "*Failed to send message. Please try again.*" }
         if (!conversationId) {
-          setLocalMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: "*Failed to send message. Please try again.*",
-            },
-          ])
+          setLocalMessages((prev) => [...prev, errMsg])
+        } else {
+          toast.error("Failed to send message")
         }
       } finally {
         setSending(false)
@@ -105,18 +101,27 @@ export function ChatLayout({ conversationId }: ChatLayoutProps) {
                 </div>
                 <h2 className="text-lg font-semibold mb-1">How can I help you?</h2>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Ask me to generate code, debug issues, explain concepts, or build entire projects
+                  Ask me about your projects, debug issues, or get help with generated code
                 </p>
               </div>
             ) : (
               <>
-                {displayMessages.map((msg, i) => (
-                  <ChatMessage
-                    key={msg.timestamp || i}
-                    message={msg}
-                    isLast={i === displayMessages.length - 1}
-                  />
-                ))}
+                {msgsLoading && conversationId ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MessageSquare className="h-4 w-4 animate-pulse" />
+                      <span className="text-sm">Loading messages...</span>
+                    </div>
+                  </div>
+                ) : (
+                  displayMessages.map((msg, i) => (
+                    <ChatMessage
+                      key={msg.timestamp || `${msg.role}-${i}`}
+                      message={msg}
+                      isLast={i === displayMessages.length - 1}
+                    />
+                  ))
+                )}
               </>
             )}
 
@@ -132,7 +137,7 @@ export function ChatLayout({ conversationId }: ChatLayoutProps) {
               <ChatInput onSend={handleSend} isLoading={sending} />
             </Card>
             <p className="text-[10px] text-muted-foreground/40 text-center mt-1.5">
-              AI may produce inaccurate information. Responses are not saved unless in a conversation.
+              AI may produce inaccurate information. Messages are saved to your conversation history.
             </p>
           </div>
         </div>

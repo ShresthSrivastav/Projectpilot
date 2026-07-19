@@ -1,7 +1,7 @@
 "use client"
 
-import { useParams } from "next/navigation"
-import { useState, useMemo } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import { PageHeader } from "@/components/shared/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -14,20 +14,29 @@ import { pipelineApi } from "@/lib/api/pipeline"
 import { useQuery } from "@tanstack/react-query"
 import {
   CheckCircle2, XCircle, AlertTriangle, Info,
-  FileCode, ScrollText, Sparkles,
+  FileCode, ScrollText, Sparkles, Download,
+  ArrowLeft, RotateCw,
 } from "lucide-react"
 import Link from "next/link"
 import { motion } from "framer-motion"
+import { toast } from "sonner"
 import type { ReviewResponse } from "@/lib/utils/types"
 
 export default function ReviewPage() {
   const params = useParams()
+  const router = useRouter()
   const jobId = params.jobId as string
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [selectedContent, setSelectedContent] = useState<string | undefined>(undefined)
 
   const { data: job, isLoading } = useJobStatus(jobId)
-  const { data: files } = useJobFiles(job?.job_id ?? null)
+  const { data: files, loadFileContent, hasLoaded } = useJobFiles(job?.job_id ?? null)
+
+  useEffect(() => {
+    if (files && selectedFile && !hasLoaded(selectedFile)) {
+      loadFileContent(selectedFile)
+    }
+  }, [selectedFile, files, hasLoaded, loadFileContent])
 
   const reviewFromJob = useMemo(() => {
     if (!job?.review_summary) return null
@@ -47,9 +56,24 @@ export default function ReviewPage() {
 
   const effectiveReview = review || reviewFromJob
 
-  const handleFileSelect = (path: string, content?: string) => {
+  const handleFileSelect = useCallback((path: string, content?: string) => {
     setSelectedFile(path)
-    setSelectedContent(content)
+    if (content) setSelectedContent(content)
+  }, [])
+
+  const handleDownload = async () => {
+    try {
+      const blob = await pipelineApi.download(jobId)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${job?.project_name ?? "project"}.zip`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success("Download started")
+    } catch {
+      toast.error("Failed to download project")
+    }
   }
 
   if (isLoading) {
@@ -73,17 +97,25 @@ export default function ReviewPage() {
         transition={{ duration: 0.3 }}
       >
         <PageHeader title={`Review: ${job?.project_name ?? "Project"}`}>
-          <Button variant="outline" size="sm" onClick={() => refetchReview()} disabled={reviewFetching}>
-            <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-            {reviewFetching ? "Reviewing..." : "Run review again"}
+          <Button variant="outline" size="sm" onClick={() => router.push(`/generate/${jobId}`)}>
+            <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+            Back to Status
           </Button>
-          <Link href={`/generate/${jobId}`}>
-            <Button variant="outline" size="sm">Back to Generation</Button>
-          </Link>
+          <Button variant="outline" size="sm" onClick={handleDownload}>
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            Download
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => refetchReview()} disabled={reviewFetching}>
+            {reviewFetching ? (
+              <RotateCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            {reviewFetching ? "Reviewing..." : "Re-review"}
+          </Button>
         </PageHeader>
       </motion.div>
 
-      {/* Summary badges */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -122,7 +154,7 @@ export default function ReviewPage() {
             <div className="flex items-center justify-center gap-2 mb-1">
               <Sparkles className="h-4 w-4 text-accent" />
               <span className="text-2xl font-semibold tabular-nums text-accent">
-                {                effectiveReview?.score ?? "--"}
+                {effectiveReview?.score ?? "--"}
               </span>
             </div>
             <p className="text-xs text-muted-foreground">AI Score</p>
@@ -131,7 +163,6 @@ export default function ReviewPage() {
       </motion.div>
 
       <div className="grid gap-6 lg:grid-cols-5">
-        {/* File browser */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
@@ -150,9 +181,7 @@ export default function ReviewPage() {
           </Card>
         </div>
 
-        {/* Main content area */}
         <div className="lg:col-span-3 space-y-6">
-          {/* Code viewer */}
           {selectedFile && selectedContent !== undefined ? (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -182,7 +211,6 @@ export default function ReviewPage() {
             </motion.div>
           ) : null}
 
-          {/* AI Review */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -197,7 +225,17 @@ export default function ReviewPage() {
                 <div className="rounded-md border border-warning/30 bg-warning/5 p-4 text-sm text-muted-foreground">
                   {String(effectiveReview.error)}
                 </div>
-              ) : !effectiveReview || !effectiveReview.issues || effectiveReview.issues.length === 0 ? (
+              ) : !effectiveReview ? (
+                <div className="flex flex-col items-center py-8">
+                  <Sparkles className="h-10 w-10 text-muted-foreground mb-3 animate-pulse" />
+                  <p className="text-sm font-medium">Review not available yet</p>
+                  <p className="text-xs text-muted-foreground mt-1 mb-4">Run a review to get AI feedback on your project</p>
+                  <Button size="sm" onClick={() => refetchReview()} disabled={reviewFetching}>
+                    <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                    Run Review
+                  </Button>
+                </div>
+              ) : effectiveReview.issues.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -236,12 +274,15 @@ export default function ReviewPage() {
                             {issue.severity}
                           </Badge>
                           {issue.file && (
-                            <span className="text-[10px] font-mono text-muted-foreground/70">
+                            <button
+                              onClick={() => handleFileSelect(issue.file!, undefined)}
+                              className="text-[10px] font-mono text-muted-foreground/70 hover:text-primary cursor-pointer"
+                            >
                               {issue.file}{issue.line ? `:${issue.line}` : ""}
-                            </span>
+                            </button>
                           )}
                         </div>
-                        <p className="text-sm mt-1">{issue.message || (issue as unknown as { description?: string }).description}</p>
+                        <p className="text-sm mt-1">{issue.message}</p>
                       </div>
                     </motion.div>
                   ))}

@@ -9,16 +9,34 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { SkeletonTable } from "@/components/shared/loading-skeleton"
 import { EmptyState } from "@/components/shared/empty-state"
-import { Clock, RefreshCw, Sparkles, ExternalLink } from "lucide-react"
+import { Clock, RefreshCw, Sparkles, ExternalLink, Trash2 } from "lucide-react"
+import { toast } from "sonner"
+import { useState } from "react"
 
 export default function HistoryPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const [deleting, setDeleting] = useState<string | null>(null)
   const { data: jobs, isLoading } = useQuery({
     queryKey: ["jobs"],
     queryFn: () => pipelineApi.jobs(),
     refetchInterval: 10000,
   })
+
+  const handleDelete = async (e: React.MouseEvent, jobId: string) => {
+    e.stopPropagation()
+    if (!confirm("Delete this project permanently?")) return
+    setDeleting(jobId)
+    try {
+      await pipelineApi.delete(jobId)
+      queryClient.invalidateQueries({ queryKey: ["jobs"] })
+      toast.success("Project deleted")
+    } catch {
+      toast.error("Failed to delete project")
+    } finally {
+      setDeleting(null)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -60,7 +78,7 @@ export default function HistoryPage() {
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{job.project_name ?? job.job_id}</p>
-                      <p className="text-xs text-muted-foreground font-mono">{job.job_id}</p>
+                      <p className="text-xs text-muted-foreground font-mono truncate">{job.job_id}</p>
                     </div>
                     <Badge
                       variant={job.status === "complete" ? "success" : job.status === "failed" ? "destructive" : job.status === "running" ? "warning" : "secondary"}
@@ -69,11 +87,20 @@ export default function HistoryPage() {
                       {job.status}
                     </Badge>
                     {job.tests_total ? (
-                      <span className="text-xs text-muted-foreground tabular-nums">
+                      <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                         {job.tests_passed}/{job.tests_total} tests
                       </span>
                     ) : null}
-                    <ExternalLink className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => handleDelete(e, job.job_id)}
+                      disabled={deleting === job.job_id}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-error" />
+                    </Button>
+                    <ExternalLink className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </div>
                 )
               })}

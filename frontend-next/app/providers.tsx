@@ -25,7 +25,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ThemeProvider
         attribute="class"
         defaultTheme="dark"
-        enableSystem={false}
+        enableSystem={true}
         storageKey="projectpilot-theme"
       >
         <TooltipProvider delayDuration={200}>
