@@ -10,7 +10,7 @@ export const chatApi = {
       response: string
       conversation_id: string
       pending_confirm?: { tool_name: string; args: Record<string, string> }
-    }>("/chat", data),
+    }>("/chat/send", data),
 
   confirmAction: (data: { conversation_id: string; tool_name: string; args: Record<string, string> }) =>
     apiPost<{ response: string }>("/chat/confirm-action", data),
