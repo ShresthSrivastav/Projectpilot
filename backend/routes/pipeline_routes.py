@@ -407,16 +407,14 @@ def get_test_files(job_id: str, request: Request = None):
 
 
 @router.post("/fix-tests/{job_id}")
-def fix_tests(job_id: str, req: FixTestsRequest):
+def fix_tests(job_id: str, req: FixTestsRequest, request: Request = None):
     """
     Run tests, collect failures, send to LLM to fix source code,
     apply fixes, re-run tests. Returns before/after results.
     """
-    from database.chroma_db import get_job as _get_job
-
-    job = _get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found.")
+    ws_id = getattr(request.state, "workspace_id", "") if request else ""
+    uid = getattr(request.state, "user_id", "") if request else ""
+    job = _require_job_owner(job_id, ws_id, uid)
     job_dir = BASE_DIR / job_id
     if not job_dir.exists():
         raise HTTPException(status_code=400, detail="Project files not available.")
@@ -438,6 +436,7 @@ def fix_tests(job_id: str, req: FixTestsRequest):
         _update_status(
             job_id,
             "complete",
+            workspace_id=ws_id,
             test_total=pr.get("collected", 0),
             test_passed=pr.get("collected", 0),
             test_failed=0,
@@ -665,6 +664,7 @@ def fix_tests(job_id: str, req: FixTestsRequest):
     _update_status(
         job_id,
         "complete",
+        workspace_id=ws_id,
         test_total=after_collected,
         test_passed=after_collected - len(after_failures),
         test_failed=len(after_failures),
@@ -889,7 +889,7 @@ async def iterate_project(job_id: str, req: IterateRequest, request: Request = N
         # Auto-fix failing tests after iteration
         if not pr.get("passed", False):
             for attempt in range(2):
-                fr = await fix_tests(job_id, FixTestsRequest(model=req.model or "cloud"))
+                fr = await fix_tests(job_id, FixTestsRequest(model=req.model or "cloud"), request=request)
                 if fr.get("after", {}).get("passed"):
                     pytest_result = {
                         "passed": True,

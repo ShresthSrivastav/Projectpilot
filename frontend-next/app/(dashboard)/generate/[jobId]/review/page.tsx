@@ -1,7 +1,7 @@
 "use client"
 
 import { useParams, useRouter } from "next/navigation"
-import { useState, useMemo, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { PageHeader } from "@/components/shared/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -17,7 +17,6 @@ import {
   FileCode, ScrollText, Sparkles, Download,
   ArrowLeft, RotateCw,
 } from "lucide-react"
-import Link from "next/link"
 import { motion } from "framer-motion"
 import { toast } from "sonner"
 import type { ReviewResponse } from "@/lib/utils/types"
@@ -38,7 +37,7 @@ export default function ReviewPage() {
     }
   }, [selectedFile, files, hasLoaded, loadFileContent])
 
-  const reviewFromJob = useMemo(() => {
+  const reviewFromJob = (() => {
     if (!job?.review_summary) return null
     try {
       const parsed = JSON.parse(job.review_summary as string)
@@ -46,7 +45,7 @@ export default function ReviewPage() {
     } catch {
       return null
     }
-  }, [job?.review_summary])
+  })()
 
   const { data: review, isLoading: reviewLoading, isFetching: reviewFetching, refetch: refetchReview } = useQuery({
     queryKey: ["job", jobId, "review"],

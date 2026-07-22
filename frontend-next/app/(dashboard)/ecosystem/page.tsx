@@ -10,21 +10,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { SkeletonCard } from "@/components/shared/loading-skeleton"
 import { EmptyState } from "@/components/shared/empty-state"
 import {
   Puzzle, Store, GitBranch,
   Search, Trash2,
   Users, Globe, Activity, Code2,
-  Link as LinkIcon, MessageSquare,
-  History, UserPlus, CheckCircle2,
+  MessageSquare,
+  History, UserPlus,
   ExternalLink, Mail,
 } from "lucide-react"
 import { motion } from "framer-motion"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
-import type { Plugin, MarketplacePackage, JobStatus } from "@/lib/utils/types"
 import Link from "next/link"
 
 export default function EcosystemPage() {
