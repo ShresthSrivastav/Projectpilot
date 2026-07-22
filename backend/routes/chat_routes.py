@@ -46,6 +46,7 @@ def chat_new(req: NewChatRequest, request: Request = None):
 
 
 @router.post("")
+@router.post("/send")
 def chat_endpoint(req: ChatRequest, request: Request = None):
     uid = getattr(request.state, "user_id", "") if request else ""
     ws_id = getattr(request.state, "workspace_id", "") if request else ""
