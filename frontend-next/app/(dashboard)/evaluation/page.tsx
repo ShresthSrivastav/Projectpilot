@@ -19,12 +19,12 @@ const MetricChart = dynamic(
 import {
   ClipboardCheck, TrendingUp, Trophy, Play,
   Loader2, BarChart3, Target, AlertTriangle,
-  DollarSign, Clock, Activity,
+  DollarSign, Activity,
 } from "lucide-react"
 import { toast } from "sonner"
 import { formatRelativeTime } from "@/lib/utils/formatters"
 import { motion } from "framer-motion"
-import { useState, useMemo } from "react"
+import { useState } from "react"
 
 export default function EvaluationPage() {
   const [running, setRunning] = useState(false)

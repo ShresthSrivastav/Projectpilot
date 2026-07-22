@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { useTheme } from "next-themes"
-import { useSyncExternalStore, useState, useEffect } from "react"
+import { useSyncExternalStore, useState } from "react"
 import { toast } from "sonner"
 import { Sun, Moon, Monitor, Check, Bell, Mail, Palette } from "lucide-react"
 
@@ -17,12 +17,19 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
   const [name, setName] = useState(user?.name ?? "")
-  const [emailNotifications, setEmailNotifications] = useState(true)
+  const emailNotifications = useSyncExternalStore(
+    (onStoreChange) => {
+      window.addEventListener("projectpilot-email-preferences", onStoreChange)
+      return () => window.removeEventListener("projectpilot-email-preferences", onStoreChange)
+    },
+    () => localStorage.getItem("projectpilot-email-notifications") !== "false",
+    () => true,
+  )
 
-  useEffect(() => {
-    const saved = localStorage.getItem("projectpilot-email-notifications")
-    if (saved !== null) setEmailNotifications(saved === "true")
-  }, [])
+  const setEmailNotifications = (enabled: boolean) => {
+    localStorage.setItem("projectpilot-email-notifications", String(enabled))
+    window.dispatchEvent(new Event("projectpilot-email-preferences"))
+  }
 
   const handleSave = () => {
     localStorage.setItem("projectpilot-email-notifications", String(emailNotifications))
