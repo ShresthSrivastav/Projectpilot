@@ -22,7 +22,8 @@ exclude = [
     "benchmark_campaign",
     "generated_projects_backup",
     "build",
-    "dist"
+    "dist",
+    "docs"
 ]
 
 # Same as Black.

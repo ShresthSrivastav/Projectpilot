@@ -134,7 +134,8 @@ deploy_nginx_config() {
         sudo systemctl reload nginx
         log "INFO" "Nginx config deployed and reloaded"
     else
-        log "WARN" "Nginx config test failed, keeping existing config"
+        log "ERROR" "Nginx config test failed; refusing to report deployment success"
+        return 1
     fi
 }
 
