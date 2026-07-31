@@ -253,7 +253,7 @@ PROTECTED_PREFIXES = [
     "/iterate/",
     "/validate/",
     "/deploy/",
-    "/plugins/",
+    "/plugins",
     "/marketplace/",
     "/agents/",
     "/workflows/",

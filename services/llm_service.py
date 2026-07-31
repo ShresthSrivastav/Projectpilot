@@ -39,8 +39,11 @@ def _add_tokens(n: int) -> None:
 # ── Local Ollama config ────────────────────────────────────────────────────────
 OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 _OPENAI_BASE: str = f"{OLLAMA_BASE_URL}/v1"
-TIMEOUT: int = int(os.getenv("LLM_TIMEOUT", "900"))
-MAX_RETRIES: int = int(os.getenv("LLM_MAX_RETRIES", "5"))
+# Keep generation responsive when a provider is unavailable. These remain
+# configurable for slower local models, but should not leave a job running
+# indefinitely on the default production configuration.
+TIMEOUT: int = int(os.getenv("LLM_TIMEOUT", "180"))
+MAX_RETRIES: int = int(os.getenv("LLM_MAX_RETRIES", "3"))
 
 # ── Cloud / Multi-model config ─────────────────────────────────────────────────
 CLOUD_BASE_URL: str = os.getenv(
@@ -493,8 +496,13 @@ def _call_cloud(
                 )
             ):
                 diagnose_google_credentials()
-                logger.error("Cloud auth error, falling back to local: %s", error_str[:200])
-                return _call_local(prompt, resolve_model("local"), system_prompt, job_id, agent)
+                if is_available():
+                    logger.error("Cloud auth error, falling back to local: %s", error_str[:200])
+                    return _call_local(prompt, resolve_model("local"), system_prompt, job_id, agent)
+                raise RuntimeError(
+                    "Cloud model authentication failed and the local model is unavailable. "
+                    "Check GOOGLE_API_KEY or select a configured provider."
+                ) from exc
             raise RuntimeError(f"Cloud LLM call failed: {exc}") from exc
     raise RuntimeError(f"Cloud (Gemma 4 31B) failed after {MAX_RETRIES} attempts: {last_exc}")
 
@@ -563,8 +571,13 @@ def _call_anthropic(
             if any(
                 kw in error_str for kw in ("401", "UNAUTHENTICATED", "403", "authentication", "api key", "unauthorized")
             ):
-                logger.error("Anthropic auth error, falling back to local: %s", error_str[:200])
-                return _call_local(prompt, resolve_model("local"), system_prompt, job_id, agent)
+                if is_available():
+                    logger.error("Anthropic auth error, falling back to local: %s", error_str[:200])
+                    return _call_local(prompt, resolve_model("local"), system_prompt, job_id, agent)
+                raise RuntimeError(
+                    "Anthropic authentication failed and the local model is unavailable. "
+                    "Check ANTHROPIC_API_KEY or select a configured provider."
+                ) from exc
             raise RuntimeError(f"Anthropic LLM call failed: {exc}") from exc
     raise RuntimeError(f"Anthropic (Claude 3.5 Sonnet via OpenRouter) failed after {MAX_RETRIES} attempts: {last_exc}")
 

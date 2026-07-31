@@ -735,6 +735,21 @@ def test_llm_retry_on_timeout():
             llm_service.call_model("test", model="local")
 
 
+def test_cloud_auth_failure_does_not_fallback_to_offline_local_model():
+    from services import llm_service
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.side_effect = RuntimeError("401 unauthorized")
+
+    with (
+        patch.object(llm_service, "_cloud", return_value=mock_client),
+        patch.object(llm_service, "diagnose_google_credentials"),
+        patch.object(llm_service, "is_available", return_value=False),
+    ):
+        with pytest.raises(RuntimeError, match="local model is unavailable"):
+            llm_service.call_model("test", model="cloud")
+
+
 def test_singleton_client_is_same_object():
     from services.llm_service import _client
 
