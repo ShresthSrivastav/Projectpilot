@@ -44,6 +44,7 @@ _OPENAI_BASE: str = f"{OLLAMA_BASE_URL}/v1"
 # indefinitely on the default production configuration.
 TIMEOUT: int = int(os.getenv("LLM_TIMEOUT", "180"))
 MAX_RETRIES: int = int(os.getenv("LLM_MAX_RETRIES", "3"))
+CLOUD_TIMEOUT: int = int(os.getenv("CLOUD_LLM_TIMEOUT", "120"))
 
 # ── Cloud / Multi-model config ─────────────────────────────────────────────────
 CLOUD_BASE_URL: str = os.getenv(
@@ -441,7 +442,7 @@ def _call_cloud(
                 messages=messages,
                 temperature=0.2,
                 max_tokens=8192,
-                timeout=TIMEOUT,
+                timeout=CLOUD_TIMEOUT,
             )
             text = (resp.choices[0].message.content or "").strip()
             text = re.sub(r"<thought>.*?</thought>", "", text, flags=re.DOTALL).strip()
@@ -527,7 +528,7 @@ def _call_anthropic(
                 messages=messages,
                 temperature=0.2,
                 max_tokens=8192,
-                timeout=TIMEOUT,
+                timeout=CLOUD_TIMEOUT,
             )
             text = (resp.choices[0].message.content or "").strip()
             text = re.sub(r"<thought>.*?</thought>", "", text, flags=re.DOTALL).strip()
