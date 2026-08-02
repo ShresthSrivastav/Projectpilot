@@ -45,6 +45,7 @@ _OPENAI_BASE: str = f"{OLLAMA_BASE_URL}/v1"
 TIMEOUT: int = int(os.getenv("LLM_TIMEOUT", "180"))
 MAX_RETRIES: int = int(os.getenv("LLM_MAX_RETRIES", "3"))
 CLOUD_TIMEOUT: int = int(os.getenv("CLOUD_LLM_TIMEOUT", "120"))
+CLOUD_MAX_RETRIES: int = int(os.getenv("CLOUD_LLM_MAX_RETRIES", "2"))
 
 # ── Cloud / Multi-model config ─────────────────────────────────────────────────
 CLOUD_BASE_URL: str = os.getenv(
@@ -434,7 +435,7 @@ def _call_cloud(
         {"role": "user", "content": prompt},
     ]
     last_exc: Exception = RuntimeError("No attempts made")
-    for attempt in range(1, MAX_RETRIES + 1):
+    for attempt in range(1, CLOUD_MAX_RETRIES + 1):
         t0 = time.monotonic()
         try:
             resp = _cloud().chat.completions.create(
@@ -477,7 +478,7 @@ def _call_cloud(
                 job_id=job_id,
                 agent=agent,
             )
-            if attempt < MAX_RETRIES:
+            if attempt < CLOUD_MAX_RETRIES:
                 time.sleep(2**attempt)
         except ValueError as exc:
             raise RuntimeError(str(exc)) from exc
@@ -505,7 +506,7 @@ def _call_cloud(
                     "Check GOOGLE_API_KEY or select a configured provider."
                 ) from exc
             raise RuntimeError(f"Cloud LLM call failed: {exc}") from exc
-    raise RuntimeError(f"Cloud (Gemma 4 31B) failed after {MAX_RETRIES} attempts: {last_exc}")
+    raise RuntimeError(f"Cloud (Gemma 4 31B) failed after {CLOUD_MAX_RETRIES} attempts: {last_exc}")
 
 
 def _call_anthropic(
@@ -520,7 +521,7 @@ def _call_anthropic(
         {"role": "user", "content": prompt},
     ]
     last_exc: Exception = RuntimeError("No attempts made")
-    for attempt in range(1, MAX_RETRIES + 1):
+    for attempt in range(1, CLOUD_MAX_RETRIES + 1):
         t0 = time.monotonic()
         try:
             resp = _anthropic().chat.completions.create(
@@ -563,7 +564,7 @@ def _call_anthropic(
                 job_id=job_id,
                 agent=agent,
             )
-            if attempt < MAX_RETRIES:
+            if attempt < CLOUD_MAX_RETRIES:
                 time.sleep(2**attempt)
         except ValueError as exc:
             raise RuntimeError(str(exc)) from exc
@@ -580,7 +581,9 @@ def _call_anthropic(
                     "Check ANTHROPIC_API_KEY or select a configured provider."
                 ) from exc
             raise RuntimeError(f"Anthropic LLM call failed: {exc}") from exc
-    raise RuntimeError(f"Anthropic (Claude 3.5 Sonnet via OpenRouter) failed after {MAX_RETRIES} attempts: {last_exc}")
+    raise RuntimeError(
+        f"Anthropic (Claude 3.5 Sonnet via OpenRouter) failed after {CLOUD_MAX_RETRIES} attempts: {last_exc}"
+    )
 
 
 def get_available_providers() -> list[dict[str, bool]]:
