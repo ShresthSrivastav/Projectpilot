@@ -247,6 +247,16 @@ async def limit_request_body(request: Request, call_next):
 
 
 PROTECTED_PREFIXES = [
+    "/generate-project",
+    "/cancel/",
+    "/status/",
+    "/files/",
+    "/read-project-file/",
+    "/review/",
+    "/download/",
+    "/test-files/",
+    "/changelog/",
+    "/fix-tests/",
     "/workspace/",
     "/jobs",
     "/regenerate-file",
