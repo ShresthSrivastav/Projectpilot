@@ -29,6 +29,7 @@ Thumbs.db
 
 # Project data
 chroma_data/
+chroma_data_recovered/
 chroma_db_v4/
 generated_projects/
 memory_store/

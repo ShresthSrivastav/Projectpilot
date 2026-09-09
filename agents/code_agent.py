@@ -310,6 +310,9 @@ def _build_reqs(req: dict) -> list[str]:
 
 def _gen_requirements(req: dict, bp: dict, model: str, job_id: str) -> str:
     must_have = _build_reqs(req)
+    backend = req.get("stack", {}).get("backend", "fastapi")
+    frontend = req.get("stack", {}).get("frontend", "streamlit")
+    features = req.get("features", [])
 
     raw = call_model(
         f"Generate requirements.txt for a project.\n"
@@ -417,7 +420,7 @@ def run(
         return f
 
     # ── Emergency fallback templates ─────────────────────────────────────────
-    _fallback_reqs = "\n".join(f"{p}==0.0.0" for p in _build_reqs(requirements)) + "\n"
+    _fallback_reqs = "\n".join(_build_reqs(requirements)) + "\n"
     _FALLBACK_TEMPLATES: dict[str, str] = {
         "backend/main.py": _FALLBACK_BACKEND,
         "database/models.py": _FALLBACK_MODELS,

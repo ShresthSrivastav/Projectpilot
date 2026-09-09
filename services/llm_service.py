@@ -93,7 +93,7 @@ def _client() -> OpenAI:
     if _openai_client is None:
         with _client_lock:
             if _openai_client is None:
-                _openai_client = OpenAI(base_url=_OPENAI_BASE, api_key="ollama")
+                _openai_client = OpenAI(base_url=_OPENAI_BASE, api_key="ollama", max_retries=0)
     return _openai_client
 
 
@@ -108,7 +108,7 @@ def _cloud() -> OpenAI:
                         "Get a free key at https://ai.google.dev/ "
                         "then add GOOGLE_API_KEY=... to your .env file."
                     )
-                _cloud_client = OpenAI(base_url=CLOUD_BASE_URL, api_key=GOOGLE_API_KEY)
+                _cloud_client = OpenAI(base_url=CLOUD_BASE_URL, api_key=GOOGLE_API_KEY, max_retries=0)
     return _cloud_client
 
 
@@ -123,7 +123,7 @@ def _anthropic() -> OpenAI:
                         "Get a key at https://openrouter.ai/keys "
                         "then add ANTHROPIC_API_KEY=... to your .env file."
                     )
-                _anthropic_client = OpenAI(base_url=ANTHROPIC_BASE_URL, api_key=ANTHROPIC_API_KEY)
+                _anthropic_client = OpenAI(base_url=ANTHROPIC_BASE_URL, api_key=ANTHROPIC_API_KEY, max_retries=0)
     return _anthropic_client
 
 

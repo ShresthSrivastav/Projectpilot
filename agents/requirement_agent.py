@@ -80,6 +80,34 @@ def _validate(prompt: str) -> None:
             raise ValueError(f"Unsupported project type: '{kw}'. ProjectPilot supports CRUD/web applications only.")
 
 
+def _fallback(prompt: str, project_name: str, stack: dict[str, str] | None) -> dict[str, Any]:
+    text = prompt.lower()
+    project_type = next(
+        (name for keyword, name in (("student", "student_management"), ("inventory", "inventory_system"),
+                                    ("blog", "blog_app"), ("task", "task_manager"), ("employee", "employee_management"))
+         if keyword in text),
+        "crud_dashboard",
+    )
+    entity = {
+        "student_management": "Student",
+        "inventory_system": "Product",
+        "blog_app": "Post",
+        "task_manager": "Task",
+        "employee_management": "Employee",
+        "crud_dashboard": "Item",
+    }[project_type]
+    return {
+        "project_name": project_name or "Generated Project",
+        "project_type": project_type,
+        "features": ["Create, read, update, and delete records", "Health check endpoint"],
+        "modules": [entity.lower() + "s"],
+        "complexity": "simple",
+        "auth_required": "auth" in text or "login" in text,
+        "db_entities": [entity],
+        "stack": stack or {"backend": "fastapi", "frontend": "streamlit", "db": "sqlite"},
+    }
+
+
 def _parse_json(text: str) -> dict[str, Any]:
     for fn in [
         lambda t: json.loads(t),
@@ -127,11 +155,10 @@ def run(
             user_msg, system_prompt=_SYSTEM, model=model or "cloud", job_id=job_id, agent="RequirementAgent"
         )
         log_to_db(job_id, "RequirementAgent", "LLM response received.")
-    except RuntimeError as exc:
-        log_to_db(job_id, "RequirementAgent", f"LLM call failed: {exc}", "ERROR")
-        raise
-
-    req = _parse_json(raw)
+        req = _parse_json(raw)
+    except (RuntimeError, ValueError) as exc:
+        log_to_db(job_id, "RequirementAgent", f"LLM unavailable — using fallback requirements: {exc}", "WARNING")
+        req = _fallback(prompt, project_name, stack)
 
     if not req.get("features"):
         raise ValueError("No features extracted — please be more specific in your prompt.")

@@ -382,7 +382,7 @@ def test_health(client):
             self._step("AcceptanceGates", 97)
             self._log("HealingGates", "Running self-healing acceptance gates...")
             try:
-                from backend.main import run_project_review
+                from backend.routes.pipeline_routes import run_project_review
 
                 gates_result = heal_gates(
                     self.job_id,

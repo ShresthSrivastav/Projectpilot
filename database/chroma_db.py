@@ -40,11 +40,12 @@ CHROMA_PATH = os.getenv(
     "CHROMA_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "chroma_data")
 )
 _client: chromadb.PersistentClient | None = None
+_active_chroma_path: str | None = None
 
 
 def _get_chroma_path() -> str:
     """Return current CHROMA_PATH, re-reading env var if changed."""
-    return os.getenv("CHROMA_PATH", CHROMA_PATH)
+    return _active_chroma_path or os.getenv("CHROMA_PATH", CHROMA_PATH)
 
 
 _DUMMY_EMBED = [[0.0]]
@@ -105,10 +106,28 @@ def get_workspace_collection(workspace_id: str, collection_type: str):
 
 def init_db() -> None:
     """Initialize default (legacy) collections. New usage should call init_workspace()."""
-    global _client
+    global _active_chroma_path, _client
+    primary_path = os.getenv("CHROMA_PATH", CHROMA_PATH)
+    _active_chroma_path = primary_path
     _client = None
-    for name in _COLLECTION_TYPES:
-        _col(name)
+    try:
+        for name in _COLLECTION_TYPES:
+            _col(name)
+    except Exception as exc:
+        # Chroma 0.5 cannot open stores created by older Chroma releases. Keep
+        # the old store intact and start a fresh store so project generation can
+        # continue; existing records remain available for manual migration.
+        recovery_path = f"{primary_path}_recovered"
+        logger.warning(
+            "Chroma store at %s is unavailable (%s); using fresh store at %s",
+            primary_path,
+            exc,
+            recovery_path,
+        )
+        _active_chroma_path = recovery_path
+        _client = None
+        for name in _COLLECTION_TYPES:
+            _col(name)
     logger.info("ChromaDB ready (persistent at %s)", _get_chroma_path())
 
 

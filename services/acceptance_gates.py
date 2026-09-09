@@ -317,23 +317,19 @@ def _run_dependency_gate(job_dir: Path) -> dict:
     req_files = list(job_dir.rglob("requirements.txt"))
     if not req_files:
         return {"passed": True, "details": {"note": "No requirements.txt found", "skipped": True}}
+
+    # Do not hit the network during generation. Build/deploy performs the real
+    # install; here we only catch malformed requirement lines locally.
+    requirement = re.compile(r"^[A-Za-z0-9_.-]+(?:\[[^\]]+\])?(?:[<>=!~].+)?$")
     errors = []
     for req_file in req_files:
-        try:
-            result = subprocess.run(
-                [sys.executable, "-m", "pip", "install", "-r", str(req_file), "--dry-run"],
-                capture_output=True,
-                text=True,
-                timeout=60,
-                cwd=str(job_dir),
-            )
-            if result.returncode != 0:
-                errors.append(f"{req_file.name}: {result.stderr.strip()[-200:]}")
-        except subprocess.TimeoutExpired:
-            errors.append(f"{req_file.name}: dry-run timed out")
-        except Exception as exc:
-            errors.append(f"{req_file.name}: {exc}")
-    return {"passed": len(errors) == 0, "details": {"files_checked": len(req_files), "errors": errors}}
+        for line_no, raw in enumerate(req_file.read_text(encoding="utf-8").splitlines(), 1):
+            line = raw.strip()
+            if not line or line.startswith("#") or line.startswith(("-r ", "--")):
+                continue
+            if not requirement.fullmatch(line):
+                errors.append(f"{req_file.name}:{line_no}: invalid requirement '{line}'")
+    return {"passed": not errors, "details": {"files_checked": len(req_files), "errors": errors}}
 
 
 def _run_static_analysis_gate(job_dir: Path) -> dict:
