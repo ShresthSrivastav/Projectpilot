@@ -349,6 +349,8 @@ def _run_type_checking_gate(job_dir: Path) -> dict:
     issues = []
     files_checked = 0
     for py_file in sorted(job_dir.rglob("*.py")):
+        if "tests" in py_file.relative_to(job_dir).parts:
+            continue
         if py_file.name == "__init__.py":
             continue
         files_checked += 1

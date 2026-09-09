@@ -35,27 +35,69 @@ _REQS_SYS = (
 # ── Fallback templates (used when LLM fails) ─────────────────────────────────
 
 _FALLBACK_BACKEND = """\
-import json
-import uuid
-from datetime import datetime
+import os
+from typing import Any
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database.db import Base, engine, get_db
-from database.models import *
+from database.models import Placeholder
 
 app = FastAPI(title="Generated API", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True,
+cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8501").split(",")
+app.add_middleware(CORSMiddleware, allow_origins=cors_origins, allow_credentials=True,
                    allow_methods=["*"], allow_headers=["*"])
 
 @app.on_event("startup")
-def on_startup():
+def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
 
 @app.get("/health")
-def health():
+def health() -> dict[str, str]:
     return {"status": "ok"}
+
+class PlaceholderCreate(BaseModel):
+    name: str = ""
+
+class PlaceholderUpdate(BaseModel):
+    name: str
+
+@app.post("/placeholders")
+def create_placeholder(payload: PlaceholderCreate, db: Session = Depends(get_db)) -> dict[str, Any]:
+    item = Placeholder(name=payload.name)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return {"id": item.id, "name": item.name}
+
+@app.get("/placeholders")
+def list_placeholders(db: Session = Depends(get_db)) -> list[dict[str, Any]]:
+    items = db.query(Placeholder).all()
+    return [{"id": item.id, "name": item.name} for item in items]
+
+@app.put("/placeholders/{placeholder_id}")
+def update_placeholder(
+    placeholder_id: str,
+    payload: PlaceholderUpdate,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    item = db.query(Placeholder).filter(Placeholder.id == placeholder_id).first()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Placeholder not found")
+    item.name = payload.name
+    db.commit()
+    db.refresh(item)
+    return {"id": item.id, "name": item.name}
+
+@app.delete("/placeholders/{placeholder_id}")
+def delete_placeholder(placeholder_id: str, db: Session = Depends(get_db)) -> dict[str, str]:
+    item = db.query(Placeholder).filter(Placeholder.id == placeholder_id).first()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Placeholder not found")
+    db.delete(item)
+    db.commit()
+    return {"status": "deleted"}
 """
 
 _FALLBACK_MODELS = """\
@@ -76,15 +118,39 @@ class Placeholder(Base):
 """
 
 _FALLBACK_CRUD = """\
+from typing import Optional
 from sqlalchemy.orm import Session
-from database.db import Base
 from database.models import Placeholder
 
-def get_placeholder(db: Session, placeholder_id: str):
+def get_placeholder(db: Session, placeholder_id: str) -> Optional[Placeholder]:
     return db.query(Placeholder).filter(Placeholder.id == placeholder_id).first()
 
-def get_all_placeholders(db: Session, skip: int = 0, limit: int = 100):
+def get_all_placeholders(db: Session, skip: int = 0, limit: int = 100) -> list[Placeholder]:
     return db.query(Placeholder).offset(skip).limit(limit).all()
+
+def create_placeholder(db: Session, name: str = "") -> Placeholder:
+    item = Placeholder(name=name)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+def update_placeholder(db: Session, placeholder_id: str, name: str) -> Optional[Placeholder]:
+    item = get_placeholder(db, placeholder_id)
+    if item is None:
+        return None
+    item.name = name
+    db.commit()
+    db.refresh(item)
+    return item
+
+def delete_placeholder(db: Session, placeholder_id: str) -> bool:
+    item = get_placeholder(db, placeholder_id)
+    if item is None:
+        return False
+    db.delete(item)
+    db.commit()
+    return True
 """
 
 _FALLBACK_FRONTEND = """\
@@ -328,7 +394,7 @@ def _gen_requirements(req: dict, bp: dict, model: str, job_id: str) -> str:
     lines = [l.strip() for l in raw.splitlines() if l.strip() and "==" in l and not l.strip().startswith(("```", "#"))]
     if lines:
         return "\n".join(lines)
-    return "\n".join(f"{p}==0.0.0" for p in must_have) + "\n"
+    return "\n".join(must_have) + "\n"
 
 
 # ── Main entry point ──────────────────────────────────────────────────────────
